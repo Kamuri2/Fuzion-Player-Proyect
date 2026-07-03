@@ -110,9 +110,30 @@ export const scanUploadsBot = async (req: Request, res: Response) => {
         }
       }
     }
+    // Cleanup phase: Remove database entries for files that no longer exist on disk
+    let removedCount = 0;
+    const allLocalEvidences = await prisma.evidence.findMany({
+      where: {
+        url: {
+          contains: '/uploads/'
+        }
+      }
+    });
+
+    for (const evidence of allLocalEvidences) {
+      const urlParts = evidence.url.split('/uploads/');
+      if (urlParts.length === 2) {
+        const relativePath = decodeURIComponent(urlParts[1]);
+        const absolutePath = path.join(uploadsPath, relativePath);
+        if (!fs.existsSync(absolutePath)) {
+          await prisma.evidence.delete({ where: { id: evidence.id } });
+          removedCount++;
+        }
+      }
+    }
     
     if (res) {
-      res.json({ message: `Escaneo completado. Se agregaron ${addedCount} nuevas evidencias.`, results });
+      res.json({ message: `Escaneo completado. Se agregaron ${addedCount} y se limpiaron ${removedCount} fantasmas.`, results, removedCount });
     }
   } catch (error) {
     console.error('Error scanning uploads:', error);
