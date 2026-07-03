@@ -1,0 +1,93 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model User {
+  id           String       @id @default(uuid())
+  username     String       @unique
+  email        String       @unique
+  passwordHash String
+  name         String
+  role         String       @default("USER") // ADMIN or USER
+  avatarUrl    String?      // Profil image URL
+  resetPin     String?
+  resetPinExpires DateTime?
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+
+  enrollments  Enrollment[]
+  evidences    Evidence[]
+}
+
+model Course {
+  id                  String       @id
+  title               String
+  subtitle            String?
+  color               String
+  textColor           String
+  iconType            String       // "emoji" or "image"
+  iconValue           String
+  category            String
+  modality            String
+  level               String?
+  description         String?
+  targetAudience      String?
+  duration            String?
+  objective           String?
+  modules             String?      // Stored as JSON or separated by newlines
+  illustrationUrl     String?
+  illustrationSide    String?      // "left" or "right"
+  registrationUrl     String?
+  sede                String?
+  capacity            String?
+  pdfUrl              String?
+  pdfPage             Int?
+  enrollmentDates     String?
+  implementationDates String?
+  createdAt           DateTime     @default(now())
+  updatedAt           DateTime     @updatedAt
+
+  evidences           Evidence[]
+  enrollments         Enrollment[]
+}
+
+model Evidence {
+  id         String   @id @default(uuid())
+  url        String
+  caption    String?
+  type       String   // "GALLERY" or "WORK_SAMPLE"
+  uploadedBy String?
+  
+  userId     String?
+  user       User?    @relation(fields: [userId], references: [id])
+  
+  courseId   String
+  course     Course   @relation(fields: [courseId], references: [id], onDelete: Cascade)
+}
+
+model Enrollment {
+  id         String   @id @default(uuid())
+  userId     String
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  courseId   String
+  course     Course   @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  status     String   @default("ENROLLED") // PENDING, ENROLLED, COMPLETED
+  progress   Int      @default(0)
+  enrolledAt DateTime @default(now())
+
+  @@unique([userId, courseId])
+}
+
+model Sede {
+  id      String  @id @default(uuid())
+  name    String
+  address String
+  mapUrl  String?
+}

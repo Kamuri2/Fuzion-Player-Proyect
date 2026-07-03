@@ -1,0 +1,18 @@
+version: '3.8'
+
+services:
+  db:
+    image: postgres:15
+    container_name: seiem_db
+    restart: always
+    environment:
+      POSTGRES_USER: seiem_user
+      POSTGRES_PASSWORD: seiem_password
+      POSTGRES_DB: seiem_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - seiem_pgdata:/var/lib/postgresql/data
+
+volumes:
+  seiem_pgdata:
