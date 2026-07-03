@@ -2,6 +2,8 @@ import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import { PrismaClient } from '@prisma/client';
+import fs from 'fs';
+import path from 'path';
 
 dotenv.config();
 
@@ -43,7 +45,28 @@ app.post('/api/upload/avatars', authenticate, avatarUpload.single('files'), (req
   return res.json({ urls: [fileUrl] });
 });
 
-app.post('/api/upload/:courseId', upload.array('files', 50), (req, res) => {
+app.post('/api/upload/rollback', authenticate, (req, res) => {
+  const { urls } = req.body;
+  if (!urls || !Array.isArray(urls)) return res.status(400).json({ error: 'Invalid urls' });
+
+  for (const url of urls) {
+    try {
+      const urlParts = url.split('/uploads/');
+      if (urlParts.length === 2) {
+        const relativePath = decodeURIComponent(urlParts[1]);
+        const absolutePath = path.join(process.cwd(), 'uploads', relativePath);
+        if (fs.existsSync(absolutePath)) {
+          fs.unlinkSync(absolutePath);
+        }
+      }
+    } catch (e) {
+      console.error('Rollback error', e);
+    }
+  }
+  res.json({ success: true });
+});
+
+app.post('/api/upload/:courseId', authenticate, upload.array('files', 50), (req, res) => {
   // File upload endpoint
   if (!req.files || (req.files as Express.Multer.File[]).length === 0) {
     return res.status(400).json({ error: 'No files uploaded' });
