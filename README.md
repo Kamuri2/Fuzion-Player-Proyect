@@ -59,6 +59,13 @@
 - **Modo Mini-Reproductor:** Para no perder de vista lo que suena mientras trabajas.
 - **Ecualización e Interfaz Cristalina:** Disfruta de un diseño Glassmorphism que se siente premium.
 
+### Novedades en esta versión
+
+- **Mejoras en la lectura de letras:** Ahora el reproductor es capaz de leer archivos de letras externos con formato .lrc. Tambien se corrigio un problema que impedia leer las letras si estas contenian marcas de tiempo que incluyeran horas.
+- **Prevencion de errores en la traduccion:** Se soluciono un problema tecnico que causaba que las letras no se mostraran si el servicio de traduccion fallaba. Ahora el sistema es mas inteligente y no guarda archivos vacios cuando hay errores de conexion, permitiendo que la traduccion se intente de nuevo mas tarde.
+- **Notificaciones de estado del traductor:** Se agregaron alertas visuales en la aplicacion para avisarte cuando el servicio de traduccion no esta disponible temporalmente (por exceso de uso) y otra alerta para avisarte cuando el servicio se restablece y vuelve a funcionar.
+- **Nueva ventana de confirmacion:** Se reemplazo la ventana basica del sistema por un cuadro de confirmacion oscuro, elegante y nativo al intentar borrar una lista de reproduccion, manteniendo la estetica del reproductor.
+
 ---
 
 ## Descargar Instalador

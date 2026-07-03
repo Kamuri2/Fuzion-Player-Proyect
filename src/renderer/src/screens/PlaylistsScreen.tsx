@@ -7,6 +7,7 @@ import { useTranslation } from 'react-i18next';
 import { Music2, Play, MoreVertical, Trash2, Edit } from 'lucide-react';
 import PlaylistCreateModal from '../components/PlaylistCreateModal';
 import PlaylistEditModal from '../components/PlaylistEditModal';
+import ConfirmModal from '../components/ConfirmModal';
 
 export default function PlaylistsScreen() {
   const { playlists, deletePlaylist, currentContextId } = useAudio();
@@ -16,13 +17,12 @@ export default function PlaylistsScreen() {
   const [hoveredId, setHoveredId] = useState<string | null>(null);
   const [contextMenuId, setContextMenuId] = useState<string | null>(null);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [playlistToDelete, setPlaylistToDelete] = useState<string | null>(null);
 
   const handleDelete = (e: React.MouseEvent, id: string): void => {
     e.stopPropagation();
-    if (confirm(t('playlists.confirmDelete'))) {
-      deletePlaylist(id);
-      setContextMenuId(null);
-    }
+    setPlaylistToDelete(id);
+    setContextMenuId(null);
   };
 
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
@@ -133,11 +133,27 @@ export default function PlaylistsScreen() {
 
       {editingPlaylist && (
         <PlaylistEditModal
-          isOpen={isEditModalOpen}
-          onClose={() => setIsEditModalOpen(false)}
-          playlist={editingPlaylist}
-        />
+        isOpen={isEditModalOpen}
+        onClose={() => {
+          setIsEditModalOpen(false);
+          setEditingPlaylist(null);
+        }}
+        playlist={editingPlaylist}
+      />
       )}
+      
+      <ConfirmModal
+        isOpen={!!playlistToDelete}
+        title={t('playlists.deleteTitle', 'Eliminar Playlist')}
+        message={t('playlists.confirmDelete', '¿Estás seguro de que deseas eliminar esta lista de reproducción?')}
+        onConfirm={() => {
+          if (playlistToDelete) {
+            deletePlaylist(playlistToDelete);
+            setPlaylistToDelete(null);
+          }
+        }}
+        onCancel={() => setPlaylistToDelete(null)}
+      />
     </div>
   );
 }

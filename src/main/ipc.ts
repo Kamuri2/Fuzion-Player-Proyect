@@ -15,6 +15,8 @@ import ffprobeStatic from 'ffprobe-static';
 import { app } from 'electron';
 import { translate } from '@vitalets/google-translate-api';
 
+let isTranslationBlocked = false;
+
 // Set up ffmpeg paths
 const ffmpegPath = app.isPackaged ? path.join(process.resourcesPath, 'app.asar.unpacked', 'node_modules', 'ffmpeg-static', 'ffmpeg.exe') : ffmpegStatic;
 const ffprobePath = app.isPackaged ? path.join(process.resourcesPath, 'app.asar.unpacked', 'node_modules', 'ffprobe-static', 'bin', 'win32', 'x64', 'ffprobe.exe') : ffprobeStatic.path;
@@ -376,6 +378,18 @@ export function setupIpc() {
           }
         }
         
+        // Check for sidecar .lrc file if no embedded lyrics were found
+        if (!lyrics) {
+          try {
+            const lrcPath = filePath.replace(/\.[^/.]+$/, "") + ".lrc";
+            if (existsSync(lrcPath)) {
+              lyrics = await fs.readFile(lrcPath, 'utf8');
+            }
+          } catch (e) {
+            // Ignore if file doesn't exist or can't be read
+          }
+        }
+        
         title = metadata.common.title || title;
         artist = metadata.common.albumartist || metadata.common.artist || artist;
         album = metadata.common.album || album;
@@ -555,7 +569,7 @@ export function setupIpc() {
     return null;
   });
 
-  ipcMain.handle('api:translateLyrics', async (_, songId: string, lines: string[], targetLang: string = 'es') => {
+  ipcMain.handle('api:translateLyrics', async (event, songId: string, lines: string[], targetLang: string = 'es') => {
     if (!songId || !lines || lines.length === 0) return [];
     
     const translationsDir = path.join(app.getPath('userData'), 'lyrics_translations');
@@ -592,10 +606,21 @@ export function setupIpc() {
       
       // Cache it
       await fs.writeFile(cacheFile, JSON.stringify(translatedLines), 'utf8');
-      
+      // Success! If it was previously blocked, notify restoration.
+      if (isTranslationBlocked) {
+        isTranslationBlocked = false;
+        event.sender.send('translation-status', 'restored');
+      }
+
       return translatedLines;
-    } catch (e) {
+    } catch (e: any) {
       console.error('Translation error', e);
+      if (e.name === 'TooManyRequestsError' || (e.message && e.message.includes('Too Many Requests'))) {
+        if (!isTranslationBlocked) {
+          isTranslationBlocked = true;
+          event.sender.send('translation-status', 'blocked');
+        }
+      }
       return [];
     }
   });
@@ -613,7 +638,7 @@ export function setupIpc() {
     return null;
   });
 
-  ipcMain.handle('api:translateUI', async (_, langCode: string, baseDictionary: Record<string, any>) => {
+  ipcMain.handle('api:translateUI', async (event, langCode: string, baseDictionary: Record<string, any>) => {
     const translationsDir = path.join(app.getPath('userData'), 'ui_translations');
     try {
       if (!existsSync(translationsDir)) {
@@ -680,27 +705,53 @@ export function setupIpc() {
       return unflattenObj(existingFlatDict);
     }
 
+    let translatedValues: string[] = [];
+    const chunkSize = 40;
+    const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+
     try {
-      // Join values with a special delimiter (like \n)
-      const fullText = valuesToTranslate.join('\n');
-      const res = await translate(fullText, { to: langCode });
-      const translatedValues = res.text.split('\n');
-
-      // Reconstruct
-      keysToTranslate.forEach((k, idx) => {
-        existingFlatDict[k] = translatedValues[idx] ? translatedValues[idx].trim() : valuesToTranslate[idx];
-      });
-
-      const translatedDict = unflattenObj(existingFlatDict);
-
-      // Cache
-      await fs.writeFile(cacheFile, JSON.stringify(translatedDict, null, 2), 'utf8');
+      for (let i = 0; i < valuesToTranslate.length; i += chunkSize) {
+        const chunk = valuesToTranslate.slice(i, i + chunkSize);
+        const fullText = chunk.join('\n');
+        const res = await translate(fullText, { to: langCode });
+        translatedValues = translatedValues.concat(res.text.split('\n'));
+        
+        if (i + chunkSize < valuesToTranslate.length) {
+          await delay(1000); // 1 second delay between chunks to avoid rate limit
+        }
+      }
       
-      return translatedDict;
-    } catch (e) {
+      // Success! If it was previously blocked, notify restoration.
+      if (isTranslationBlocked) {
+        isTranslationBlocked = false;
+        event.sender.send('translation-status', 'restored');
+      }
+    } catch (e: any) {
       console.error('UI Translation error', e);
-      return unflattenObj(existingFlatDict);
+      if (e.name === 'TooManyRequestsError' || (e.message && e.message.includes('Too Many Requests'))) {
+        if (!isTranslationBlocked) {
+          isTranslationBlocked = true;
+          event.sender.send('translation-status', 'blocked');
+        }
+      }
+      // Continue to save whatever we successfully translated so far
     }
+
+    // Reconstruct
+    keysToTranslate.forEach((k, idx) => {
+      if (translatedValues[idx]) {
+        existingFlatDict[k] = translatedValues[idx].trim();
+      }
+    });
+
+    const translatedDict = unflattenObj(existingFlatDict);
+
+    // Cache (only if we got at least some translations or if it was already populated)
+    if (translatedValues.length > 0 || Object.keys(existingFlatDict).length > 0) {
+      await fs.writeFile(cacheFile, JSON.stringify(translatedDict, null, 2), 'utf8');
+    }
+    
+    return translatedDict;
   });
 }
 

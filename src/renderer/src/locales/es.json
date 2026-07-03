@@ -51,6 +51,8 @@
     "crossfade": "Crossfade",
     "crossfadeDesc": "Desvanece la pista actual y comienza la siguiente sin cortes.",
     "crossfadeDuration": "Duración del Crossfade",
+    "crossfadeDurationIn": "Duración de Entrada (Fade In)",
+    "crossfadeDurationOut": "Duración de Salida (Fade Out)",
     "about": "Acerca de",
     "songsRead": "Canciones Leídas:",
     "deleteFolder": "Eliminar Carpeta"
@@ -124,7 +126,9 @@
     "songRemoved": "Canción eliminada de \"{{name}}\".",
     "deleted": "Lista \"{{name}}\" eliminada.",
     "songAddError": "Error al agregar la canción.",
-    "songRemoveError": "Error al eliminar la canción."
+    "songRemoveError": "Error al eliminar la canción.",
+    "confirmDelete": "¿Estás seguro de que deseas eliminar esta lista de reproducción?",
+    "deleteTitle": "Eliminar Playlist"
   },
   "artists": {
     "title": "Artistas",
@@ -174,6 +178,12 @@
     "cancel": "Cancelar",
     "create": "Crear",
     "back": "Volver",
-    "playingFrom": "Reproduciendo desde"
+    "playingFrom": "Reproduciendo desde",
+    "translationBlocked": "EL SERVICIO DE TRADUCCION NO ESTA DISPONIBLE EN ESTE MOMENTO",
+    "translationRestored": "SERVICIO RESTABLECIDO NUEVAMENTE, GRACIAS POR LA ESPERA"
+  },
+  "common": {
+    "cancel": "Cancelar",
+    "confirm": "Aceptar"
   }
 }

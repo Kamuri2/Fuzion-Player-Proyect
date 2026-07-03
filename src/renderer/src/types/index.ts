@@ -102,8 +102,10 @@ export interface AudioContextType {
   setShowLyrics: (show: boolean) => void;
   isCrossfadeEnabled: boolean;
   setIsCrossfadeEnabled: (enabled: boolean) => void;
-  crossfadeDuration: number;
-  setCrossfadeDuration: (duration: number) => void;
+  crossfadeDurationIn: number;
+  setCrossfadeDurationIn: (duration: number) => void;
+  crossfadeDurationOut: number;
+  setCrossfadeDurationOut: (duration: number) => void;
   toastMessage: { msg: string, type: 'success' | 'error' } | null;
   showToast: (msg: string, type?: 'success' | 'error') => void;
 }

@@ -18,7 +18,7 @@ export default function SettingsScreen() {
   const navigate = useNavigate();
   const { t, i18n } = useTranslation();
   const { colors, isDarkMode, toggleTheme, themeFamily, setThemeFamily, particles, setParticles, customFont, setCustomFont, mascots, addMascot, removeMascot, lyricsFontSize, setLyricsFontSize, showTranslatedLyrics, setShowTranslatedLyrics, lyricsLanguage, setLyricsLanguage } = useTheme();
-  const { loadSongsFromUri, songs, isScanning, isCrossfadeEnabled, setIsCrossfadeEnabled, crossfadeDuration, setCrossfadeDuration } = useAudio();
+  const { loadSongsFromUri, songs, isScanning, isCrossfadeEnabled, setIsCrossfadeEnabled, crossfadeDurationIn, setCrossfadeDurationIn, crossfadeDurationOut, setCrossfadeDurationOut } = useAudio();
   const currentFolder = localStorage.getItem('@music_folder');
 
   const [draftFont, setDraftFont] = useState(customFont);
@@ -367,24 +367,47 @@ export default function SettingsScreen() {
           </div>
 
           {isCrossfadeEnabled && (
-            <div className="mt-6 pt-6 border-t border-white/10">
-              <div className="flex flex-row items-center justify-between mb-2">
-                <span className="font-medium" style={{ color: colors.text }}>{t('settings.crossfadeDuration', 'Duración del Crossfade')}</span>
-                <span className="font-bold" style={{ color: colors.primary }}>{crossfadeDuration} s</span>
+            <div className="mt-6 pt-6 border-t border-white/10 flex flex-col gap-6">
+              <div>
+                <div className="flex flex-row items-center justify-between mb-2">
+                  <span className="font-medium" style={{ color: colors.text }}>{t('settings.crossfadeDurationOut', 'Duración de Salida (Fade Out)')}</span>
+                  <span className="font-bold" style={{ color: colors.primary }}>{crossfadeDurationOut} s</span>
+                </div>
+                <input
+                  type="range"
+                  min="0"
+                  max="10"
+                  step="0.1"
+                  value={crossfadeDurationOut}
+                  onChange={(e) => setCrossfadeDurationOut(Number(e.target.value))}
+                  className="w-full h-2 rounded-lg appearance-none cursor-pointer bg-white/10"
+                  style={{ accentColor: colors.primary }}
+                />
+                <div className="flex flex-row justify-between mt-1">
+                  <span className="text-xs opacity-50" style={{ color: colors.subText }}>0s</span>
+                  <span className="text-xs opacity-50" style={{ color: colors.subText }}>10s</span>
+                </div>
               </div>
-              <input
-                type="range"
-                min="0.1"
-                max="10"
-                step="0.1"
-                value={crossfadeDuration}
-                onChange={(e) => setCrossfadeDuration(Number(e.target.value))}
-                className="w-full h-2 rounded-lg appearance-none cursor-pointer bg-white/10"
-                style={{ accentColor: colors.primary }}
-              />
-              <div className="flex flex-row justify-between mt-1">
-                <span className="text-xs opacity-50" style={{ color: colors.subText }}>0.1s</span>
-                <span className="text-xs opacity-50" style={{ color: colors.subText }}>10s</span>
+
+              <div>
+                <div className="flex flex-row items-center justify-between mb-2">
+                  <span className="font-medium" style={{ color: colors.text }}>{t('settings.crossfadeDurationIn', 'Duración de Entrada (Fade In)')}</span>
+                  <span className="font-bold" style={{ color: colors.primary }}>{crossfadeDurationIn} s</span>
+                </div>
+                <input
+                  type="range"
+                  min="0"
+                  max="10"
+                  step="0.1"
+                  value={crossfadeDurationIn}
+                  onChange={(e) => setCrossfadeDurationIn(Number(e.target.value))}
+                  className="w-full h-2 rounded-lg appearance-none cursor-pointer bg-white/10"
+                  style={{ accentColor: colors.primary }}
+                />
+                <div className="flex flex-row justify-between mt-1">
+                  <span className="text-xs opacity-50" style={{ color: colors.subText }}>0s</span>
+                  <span className="text-xs opacity-50" style={{ color: colors.subText }}>10s</span>
+                </div>
               </div>
             </div>
           )}

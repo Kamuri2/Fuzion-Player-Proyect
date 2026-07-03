@@ -42,7 +42,8 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const currentContextIdRef = useRef(currentContextId);
   const isCrossfadingRef = useRef(false);
   const crossfadeTimerRef = useRef<any>(null);
-  const crossfadeDurationRef = useRef(3);
+  const crossfadeDurationInRef = useRef(3);
+  const crossfadeDurationOutRef = useRef(3);
 
   useEffect(() => { repeatModeRef.current = repeatMode; }, [repeatMode]);
   useEffect(() => { isShuffleRef.current = isShuffle; }, [isShuffle]);
@@ -52,7 +53,8 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const [isPlayerOpen, setIsPlayerOpen] = useState(false);
   const [showLyrics, setShowLyrics] = useState(false);
   const [isCrossfadeEnabled, setIsCrossfadeEnabledState] = useState(true);
-  const [crossfadeDuration, setCrossfadeDurationState] = useState(3);
+  const [crossfadeDurationIn, setCrossfadeDurationInState] = useState(3);
+  const [crossfadeDurationOut, setCrossfadeDurationOutState] = useState(3);
   const [toastMessage, setToastMessage] = useState<{ msg: string, type: 'success' | 'error' } | null>(null);
 
   const showToast = (msg: string, type: 'success' | 'error' = 'success') => {
@@ -68,11 +70,17 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     localStorage.setItem('@crossfade_enabled', enabled.toString());
   };
 
-  useEffect(() => { crossfadeDurationRef.current = crossfadeDuration; }, [crossfadeDuration]);
+  useEffect(() => { crossfadeDurationInRef.current = crossfadeDurationIn; }, [crossfadeDurationIn]);
+  useEffect(() => { crossfadeDurationOutRef.current = crossfadeDurationOut; }, [crossfadeDurationOut]);
 
-  const setCrossfadeDuration = (duration: number) => {
-    setCrossfadeDurationState(duration);
-    localStorage.setItem('@crossfade_duration', duration.toString());
+  const setCrossfadeDurationIn = (duration: number) => {
+    setCrossfadeDurationInState(duration);
+    localStorage.setItem('@crossfade_duration_in', duration.toString());
+  };
+
+  const setCrossfadeDurationOut = (duration: number) => {
+    setCrossfadeDurationOutState(duration);
+    localStorage.setItem('@crossfade_duration_out', duration.toString());
   };
 
   const attachListeners = (audio: HTMLAudioElement) => {
@@ -83,10 +91,10 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       setProgress(audio.currentTime);
       setDuration(audio.duration || 0);
 
-      const CROSSFADE_DURATION = crossfadeDurationRef.current;
+      const CROSSFADE_DURATION_OUT = crossfadeDurationOutRef.current;
       if (
         audio.duration &&
-        audio.duration - audio.currentTime <= CROSSFADE_DURATION &&
+        audio.duration - audio.currentTime <= CROSSFADE_DURATION_OUT &&
         !isCrossfadingRef.current &&
         queueRef.current.length > 0 &&
         repeatModeRef.current !== 'track'
@@ -136,8 +144,15 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       const cf = localStorage.getItem('@crossfade_enabled');
       if (cf !== null) setIsCrossfadeEnabledState(cf === 'true');
 
-      const cd = localStorage.getItem('@crossfade_duration');
-      if (cd !== null) setCrossfadeDurationState(Number(cd));
+      const cdOld = localStorage.getItem('@crossfade_duration');
+      
+      const cdIn = localStorage.getItem('@crossfade_duration_in');
+      if (cdIn !== null) setCrossfadeDurationInState(Number(cdIn));
+      else if (cdOld !== null) setCrossfadeDurationInState(Number(cdOld));
+
+      const cdOut = localStorage.getItem('@crossfade_duration_out');
+      if (cdOut !== null) setCrossfadeDurationOutState(Number(cdOut));
+      else if (cdOld !== null) setCrossfadeDurationOutState(Number(cdOld));
     };
     loadPlaylists();
 
@@ -292,45 +307,62 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     }
 
     isCrossfadingRef.current = true;
+    primary.onended = null; // Prevent natural end trigger immediately
     secondary.src = nextSong.uri;
     secondary.volume = 0;
-    secondary.play().catch(e => console.error("Crossfade error", e));
 
-    const CROSSFADE_DURATION = crossfadeDurationRef.current;
-    const steps = Math.max(10, CROSSFADE_DURATION * 10);
-    const intervalTime = (CROSSFADE_DURATION * 1000) / steps;
-    let currentStep = 0;
+    secondary.play().then(() => {
+      const CROSSFADE_DURATION_IN = crossfadeDurationInRef.current;
+      const CROSSFADE_DURATION_OUT = crossfadeDurationOutRef.current;
+      const maxDuration = Math.max(CROSSFADE_DURATION_IN, CROSSFADE_DURATION_OUT, 0.1); // prevent 0
+      const steps = Math.max(20, maxDuration * 20); // 50ms intervals for smoother fade
+      const intervalTime = (maxDuration * 1000) / steps;
+      let elapsed = 0;
 
-    // Prevent natural end trigger
-    primary.onended = null;
+      if (crossfadeTimerRef.current) clearInterval(crossfadeTimerRef.current);
 
-    if (crossfadeTimerRef.current) clearInterval(crossfadeTimerRef.current);
+      crossfadeTimerRef.current = setInterval(() => {
+        elapsed += intervalTime;
+        const elapsedSecs = elapsed / 1000;
+        
+        const fractionOut = CROSSFADE_DURATION_OUT > 0 ? Math.min(1, elapsedSecs / CROSSFADE_DURATION_OUT) : 1;
+        const fractionIn = CROSSFADE_DURATION_IN > 0 ? Math.min(1, elapsedSecs / CROSSFADE_DURATION_IN) : 1;
 
-    crossfadeTimerRef.current = setInterval(() => {
-      currentStep++;
-      const fraction = currentStep / steps;
+        // Use equal-power crossfade curves (logarithmic perception)
+        if (primary) primary.volume = Math.max(0, Math.cos(fractionOut * 0.5 * Math.PI));
+        if (secondary) secondary.volume = Math.min(1, Math.sin(fractionIn * 0.5 * Math.PI));
 
-      if (primary) primary.volume = Math.max(0, 1 - fraction);
-      if (secondary) secondary.volume = Math.min(1, fraction);
+        if (elapsedSecs >= maxDuration) {
+          clearInterval(crossfadeTimerRef.current);
+          crossfadeTimerRef.current = null;
 
-      if (currentStep >= steps) {
-        clearInterval(crossfadeTimerRef.current);
-        crossfadeTimerRef.current = null;
+          clearListeners(primary); // Prevent onpause firing
+          primary.pause();
+          primary.volume = 1;
 
-        clearListeners(primary); // Prevent onpause firing
-        primary.pause();
-        primary.volume = 1;
+          // Swap references
+          audioRef.current = secondary;
+          secondaryAudioRef.current = primary;
 
-        // Swap references
-        audioRef.current = secondary;
-        secondaryAudioRef.current = primary;
+          attachListeners(audioRef.current);
+          setIsPlaying(true); // Ensure UI shows playing
 
-        attachListeners(audioRef.current);
-        setIsPlaying(true); // Ensure UI shows playing, since onplay won't fire for an already playing track
-
-        isCrossfadingRef.current = false;
-      }
-    }, intervalTime);
+          isCrossfadingRef.current = false;
+        }
+      }, intervalTime);
+    }).catch(e => {
+      console.error("Crossfade error", e);
+      // Fallback: switch instantly
+      clearListeners(primary);
+      primary.pause();
+      primary.volume = 1;
+      secondary.volume = 1;
+      audioRef.current = secondary;
+      secondaryAudioRef.current = primary;
+      attachListeners(audioRef.current);
+      setIsPlaying(true);
+      isCrossfadingRef.current = false;
+    });
   };
 
   const handleTrackEnded = () => {
@@ -726,6 +758,25 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     }
   };
 
+  useEffect(() => {
+    // @ts-ignore
+    if (window.electron?.ipcRenderer) {
+      // @ts-ignore
+      window.electron.ipcRenderer.on('translation-status', (_, status) => {
+        if (status === 'blocked') {
+          showToast(t('player.translationBlocked', 'EL SERVICIO DE TRADUCCION NO ESTA DISPONIBLE EN ESTE MOMENTO'), 'error');
+        } else if (status === 'restored') {
+          showToast(t('player.translationRestored', 'SERVICIO RESTABLECIDO NUEVAMENTE, GRACIAS POR LA ESPERA'), 'success');
+        }
+      });
+      return () => {
+        // @ts-ignore
+        window.electron.ipcRenderer.removeAllListeners('translation-status');
+      };
+    }
+    return undefined;
+  }, [t]);
+
   return (
     <AudioContext.Provider value={{
       isScanning, songs, setSongs, albums, folders, artists, playlists,
@@ -738,7 +789,9 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       toggleFavorite, isFavorite, repeatMode, toggleRepeatMode, isShuffle,
       toggleShuffle, changeMusicFolder, isPlayerOpen, setIsPlayerOpen,
       showLyrics, setShowLyrics, isCrossfadeEnabled, setIsCrossfadeEnabled,
-      crossfadeDuration, setCrossfadeDuration, toastMessage, showToast
+      crossfadeDurationIn, setCrossfadeDurationIn,
+      crossfadeDurationOut, setCrossfadeDurationOut,
+      toastMessage, showToast
     }}>
       {children}
     </AudioContext.Provider>

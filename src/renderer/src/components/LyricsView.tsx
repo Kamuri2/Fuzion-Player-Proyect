@@ -21,7 +21,9 @@ export default function LyricsView() {
   const activeLineRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    if (!metadata.lyrics) {
+    const isLyricsEmpty = !metadata.lyrics || (typeof metadata.lyrics === 'string' && metadata.lyrics.trim() === '');
+    
+    if (isLyricsEmpty) {
       setLyrics([]);
       setStaticLyrics(null);
       setIsSynced(false);
@@ -46,25 +48,34 @@ export default function LyricsView() {
     const content = typeof lrcRaw === 'string' ? lrcRaw : ((lrcRaw as any)?.text || String(lrcRaw));
     const lines = content.split('\n');
     const parsed: LyricLine[] = [];
-    const timeRegexGlobal = /\[(\d{1,}):(\d{2})(?:\.(\d{1,3}))?\]/g;
+    const timeRegexGlobal = /\[(?:(\d{1,}):)?(\d{1,}):(\d{2})(?:[\.,](\d{1,3}))?\]/g;
     
     let isLrc = false;
 
     lines.forEach(line => {
       let match;
       const text = line.replace(/\[.*?\]/g, '').trim();
+      timeRegexGlobal.lastIndex = 0; // Reset lastIndex for each line!
       
       while ((match = timeRegexGlobal.exec(line)) !== null) {
         isLrc = true;
-        const minutes = parseInt(match[1], 10);
-        const seconds = parseInt(match[2], 10);
-        let milliseconds = 0;
-        if (match[3]) {
-          const msStr = match[3];
+        let hours = 0, minutes = 0, seconds = 0, milliseconds = 0;
+
+        if (match[1] !== undefined) {
+          hours = parseInt(match[1], 10);
+          minutes = parseInt(match[2], 10);
+          seconds = parseInt(match[3], 10);
+        } else {
+          minutes = parseInt(match[2], 10);
+          seconds = parseInt(match[3], 10);
+        }
+
+        if (match[4]) {
+          const msStr = match[4];
           milliseconds = msStr.length === 1 ? parseInt(msStr) * 100 : (msStr.length === 2 ? parseInt(msStr) * 10 : parseInt(msStr));
         }
         
-        const time = minutes * 60 + seconds + milliseconds / 1000;
+        const time = hours * 3600 + minutes * 60 + seconds + milliseconds / 1000;
         
         // Remove the `if (text)` check so we preserve empty lines (paragraph gaps)
         parsed.push({ time, text });
@@ -145,7 +156,8 @@ export default function LyricsView() {
     }
   }, [activeIndex, isSynced]);
 
-  if (!metadata.lyrics) {
+  const isLyricsEmptyRender = !metadata.lyrics || (typeof metadata.lyrics === 'string' && metadata.lyrics.trim() === '');
+  if (isLyricsEmptyRender) {
     return (
       <div className="flex-1 w-full flex items-center justify-center mb-8 px-4 h-full min-h-[300px]">
         <p className="text-white/40 text-2xl font-bold text-center tracking-widest uppercase">{t('player.lyricsNotAvailable', 'Letras no disponibles')}</p>

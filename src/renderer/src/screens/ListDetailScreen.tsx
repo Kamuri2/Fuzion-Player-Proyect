@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAudio } from '../context/AudioContext';
 import { useTheme } from '../context/ThemeContext';
-import { ArrowLeft, Play, Shuffle, Activity, Clock, ExternalLink, Music, Trash2, Camera, X } from 'lucide-react';
+import { ArrowLeft, Play, Shuffle, Activity, Clock, ExternalLink, Music, Trash2, X } from 'lucide-react';
 import CoverImage from '../components/CoverImage';
 import { useDominantColor } from '../hooks/useDominantColor';
 import { Virtuoso } from 'react-virtuoso';
@@ -63,7 +63,7 @@ const SongListItem = React.memo(({ item, isPlaying, onPress, index, hideCover, o
 export default function ListDetailScreen() {
   const { type, id } = useParams();
   const navigate = useNavigate();
-  const { albums, folders, artists, playlists, songs, playSound, playWithShuffle, currentSong, removeSongFromPlaylist, updatePlaylistCover } = useAudio();
+  const { albums, folders, artists, playlists, songs, playSound, playWithShuffle, currentSong, removeSongFromPlaylist } = useAudio();
   const { colors } = useTheme();
   const { t } = useTranslation();
 
@@ -228,7 +228,7 @@ export default function ListDetailScreen() {
       title = playlist.id === 'favorites' ? t('playlists.favorites', 'Me Gusta') : playlist.name;
       subtitle = playlist.description || t('detail.playlist', 'Playlist');
       cover = playlist.cover || null;
-      audioPath = dataList[0]?.path;
+      audioPath = cover ? undefined : dataList[0]?.path;
     }
   }
 
@@ -326,26 +326,6 @@ export default function ListDetailScreen() {
             placeholderClassName="w-full h-full bg-black/10 dark:bg-white/10"
             iconSize={80}
           />
-          {type === 'playlist' && id !== 'favorites' && (
-            <button
-              onClick={async () => {
-                try {
-                  const url = await window.api.openImageFile();
-                  if (url && id) {
-                    updatePlaylistCover(id, url);
-                  }
-                } catch (e) {
-                  console.error(e);
-                }
-              }}
-              className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white backdrop-blur-sm"
-            >
-              <div className="flex flex-col items-center gap-2">
-                <Camera size={32} />
-                <span className="font-bold text-sm">Cambiar Portada</span>
-              </div>
-            </button>
-          )}
         </div>
 
         {/* Text Details */}

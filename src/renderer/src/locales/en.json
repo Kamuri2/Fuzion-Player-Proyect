@@ -51,6 +51,8 @@
     "crossfade": "Crossfade",
     "crossfadeDesc": "Crossfades the current track and starts the next one without gaps.",
     "crossfadeDuration": "Crossfade Duration",
+    "crossfadeDurationIn": "Fade In Duration",
+    "crossfadeDurationOut": "Fade Out Duration",
     "about": "About",
     "songsRead": "Songs Read:",
     "deleteFolder": "Delete Folder"
@@ -124,7 +126,9 @@
     "songRemoved": "Song removed from \"{{name}}\".",
     "deleted": "Playlist \"{{name}}\" deleted.",
     "songAddError": "Error adding song.",
-    "songRemoveError": "Error removing song."
+    "songRemoveError": "Error removing song.",
+    "confirmDelete": "Are you sure you want to delete this playlist?",
+    "deleteTitle": "Delete Playlist"
   },
   "artists": {
     "title": "Artists",
@@ -174,6 +178,12 @@
     "cancel": "Cancel",
     "create": "Create",
     "back": "Back",
-    "playingFrom": "Playing from"
+    "playingFrom": "Playing from",
+    "translationBlocked": "TRANSLATION SERVICE IS CURRENTLY UNAVAILABLE",
+    "translationRestored": "SERVICE RESTORED, THANK YOU FOR WAITING"
+  },
+  "common": {
+    "cancel": "Cancel",
+    "confirm": "Confirm"
   }
 }
