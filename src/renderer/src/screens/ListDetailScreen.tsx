@@ -4,7 +4,6 @@ import { useAudio } from '../context/AudioContext';
 import { useTheme } from '../context/ThemeContext';
 import { ArrowLeft, Play, Shuffle, Activity, Clock, ExternalLink, Music, Trash2, X } from 'lucide-react';
 import CoverImage from '../components/CoverImage';
-import { useDominantColor } from '../hooks/useDominantColor';
 import { Virtuoso } from 'react-virtuoso';
 import { motion } from 'framer-motion';
 import lutoImg from '../assets/luto.png';
@@ -72,8 +71,6 @@ export default function ListDetailScreen() {
   let subtitle = '';
   let cover: string | null = null;
   let audioPath: string | undefined = undefined;
-
-  const dominantColor = useDominantColor(cover);
 
   const [artistDetails, setArtistDetails] = useState<{ bio: string | null, followers: number | null, origin: string | null, fanart: string | null, isDeceased?: boolean | null } | null>(null);
   const [isAboutArtistOpen, setIsAboutArtistOpen] = useState(false);
@@ -294,16 +291,25 @@ export default function ListDetailScreen() {
       transition={{ type: "tween", duration: 0.3, ease: "easeOut" }}
       className="flex-1 w-full pb-24 flex flex-col"
     >
-      {/* Dynamic Background */}
+      {/* Dynamic Background (Blurred Cover) */}
       <motion.div
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         transition={{ delay: 0.1, duration: 0.5 }}
-        className="absolute top-0 left-0 right-0 h-[600px] -z-10 select-none pointer-events-none transition-colors duration-1000"
-        style={{
-          background: `linear-gradient(to bottom, ${dominantColor || colors.card} 0%, ${colors.background} 100%)`
-        }}
-      />
+        className="absolute top-0 left-0 right-0 h-[600px] -z-10 overflow-hidden select-none pointer-events-none"
+      >
+        <CoverImage
+          coverUrl={cover}
+          audioPath={audioPath}
+          hq={true}
+          className="w-full h-full object-cover opacity-50 blur-[60px] scale-125 transition-all duration-1000"
+          placeholderClassName="w-full h-full bg-transparent"
+        />
+        <div 
+          className="absolute inset-0"
+          style={{ background: `linear-gradient(to bottom, transparent 0%, ${colors.background} 100%)` }}
+        />
+      </motion.div>
 
       {/* Header Section (Spotify Style) */}
       <div className="relative pt-20 pb-8 px-8 flex flex-col lg:flex-row items-end justify-between gap-8">

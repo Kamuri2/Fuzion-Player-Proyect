@@ -110,6 +110,10 @@ type ThemeContextType = {
   setShowTranslatedLyrics: (val: boolean) => void;
   lyricsLanguage: string;
   setLyricsLanguage: (lang: string) => void;
+  isFullMode: boolean;
+  setIsFullMode: (val: boolean) => void;
+  isNavHidden: boolean;
+  setIsNavHidden: (val: boolean) => void;
 };
 
 const ThemeContext = createContext<ThemeContextType>({
@@ -135,7 +139,11 @@ const ThemeContext = createContext<ThemeContextType>({
   showTranslatedLyrics: false,
   setShowTranslatedLyrics: () => { },
   lyricsLanguage: 'es',
-  setLyricsLanguage: () => { }
+  setLyricsLanguage: () => { },
+  isFullMode: false,
+  setIsFullMode: () => { },
+  isNavHidden: false,
+  setIsNavHidden: () => { }
 });
 
 export const useTheme = (): ThemeContextType => useContext(ThemeContext);
@@ -150,6 +158,8 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const [lyricsFontSize, setLyricsFontSizeState] = useState<number>(100);
   const [showTranslatedLyrics, setShowTranslatedLyricsState] = useState<boolean>(false);
   const [lyricsLanguage, setLyricsLanguageState] = useState<string>('es');
+  const [isFullMode, setIsFullModeState] = useState<boolean>(false);
+  const [isNavHidden, setIsNavHiddenState] = useState<boolean>(false);
 
   useEffect(() => {
     const fam = localStorage.getItem('@theme_family');
@@ -187,6 +197,16 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     const savedLyricsLang = localStorage.getItem('@lyrics_language');
     if (savedLyricsLang) {
       setLyricsLanguageState(savedLyricsLang);
+    }
+
+    const savedFullMode = localStorage.getItem('@is_full_mode');
+    if (savedFullMode !== null) {
+      setIsFullModeState(savedFullMode === 'true');
+    }
+
+    const savedNavHidden = localStorage.getItem('@is_nav_hidden');
+    if (savedNavHidden !== null) {
+      setIsNavHiddenState(savedNavHidden === 'true');
     }
   }, []);
 
@@ -301,6 +321,16 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     localStorage.setItem('@lyrics_language', lang);
   };
 
+  const setIsFullMode = (val: boolean): void => {
+    setIsFullModeState(val);
+    localStorage.setItem('@is_full_mode', val ? 'true' : 'false');
+  };
+
+  const setIsNavHidden = (val: boolean): void => {
+    setIsNavHiddenState(val);
+    localStorage.setItem('@is_nav_hidden', val ? 'true' : 'false');
+  };
+
   const toggleTheme = (): void => {
     setIsDarkMode(!isDarkMode);
   };
@@ -316,7 +346,7 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       backgroundImage, setBackgroundImage, pickBackgroundImage,
       customFont, setCustomFont, mascots, addMascot, removeMascot,
       lyricsFontSize, setLyricsFontSize, showTranslatedLyrics, setShowTranslatedLyrics,
-      lyricsLanguage, setLyricsLanguage
+      lyricsLanguage, setLyricsLanguage, isFullMode, setIsFullMode, isNavHidden, setIsNavHidden
     }}>
       <div style={{
         flex: 1,

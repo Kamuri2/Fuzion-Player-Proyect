@@ -17,7 +17,7 @@ const popularFonts = [
 export default function SettingsScreen() {
   const navigate = useNavigate();
   const { t, i18n } = useTranslation();
-  const { colors, isDarkMode, toggleTheme, themeFamily, setThemeFamily, particles, setParticles, customFont, setCustomFont, mascots, addMascot, removeMascot, lyricsFontSize, setLyricsFontSize, showTranslatedLyrics, setShowTranslatedLyrics, lyricsLanguage, setLyricsLanguage } = useTheme();
+  const { colors, isDarkMode, toggleTheme, themeFamily, setThemeFamily, particles, setParticles, customFont, setCustomFont, mascots, addMascot, removeMascot, lyricsFontSize, setLyricsFontSize, showTranslatedLyrics, setShowTranslatedLyrics, lyricsLanguage, setLyricsLanguage, isFullMode, setIsFullMode } = useTheme();
   const { loadSongsFromUri, songs, isScanning, isCrossfadeEnabled, setIsCrossfadeEnabled, crossfadeDurationIn, setCrossfadeDurationIn, crossfadeDurationOut, setCrossfadeDurationOut } = useAudio();
   const currentFolder = localStorage.getItem('@music_folder');
 
@@ -96,6 +96,20 @@ export default function SettingsScreen() {
               onClick={toggleTheme}
             >
               {isDarkMode ? t('settings.active') : t('settings.inactive')}
+            </button>
+          </div>
+
+          <div className="flex flex-row items-center justify-between mb-6">
+            <div className="flex flex-col pr-4">
+              <span className="font-medium" style={{ color: colors.text }}>{t('settings.fullMode', 'Modo Completo')}</span>
+              <span className="text-xs opacity-70 mt-1" style={{ color: colors.subText }}>{t('settings.fullModeDesc', 'Habilitar el diseño de escritorio completo para el reproductor con barras laterales.')}</span>
+            </div>
+            <button
+              className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors focus:outline-none ${isFullMode ? 'bg-green-500' : 'bg-gray-400'}`}
+              style={{ backgroundColor: isFullMode ? colors.primary : undefined }}
+              onClick={() => setIsFullMode(!isFullMode)}
+            >
+              <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${isFullMode ? 'translate-x-6' : 'translate-x-1'}`} />
             </button>
           </div>
 

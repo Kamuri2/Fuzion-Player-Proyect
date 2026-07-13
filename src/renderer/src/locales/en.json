@@ -55,7 +55,9 @@
     "crossfadeDurationOut": "Fade Out Duration",
     "about": "About",
     "songsRead": "Songs Read:",
-    "deleteFolder": "Delete Folder"
+    "deleteFolder": "Delete Folder",
+    "fullMode": "Compact Mode",
+    "fullModeDesc": "Enable the compact desktop layout for the player with sidebars."
   },
   "home": {
     "welcome": "Welcome back",

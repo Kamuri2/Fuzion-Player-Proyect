@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ArrowLeft, Play, Pause, SkipBack, SkipForward, Repeat, Shuffle, ListMusic, Mic2, Heart, Plus, ThumbsDown } from 'lucide-react';
+import { ArrowLeft, Play, Pause, SkipBack, SkipForward, Repeat, Shuffle, ListMusic, Mic2, Heart, Plus, ThumbsDown, Home, FolderOpen, Disc3, Mic2 as Mic2Icon, Menu } from 'lucide-react';
 import { useAudio } from '../context/AudioContext';
 import { useTheme } from '../context/ThemeContext';
 import { useTranslation } from 'react-i18next';
@@ -51,14 +51,35 @@ const MarqueeText = ({ text, className }: { text: string, className?: string }) 
   );
 };
 
+let hasRunInitialLeftPanelTimer = false;
+let savedLeftPanelState = true;
+let savedActiveMiniTab: 'playlists' | 'folders' | 'albums' | 'artists' = 'playlists';
+let savedMiniDetail: {type: 'playlist'|'folder'|'album'|'artist', id: string, name: string} | null = null;
+
 export default function PlayerScreen() {
-  const { colors } = useTheme();
+  const { colors, isFullMode } = useTheme();
   const navigate = useNavigate();
   const { t } = useTranslation();
   const [isQueueOpen, setIsQueueOpen] = useState(false);
+  const [isLeftPanelOpen, setIsLeftPanelOpen] = useState(savedLeftPanelState);
+  
+  // Guardar estado cada vez que cambie
+  useEffect(() => {
+    savedLeftPanelState = isLeftPanelOpen;
+  }, [isLeftPanelOpen]);
   const [isIdle, setIsIdle] = useState(false);
   const [isAddToPlaylistOpen, setIsAddToPlaylistOpen] = useState(false);
   const [isCreatePlaylistOpen, setIsCreatePlaylistOpen] = useState(false);
+  const [activeMiniTab, setActiveMiniTab] = useState<'playlists' | 'folders' | 'albums' | 'artists'>(savedActiveMiniTab);
+  const [miniDetail, setMiniDetail] = useState<{type: 'playlist'|'folder'|'album'|'artist', id: string, name: string} | null>(savedMiniDetail);
+
+  useEffect(() => {
+    savedActiveMiniTab = activeMiniTab;
+  }, [activeMiniTab]);
+
+  useEffect(() => {
+    savedMiniDetail = miniDetail;
+  }, [miniDetail]);
   const {
     currentSong,
     metadata,
@@ -76,6 +97,10 @@ export default function PlayerScreen() {
     setIsPlayerOpen,
     currentContextId,
     playlists,
+    folders,
+    albums,
+    artists,
+    songs,
     showLyrics,
     setShowLyrics,
     queue,
@@ -84,6 +109,29 @@ export default function PlayerScreen() {
     toggleFavorite,
     isFavorite
   } = useAudio();
+
+  const leftPanelTimerRef = useRef<NodeJS.Timeout | null>(null);
+
+  const startLeftPanelTimer = () => {
+    if (leftPanelTimerRef.current) clearTimeout(leftPanelTimerRef.current);
+    leftPanelTimerRef.current = setTimeout(() => {
+      setIsLeftPanelOpen(false);
+    }, 4000);
+  };
+
+  const cancelLeftPanelTimer = () => {
+    if (leftPanelTimerRef.current) clearTimeout(leftPanelTimerRef.current);
+  };
+
+  // Auto-hide left panel in Full Mode solo la primera vez y manejado por inactividad
+  useEffect(() => {
+    if (isFullMode && !hasRunInitialLeftPanelTimer) {
+      hasRunInitialLeftPanelTimer = true;
+      setIsLeftPanelOpen(true);
+      startLeftPanelTimer();
+    }
+    return () => cancelLeftPanelTimer();
+  }, [isFullMode]);
 
   // Efecto de inactividad: la portada central crece después de 2 segundos si está reproduciendo
   useEffect(() => {
@@ -124,8 +172,172 @@ export default function PlayerScreen() {
     seekTo(Number(e.target.value));
   };
 
+  const renderMiniPanelList = () => {
+    if (miniDetail) {
+      // Render detail view
+      let detailSongs: any[] = [];
+      let headerTitle = miniDetail.name;
+      let contextPrefix = '';
+      let headerCover: string | null | undefined = undefined;
+
+      if (miniDetail.type === 'playlist') {
+        const p = playlists.find(pl => pl.id === miniDetail.id);
+        if (p) {
+          detailSongs = songs.filter(s => p.songIds.includes(s.id));
+          headerTitle = p.name;
+          contextPrefix = 'playlist:';
+          headerCover = p.cover;
+        }
+      } else if (miniDetail.type === 'folder') {
+        const f = folders[miniDetail.id];
+        if (f) {
+          detailSongs = f.songs || [];
+          headerTitle = f.name;
+          contextPrefix = 'folder:';
+        }
+      } else if (miniDetail.type === 'album') {
+        const a = albums[miniDetail.id];
+        if (a) {
+          detailSongs = a.songs || [];
+          headerTitle = a.name;
+          contextPrefix = 'album:';
+          headerCover = a.cover;
+        }
+      } else if (miniDetail.type === 'artist') {
+        const a = artists[miniDetail.id];
+        if (a) {
+          detailSongs = a.songs || [];
+          headerTitle = a.name;
+          contextPrefix = 'artist:';
+          headerCover = a.cover;
+        }
+      }
+
+      if (!headerCover && detailSongs.length > 0) {
+        headerCover = detailSongs[0].cover;
+      }
+
+      return (
+        <div className="flex flex-col h-full overflow-hidden">
+          <div className="relative flex flex-col mb-2 w-full shrink-0">
+            <div className="absolute inset-0 z-0 overflow-hidden bg-black/40">
+              <CoverImage coverUrl={headerCover} audioPath={detailSongs[0]?.path} hq={true} className="w-full h-full object-cover opacity-60 blur-lg scale-110" iconSize={20} />
+              <div className="absolute inset-0 bg-gradient-to-b from-transparent to-black/90" />
+            </div>
+            
+            <div className="relative z-10 flex flex-col p-4 pt-6">
+              <div className="flex flex-row items-center mb-3 cursor-pointer text-white/70 hover:text-white w-fit" onClick={() => setMiniDetail(null)}>
+                <ArrowLeft size={16} className="mr-2" />
+                <span className="text-xs font-bold uppercase tracking-widest">{t('player.back', 'Volver')}</span>
+              </div>
+              <div className="flex flex-row items-end gap-3 mt-2">
+                <div className="w-24 h-24 rounded-md shadow-2xl overflow-hidden shrink-0 bg-black/40">
+                  <CoverImage coverUrl={headerCover} audioPath={detailSongs[0]?.path} hq={true} className="w-full h-full object-cover" iconSize={32} />
+                </div>
+                <div className="flex flex-col overflow-hidden pb-1">
+                  <span className="text-[10px] uppercase font-black text-white/70 tracking-widest mb-1">{miniDetail.type}</span>
+                  <span className="text-2xl font-black text-white truncate leading-none">{headerTitle}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div className="flex flex-col gap-1 overflow-y-auto w-full px-2 pb-24">
+            {detailSongs.map((s) => {
+              const isPlayingThis = currentSong?.id === s.id;
+              return (
+                <div 
+                  key={s.id} 
+                  onClick={() => playSound(s, `${contextPrefix}${miniDetail.id}`, detailSongs)}
+                  className={`flex flex-row items-center gap-3 p-2 rounded-lg cursor-pointer ${isPlayingThis ? 'bg-white/20' : 'hover:bg-white/10'}`}
+                >
+                  <div className="w-8 h-8 rounded overflow-hidden shrink-0">
+                    <CoverImage coverUrl={s.cover} audioPath={s.path} hq={true} className="w-full h-full object-cover" iconSize={16} />
+                  </div>
+                  <div className="flex flex-col truncate">
+                    <span className={`text-xs font-bold truncate ${isPlayingThis ? 'text-green-400' : 'text-white'}`}>{s.title}</span>
+                    <span className="text-[10px] text-white/50 truncate">{s.artist}</span>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      );
+    }
+
+    if (activeMiniTab === 'playlists') {
+      return (
+        <div className="flex flex-col gap-2 overflow-y-auto w-full pr-2 pb-24">
+          {playlists.map((p) => (
+            <div key={p.id} onClick={() => setMiniDetail({type: 'playlist', id: p.id, name: p.name})} className="flex flex-row items-center gap-3 p-2 rounded-lg hover:bg-white/10 cursor-pointer">
+              <div className="w-10 h-10 rounded overflow-hidden shrink-0">
+                <CoverImage coverUrl={p.cover} audioPath={undefined} hq={true} className="w-full h-full object-cover" iconSize={20} />
+              </div>
+              <div className="flex flex-col truncate">
+                <span className="text-sm font-bold text-white truncate">{p.name}</span>
+                <span className="text-xs text-white/50 truncate">{p.songIds.length} {t('detail.songs')}</span>
+              </div>
+            </div>
+          ))}
+        </div>
+      );
+    }
+    if (activeMiniTab === 'folders') {
+      return (
+        <div className="flex flex-col gap-2 overflow-y-auto w-full pr-2 pb-24">
+          {Object.values(folders || {}).map((f: any) => (
+            <div key={f.name} onClick={() => setMiniDetail({type: 'folder', id: f.name, name: f.name})} className="flex flex-row items-center gap-3 p-2 rounded-lg hover:bg-white/10 cursor-pointer">
+              <div className="w-10 h-10 rounded bg-white/10 flex items-center justify-center shrink-0">
+                <FolderOpen size={20} className="text-white/70" />
+              </div>
+              <div className="flex flex-col truncate">
+                <span className="text-sm font-bold text-white truncate">{f.name}</span>
+                <span className="text-xs text-white/50 truncate">{f.songs?.length || 0} {t('detail.songs')}</span>
+              </div>
+            </div>
+          ))}
+        </div>
+      );
+    }
+    if (activeMiniTab === 'albums') {
+      return (
+        <div className="flex flex-col gap-2 overflow-y-auto w-full pr-2 pb-24">
+          {Object.values(albums || {}).map((a: any) => (
+            <div key={a.name} onClick={() => setMiniDetail({type: 'album', id: a.name, name: a.name})} className="flex flex-row items-center gap-3 p-2 rounded-lg hover:bg-white/10 cursor-pointer">
+              <div className="w-10 h-10 rounded overflow-hidden shrink-0">
+                <CoverImage coverUrl={a.cover} audioPath={a.songs?.[0]?.path} hq={true} className="w-full h-full object-cover" iconSize={20} />
+              </div>
+              <div className="flex flex-col truncate">
+                <span className="text-sm font-bold text-white truncate">{a.name}</span>
+                <span className="text-xs text-white/50 truncate">{a.artist}</span>
+              </div>
+            </div>
+          ))}
+        </div>
+      );
+    }
+    if (activeMiniTab === 'artists') {
+      return (
+        <div className="flex flex-col gap-2 overflow-y-auto w-full pr-2 pb-24">
+          {Object.values(artists || {}).map((a: any) => (
+            <div key={a.name} onClick={() => setMiniDetail({type: 'artist', id: a.name, name: a.name})} className="flex flex-row items-center gap-3 p-2 rounded-lg hover:bg-white/10 cursor-pointer">
+              <div className="w-10 h-10 rounded-full overflow-hidden shrink-0 flex items-center justify-center bg-white/10">
+                <CoverImage coverUrl={a.cover} audioPath={a.songs?.[0]?.path} hq={true} className="w-full h-full object-cover" iconSize={20} />
+              </div>
+              <div className="flex flex-col truncate">
+                <span className="text-sm font-bold text-white truncate">{a.name}</span>
+                <span className="text-xs text-white/50 truncate">{a.songs?.length || 0} {t('detail.songs')}</span>
+              </div>
+            </div>
+          ))}
+        </div>
+      );
+    }
+    return null;
+  };
+
   return (
-    <div className="flex flex-col h-screen relative overflow-hidden bg-[#121212] select-none pb-8">
+    <div className="flex flex-col h-screen relative overflow-hidden bg-[#121212] select-none">
       {/* Dynamic Background */}
       <div className="absolute inset-0 z-0 overflow-hidden">
         <CoverImage
@@ -138,43 +350,115 @@ export default function PlayerScreen() {
         <div className="absolute inset-0 bg-transparent" />
       </div>
 
-      {/* Header */}
-      <div className="relative z-10 flex flex-row items-center justify-between px-8 py-6">
-        <button onClick={() => setIsPlayerOpen(false)} className="p-2 rounded-full hover:bg-white/10 text-white transition-colors">
-          <ArrowLeft size={28} />
-        </button>
-        <div className="text-center flex-1 pr-11">
-          <p className="text-xs font-bold text-white/50 tracking-widest uppercase">
-            {t('player.playingFrom', 'Reproduciendo desde')} {(() => {
-              if (!currentContextId || currentContextId === 'all') return t('sidebar.home', 'tu música');
-              if (currentContextId === 'queue') return 'Queue';
-              if (currentContextId === 'favorites') return t('sidebar.favorites', 'tus favoritos');
-              if (currentContextId.startsWith('album:')) return `${t('albums.title', 'Álbum')} • ${currentContextId.split('album:')[1]}`;
-              if (currentContextId.startsWith('artist:')) return `${t('artists.title', 'Artista')} • ${currentContextId.split('artist:')[1]}`;
-              if (currentContextId.startsWith('folder:')) return `${t('folders.title', 'Carpeta')} • ${currentContextId.split('folder:')[1]}`;
-              if (currentContextId.startsWith('playlist:')) {
-                const pId = currentContextId.split('playlist:')[1];
-                const p = playlists.find(pl => pl.id === pId);
-                return `${t('playlists.title', 'Playlist')} • ${p ? p.name : 'Unknown'}`;
-              }
-              return t('sidebar.home', 'tu música');
-            })()}
-          </p>
+      <div className="flex-1 flex flex-row relative z-10 min-h-0 w-full">
+        {/* Floating Top Left Controls */}
+        <div className="absolute top-0 left-0 p-6 z-40 group flex flex-row gap-4 items-center h-20">
+            {/* The back button appears only on hover or if not full mode */}
+            {(!isFullMode || !isLeftPanelOpen) && (
+              <button onClick={() => setIsPlayerOpen(false)} className={`p-2 rounded-full bg-black/50 hover:bg-white/10 text-white transition-all shadow-xl ${isFullMode ? 'opacity-0 group-hover:opacity-100' : 'opacity-100'}`}>
+                <ArrowLeft size={28} />
+              </button>
+            )}
+            {/* Menu button to open the left panel */}
+            {isFullMode && !isLeftPanelOpen && (
+              <button onClick={() => { setIsLeftPanelOpen(true); startLeftPanelTimer(); }} className="p-2 rounded-full bg-black/50 hover:bg-white/10 text-white transition-all shadow-xl">
+                <Menu size={28} />
+              </button>
+            )}
         </div>
-      </div>
 
-      {/* Main Split Area (Flex-1) */}
-      <div className="relative z-10 flex-1 min-h-0 flex flex-row items-center justify-center px-8 w-full mx-auto gap-8 transition-all duration-500 ease-in-out max-w-[1400px]">
+        {/* Left Navigation Pane (Triptych Left Column) */}
+        {isFullMode && (
+          <div 
+            onMouseEnter={cancelLeftPanelTimer}
+            onMouseLeave={startLeftPanelTimer}
+            className={`absolute top-0 bottom-0 left-0 z-30 transition-all duration-500 ease-in-out border-r border-white/5 backdrop-blur-md overflow-hidden bg-black/40 ${isLeftPanelOpen ? 'translate-x-0 w-[340px] opacity-100' : '-translate-x-full w-0 opacity-0'}`}
+          >
+            <div className="w-[340px] h-full flex flex-col pt-6">
+              <div className="flex flex-row items-center justify-between mb-4 pb-4 px-4 border-b border-white/10 shrink-0">
+                <button onClick={() => { setIsPlayerOpen(false); navigate('/'); }} className="p-2 hover:bg-white/10 rounded-lg text-white/70 hover:text-white" title={t('sidebar.home')}>
+                  <Home size={20} />
+                </button>
+                <button onClick={() => { setActiveMiniTab('playlists'); setMiniDetail(null); }} className={`p-2 rounded-lg ${activeMiniTab === 'playlists' ? 'bg-white/20 text-white' : 'hover:bg-white/10 text-white/70 hover:text-white'}`} title={t('sidebar.playlists')}>
+                  <ListMusic size={20} />
+                </button>
+                <button onClick={() => { setActiveMiniTab('folders'); setMiniDetail(null); }} className={`p-2 rounded-lg ${activeMiniTab === 'folders' ? 'bg-white/20 text-white' : 'hover:bg-white/10 text-white/70 hover:text-white'}`} title={t('sidebar.folders')}>
+                  <FolderOpen size={20} />
+                </button>
+                <button onClick={() => { setActiveMiniTab('albums'); setMiniDetail(null); }} className={`p-2 rounded-lg ${activeMiniTab === 'albums' ? 'bg-white/20 text-white' : 'hover:bg-white/10 text-white/70 hover:text-white'}`} title={t('sidebar.albums')}>
+                  <Disc3 size={20} />
+                </button>
+                <button onClick={() => { setActiveMiniTab('artists'); setMiniDetail(null); }} className={`p-2 rounded-lg ${activeMiniTab === 'artists' ? 'bg-white/20 text-white' : 'hover:bg-white/10 text-white/70 hover:text-white'}`} title={t('sidebar.artists')}>
+                  <Mic2Icon size={20} />
+                </button>
+              </div>
+              {renderMiniPanelList()}
+            </div>
+          </div>
+        )}
 
-        {/* Cover Art Area (Cover Flow) */}
-        <div
-          className={`flex flex-col items-center justify-center transition-all duration-500 ease-in-out h-full overflow-visible ${showLyrics && isQueueOpen ? 'w-0 opacity-0 scale-90 hidden' : showLyrics || isQueueOpen ? 'w-1/2 opacity-100 scale-100 flex-shrink-0' : 'w-full opacity-100 scale-100'
+        {/* Main Content Area (100% width, inherently perfectly centered) */}
+        <div className="flex-1 flex flex-col min-w-0 h-full relative">
+          {/* Header */}
+          <div className="relative z-10 flex flex-row items-center justify-between px-8 py-6 shrink-0 h-20 pointer-events-auto">
+            <div className="text-center w-full flex-1">
+              <p className="text-xs font-bold text-white/50 tracking-widest uppercase">
+                {t('player.playingFrom', 'Reproduciendo desde')} {(() => {
+                  if (!currentContextId || currentContextId === 'all') return t('sidebar.home', 'tu música');
+                  if (currentContextId === 'queue') return 'Queue';
+                  if (currentContextId === 'favorites') return t('sidebar.favorites', 'tus favoritos');
+                  if (currentContextId.startsWith('album:')) return `${t('albums.title', 'Álbum')} • ${currentContextId.split('album:')[1]}`;
+                  if (currentContextId.startsWith('artist:')) return `${t('artists.title', 'Artista')} • ${currentContextId.split('artist:')[1]}`;
+                  if (currentContextId.startsWith('folder:')) return `${t('folders.title', 'Carpeta')} • ${currentContextId.split('folder:')[1]}`;
+                  if (currentContextId.startsWith('playlist:')) {
+                    const pId = currentContextId.split('playlist:')[1];
+                    const p = playlists.find(pl => pl.id === pId);
+                    return `${t('playlists.title', 'Playlist')} • ${p ? p.name : 'Unknown'}`;
+                  }
+                  return t('sidebar.home', 'tu música');
+                })()}
+              </p>
+            </div>
+          </div>
+
+          {/* Main Split Area (Flex-1) */}
+          <div className={`relative z-10 flex-1 min-h-0 flex flex-row items-center justify-center px-8 w-full mx-auto transition-all duration-500 ease-in-out pointer-events-auto ${isFullMode ? 'gap-8' : 'gap-0'}`}>
+
+            {/* Cover Art Area (Cover Flow / Center) */}
+            <div
+          className={`flex flex-col items-center justify-center transition-all duration-500 ease-in-out h-full overflow-visible ${
+            isFullMode 
+              ? (showLyrics ? 'hidden' : 'flex-1') // In Full Mode, completely hide cover if lyrics are shown
+              : (showLyrics && isQueueOpen ? 'w-0 opacity-0 scale-90 hidden' : showLyrics || isQueueOpen ? 'w-[45%] opacity-100 scale-100 flex-none' : 'w-full opacity-100 scale-100')
             }`}
           style={{ perspective: 1200 }}
         >
           <div className="relative w-full h-full flex items-center justify-center perspective-[1200px]">
             <AnimatePresence mode="popLayout" initial={false}>
               {(() => {
+                if (isFullMode) {
+                  // In Full Mode, NO CAROUSEL. Just show current cover in the center.
+                  return (
+                    <motion.div
+                      key={currentSong.id}
+                      className="absolute h-[75%] md:h-[90%] max-h-[800px] aspect-square rounded-2xl"
+                      initial={{ opacity: 0, scale: 0.9 }}
+                      animate={{ opacity: 1, scale: isIdle ? 1.05 : 1 }}
+                      exit={{ opacity: 0, scale: 0.9 }}
+                      transition={{ type: "tween", ease: "easeInOut", duration: 0.35 }}
+                    >
+                      <CoverImage
+                        coverUrl={currentSong.cover}
+                        audioPath={currentSong.path}
+                        hq={true}
+                        className="w-full h-full object-cover rounded-2xl shadow-2xl"
+                        iconSize={64}
+                      />
+                    </motion.div>
+                  );
+                }
+
+                // Normal Mode (Carousel)
                 const currentIndex = queuePosition - 1;
                 const items: { song: any; offset: number }[] = [];
                 const showOnlyCenter = showLyrics || isQueueOpen;
@@ -206,7 +490,7 @@ export default function PlayerScreen() {
                     <motion.div
                       key={song.id}
                       // Forzamos el tamaño máximo basado en la altura disponible para evitar recortes verticales
-                      className={`absolute h-[75%] md:h-[90%] max-h-[800px] aspect-square rounded-2xl cursor-pointer ${isCenter ? '' : 'pointer-events-auto'}`}
+                      className={`absolute ${isFullMode ? 'h-[75%] md:h-[90%] max-h-[800px]' : 'h-[75%] md:h-[85%] max-h-[640px]'} aspect-square rounded-2xl cursor-pointer ${isCenter ? '' : 'pointer-events-auto'}`}
                       initial={{ opacity: 0, x: `${translateX + (offset > 0 ? 20 : -20)}%`, scale: isCenter ? 1 : scale * 0.9, rotateY: rotateY * 1.5 }}
                       animate={{
                         opacity,
@@ -245,7 +529,10 @@ export default function PlayerScreen() {
 
         {/* Lyrics Area */}
         <div
-          className={`flex flex-col items-center justify-center overflow-hidden transition-all duration-500 ease-in-out h-full ${showLyrics ? 'flex-1 opacity-100 w-1/2 translate-x-0' : 'w-0 opacity-0 flex-none translate-x-4'
+          className={`flex flex-col items-center justify-center overflow-hidden transition-all duration-500 ease-in-out h-full ${
+            isFullMode 
+              ? (showLyrics ? 'flex-1 opacity-100' : 'hidden') // In Full Mode, take center if toggled
+              : (showLyrics ? 'w-[45%] flex-none opacity-100 translate-x-0' : 'w-0 opacity-0 flex-none translate-x-4')
             }`}
         >
           <div className="w-full h-full min-w-[300px]">
@@ -253,21 +540,25 @@ export default function PlayerScreen() {
           </div>
         </div>
 
-        {/* Queue Area */}
-        <div
-          className={`flex flex-col items-center justify-center overflow-hidden transition-all duration-500 ease-in-out h-full ${isQueueOpen ? 'flex-1 opacity-100 py-4 w-1/2 translate-x-0' : 'w-0 opacity-0 flex-none py-4 translate-x-4'
-            }`}
-        >
-          <div className="w-full h-full min-w-[300px]">
-            <QueuePanel isOpen={isQueueOpen} onClose={() => setIsQueueOpen(false)} />
-          </div>
-        </div>
-      </div>
+            {/* Queue Area */}
+            <div
+              className={`flex flex-col items-center justify-center overflow-hidden transition-all duration-500 ease-in-out ${
+                isFullMode 
+                  ? `fixed right-0 top-0 bottom-0 z-40 bg-[#121212] border-l border-white/5 shadow-2xl ${isQueueOpen ? 'w-[340px] opacity-100 translate-x-0' : 'w-0 opacity-0 translate-x-full pointer-events-none'}`
+                  : (isQueueOpen ? 'w-[45%] flex-none opacity-100 py-4 h-full translate-x-0 relative' : 'w-0 opacity-0 h-full flex-none py-4 translate-x-4 relative')
+                }`}
+            >
+              <div className={`${isFullMode ? 'w-[340px]' : 'w-full max-w-md'} h-full`}>
+                <QueuePanel isOpen={isQueueOpen} onClose={() => setIsQueueOpen(false)} />
+              </div>
+            </div>
 
-      {/* Bottom Controls Area */}
-      <div className="relative z-10 w-full max-w-4xl mx-auto px-8 mt-6 flex flex-col">
-        {/* Track Info */}
-        <div className="w-full flex flex-row items-center justify-between mb-6">
+          </div>
+
+          {/* Bottom Controls Area */}
+          <div className="relative z-10 w-full max-w-4xl mx-auto px-8 flex flex-col pb-8">
+            {/* Track Info */}
+            <div className="w-full flex flex-row items-center justify-between mb-6">
           <div className="flex flex-col flex-1 overflow-hidden pr-4">
             <AnimatePresence mode="popLayout" initial={false}>
               <motion.div
@@ -391,13 +682,13 @@ export default function PlayerScreen() {
           </button>
 
           <button
-            className="w-16 h-16 md:w-20 md:h-20 flex items-center justify-center rounded-full transition-transform active:scale-95 hover:scale-105 bg-white text-black"
+            className="p-4 opacity-90 hover:opacity-100 hover:scale-105 transition-transform active:scale-95 text-white"
             onClick={pauseOrResumeSound}
           >
             {isPlaying ? (
-              <Pause size={32} fill="currentColor" />
+              <Pause size={56} fill="currentColor" />
             ) : (
-              <Play size={32} fill="currentColor" className="ml-2" />
+              <Play size={56} fill="currentColor" className="ml-2" />
             )}
           </button>
 
@@ -430,6 +721,8 @@ export default function PlayerScreen() {
           </div>
         )}
       </div>
+    </div>
+  </div>
 
       <AddToPlaylistModal 
         isOpen={isAddToPlaylistOpen} 

@@ -65,6 +65,10 @@
 - **Prevencion de errores en la traduccion:** Se soluciono un problema tecnico que causaba que las letras no se mostraran si el servicio de traduccion fallaba. Ahora el sistema es mas inteligente y no guarda archivos vacios cuando hay errores de conexion, permitiendo que la traduccion se intente de nuevo mas tarde.
 - **Notificaciones de estado del traductor:** Se agregaron alertas visuales en la aplicacion para avisarte cuando el servicio de traduccion no esta disponible temporalmente (por exceso de uso) y otra alerta para avisarte cuando el servicio se restablece y vuelve a funcionar.
 - **Nueva ventana de confirmacion:** Se reemplazo la ventana basica del sistema por un cuadro de confirmacion oscuro, elegante y nativo al intentar borrar una lista de reproduccion, manteniendo la estetica del reproductor.
+- **Panel lateral inteligente e interactivo:** El panel izquierdo del reproductor ahora se oculta de forma automatica luego de 4 segundos de inactividad la primera vez que entras. Ademas, cuenta con una nueva animacion suave al contraerse hacia un lado.
+- **Memoria de estado avanzada:** Si navegas por tus albumes o artistas desde el panel del reproductor y luego sales, la proxima vez que abras el reproductor recordara exactamente en que pestaña y seccion del panel te habias quedado.
+- **Ajustes de proporciones del reproductor:** Se optimizo el tamaño de la portada en el modo de vista normal (aumentada un 5%) y se redujo el espacio horizontal entre la portada y las letras (un 9% mas juntas) logrando un balance visual mucho mas limpio.
+- **Boton de retroceso dinamico:** La flecha de retroceso del reproductor ahora se oculta automaticamente cuando el panel lateral esta abierto para evitar sobreponerse con otros botones y mantener la interfaz limpia.
 
 ---
 

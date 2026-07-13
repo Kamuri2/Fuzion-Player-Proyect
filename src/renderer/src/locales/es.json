@@ -55,7 +55,9 @@
     "crossfadeDurationOut": "Duración de Salida (Fade Out)",
     "about": "Acerca de",
     "songsRead": "Canciones Leídas:",
-    "deleteFolder": "Eliminar Carpeta"
+    "deleteFolder": "Eliminar Carpeta",
+    "fullMode": "Modo Compacto",
+    "fullModeDesc": "Habilitar el diseño de escritorio compacto para el reproductor con barras laterales."
   },
   "home": {
     "welcome": "Bienvenido de nuevo",
