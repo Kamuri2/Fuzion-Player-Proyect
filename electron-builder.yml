@@ -14,7 +14,7 @@ asarUnpack:
   - resources/**
 win:
   executableName: SCat
-  icon: build/CybeCat.png
+  icon: build/icon.png
 nsis:
   artifactName: SCat-${version}-setup.${ext}
   shortcutName: ${productName}

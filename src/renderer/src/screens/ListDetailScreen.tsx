@@ -64,7 +64,7 @@ export default function ListDetailScreen() {
   const navigate = useNavigate();
   const { albums, folders, artists, playlists, songs, playSound, playWithShuffle, currentSong, removeSongFromPlaylist } = useAudio();
   const { colors } = useTheme();
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
 
   let dataList: any = null;
   let title = '';
@@ -74,6 +74,28 @@ export default function ListDetailScreen() {
 
   const [artistDetails, setArtistDetails] = useState<{ bio: string | null, followers: number | null, origin: string | null, fanart: string | null, isDeceased?: boolean | null } | null>(null);
   const [isAboutArtistOpen, setIsAboutArtistOpen] = useState(false);
+  const [translatedBio, setTranslatedBio] = useState<string | null>(null);
+
+  useEffect(() => {
+    let isMounted = true;
+    if (isAboutArtistOpen && artistDetails?.bio) {
+      const translateBio = async () => {
+        try {
+          const lines = artistDetails.bio!.split('\n');
+          const translatedLines = await (window as any).api.translateLyrics(`bio_${id}_${i18n.language}`, lines, i18n.language);
+          if (isMounted) {
+            setTranslatedBio(translatedLines && translatedLines.length > 0 ? translatedLines.join('\n') : artistDetails.bio);
+          }
+        } catch (e) {
+          if (isMounted) setTranslatedBio(artistDetails.bio);
+        }
+      };
+      translateBio();
+    } else {
+      setTranslatedBio(null);
+    }
+    return () => { isMounted = false; };
+  }, [isAboutArtistOpen, artistDetails?.bio, i18n.language, id]);
 
   useEffect(() => {
     if (type === 'artist' && id) {
@@ -389,7 +411,7 @@ export default function ListDetailScreen() {
                 <div className="lg:hidden bg-black/10 dark:bg-white/5 p-4 rounded-xl border border-black/5 dark:border-white/5 mb-4 cursor-pointer" onClick={() => setIsAboutArtistOpen(true)}>
                   <h3 className="font-bold text-sm uppercase tracking-wider mb-2 opacity-70" style={{ color: colors.text }}>{t('detail.about')}</h3>
                   <p className="text-sm opacity-90 leading-relaxed line-clamp-3" style={{ color: colors.text }}>
-                    {artistDetails.bio}
+                    {translatedBio || artistDetails.bio}
                   </p>
                 </div>
               )}
@@ -595,7 +617,7 @@ export default function ListDetailScreen() {
             
             <div className="lg:w-2/3">
               <p className="text-lg leading-relaxed whitespace-pre-wrap font-medium opacity-90" style={{ color: colors.text }}>
-                {artistDetails?.bio}
+                {translatedBio || artistDetails?.bio}
               </p>
             </div>
           </div>

@@ -72,12 +72,12 @@ export default function CoverImage({ coverUrl, className = '', placeholderClassN
   }
 
   return (
-    <div className={`bg-white flex justify-center items-center border-2 border-black relative ${placeholderClassName} ${className}`}>
+    <div className={`bg-white flex justify-center items-center relative ${placeholderClassName} ${className}`}>
       {type === 'artist' ? (
         <div className="relative flex items-center justify-center">
-          <Cat size={iconSize} color="#000000" />
+          <Cat size={iconSize ? iconSize * 1.5 : 36} color="#000000" />
           <CircleHelp 
-            size={iconSize ? iconSize * 0.4 : 10} 
+            size={iconSize ? iconSize * 0.6 : 16} 
             color="#000000" 
             className="absolute -top-2 -right-2 bg-white rounded-full shadow-sm" 
           />
