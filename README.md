@@ -69,6 +69,10 @@
 - **Memoria de estado avanzada:** Si navegas por tus albumes o artistas desde el panel del reproductor y luego sales, la proxima vez que abras el reproductor recordara exactamente en que pestaña y seccion del panel te habias quedado.
 - **Ajustes de proporciones del reproductor:** Se optimizo el tamaño de la portada en el modo de vista normal (aumentada un 5%) y se redujo el espacio horizontal entre la portada y las letras (un 9% mas juntas) logrando un balance visual mucho mas limpio.
 - **Boton de retroceso dinamico:** La flecha de retroceso del reproductor ahora se oculta automaticamente cuando el panel lateral esta abierto para evitar sobreponerse con otros botones y mantener la interfaz limpia.
+- **Optimización extrema de memoria:** Se implementó *Lazy Loading* (Carga perezosa) en las pantallas de Álbumes y Artistas para que las portadas solo se carguen a medida que haces scroll, evitando que la aplicación consuma exceso de RAM.
+- **Respeto por nombres de bandas:** Se eliminó la función intrusiva que intentaba separar nombres con comas o palabras como "and" o "feat", de modo que bandas como "LSD and the Search for God" mantienen su nombre intacto.
+- **Icono por defecto mejorado:** Se reemplazó el icono por defecto para artistas desconocidos por un diseño minimalista y personalizado (un gatito con un signo de interrogación) que es mucho más claro y estético, ajustándose automáticamente al tamaño de la vista.
+- **Ajustes de encuadre fotográfico:** Las imágenes de fondo y banners de artistas (como *Fanarts*) ahora están configuradas para no cortar las cabezas u otros detalles importantes en la parte superior.
 
 ---
 
