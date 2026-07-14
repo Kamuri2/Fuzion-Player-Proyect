@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Music } from 'lucide-react';
+import { Music, Cat, CircleHelp } from 'lucide-react';
 
 interface CoverImageProps {
   coverUrl?: string | null;
@@ -8,6 +8,7 @@ interface CoverImageProps {
   iconSize?: number;
   audioPath?: string;
   hq?: boolean;
+  type?: 'artist' | 'album' | 'folder' | 'playlist' | 'song';
 }
 
 const MAX_CACHE_SIZE = 500;
@@ -22,7 +23,7 @@ function setCache(key: string, value: string | null) {
   coverCache.set(key, value);
 }
 
-export default function CoverImage({ coverUrl, className = '', placeholderClassName = '', iconSize = 24, audioPath, hq = true }: CoverImageProps) {
+export default function CoverImage({ coverUrl, className = '', placeholderClassName = '', iconSize = 24, audioPath, hq = true, type }: CoverImageProps) {
   const [, forceUpdate] = useState({});
 
   let displayCover = coverUrl;
@@ -71,8 +72,19 @@ export default function CoverImage({ coverUrl, className = '', placeholderClassN
   }
 
   return (
-    <div className={`bg-white flex justify-center items-center border-2 border-black ${placeholderClassName} ${className}`}>
-      <Music size={iconSize} color="#000000" />
+    <div className={`bg-white flex justify-center items-center border-2 border-black relative ${placeholderClassName} ${className}`}>
+      {type === 'artist' ? (
+        <div className="relative flex items-center justify-center">
+          <Cat size={iconSize} color="#000000" />
+          <CircleHelp 
+            size={iconSize ? iconSize * 0.4 : 10} 
+            color="#000000" 
+            className="absolute -top-2 -right-2 bg-white rounded-full shadow-sm" 
+          />
+        </div>
+      ) : (
+        <Music size={iconSize} color="#000000" />
+      )}
     </div>
   );
 }

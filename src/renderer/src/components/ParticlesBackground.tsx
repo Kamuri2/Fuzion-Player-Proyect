@@ -1,10 +1,11 @@
 /* eslint-disable */
 // @ts-ignore
 import React, { useEffect, useRef, JSX } from 'react';
-import type { ParticleType } from '../context/ThemeContext';
+import { useTheme, type ParticleType } from '../context/ThemeContext';
 
 export default function ParticlesBackground({ type }: { type: ParticleType }): JSX.Element { // eslint-disable-line no-undef
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const { isDarkMode, colors } = useTheme();
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -40,14 +41,17 @@ export default function ParticlesBackground({ type }: { type: ParticleType }): J
 
     const render = (): void => {
       ctx.clearRect(0, 0, canvas.width, canvas.height);
+      const isDark = isDarkMode;
+      const baseColor = isDark ? '#ffffff' : colors.primary;
 
       particles.forEach(p => {
-        ctx.fillStyle = `rgba(255, 255, 255, ${type === 'stars' ? Math.abs(Math.sin(Date.now() * 0.001 * p.radius + p.x)) : p.alpha})`;
+        ctx.globalAlpha = type === 'stars' ? Math.abs(Math.sin(Date.now() * 0.001 * p.radius + p.x)) : p.alpha;
+        ctx.fillStyle = baseColor;
         ctx.beginPath();
         ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
 
         if (type === 'bubbles') {
-          ctx.strokeStyle = `rgba(255, 255, 255, ${p.alpha})`;
+          ctx.strokeStyle = baseColor;
           ctx.stroke();
         } else {
           ctx.fill();
@@ -61,6 +65,7 @@ export default function ParticlesBackground({ type }: { type: ParticleType }): J
         if (p.x > canvas.width + 10) p.x = -10;
         if (p.x < -10) p.x = canvas.width + 10;
       });
+      ctx.globalAlpha = 1;
 
       animationFrameId = requestAnimationFrame(render);
     };
@@ -70,7 +75,7 @@ export default function ParticlesBackground({ type }: { type: ParticleType }): J
       window.removeEventListener('resize', resize);
       cancelAnimationFrame(animationFrameId);
     };
-  }, [type]);
+  }, [type, isDarkMode, colors.primary]);
 
   return <canvas ref={canvasRef} style={{ width: '100%', height: '100%', display: 'block' }} />;
 }

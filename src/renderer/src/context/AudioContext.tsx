@@ -213,14 +213,30 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       if (!albumsObj[aName]) albumsObj[aName] = { name: aName, artist: artName, cover: song.cover || null, songs: [], year: song.year };
       albumsObj[aName].songs.push(song);
 
-      if (!artistsObj[artName]) {
-        let coverUrl = song.cover || null;
-        if (artistCache && artistCache[normArtist]) {
-          coverUrl = artistCache[normArtist];
+      const individualArtists = [rawArtist.trim()].filter(a => a.length > 0);
+      if (individualArtists.length === 0) individualArtists.push('Desconocido');
+
+      individualArtists.forEach(indvArtist => {
+        let normIndv = indvArtist.toLowerCase();
+        let indvName = artistKeyMap[normIndv];
+        if (!indvName) {
+          indvName = indvArtist;
+          artistKeyMap[normIndv] = indvName;
         }
-        artistsObj[artName] = { name: artName, cover: coverUrl, songs: [] };
-      }
-      artistsObj[artName].songs.push(song);
+
+        if (!artistsObj[indvName]) {
+          let coverUrl = song.cover || null;
+          if (artistCache && artistCache[normIndv]) {
+            coverUrl = artistCache[normIndv];
+          }
+          artistsObj[indvName] = { name: indvName, cover: coverUrl, songs: [] };
+        }
+        
+        // Prevent duplicate songs if split wasn't perfect
+        if (!artistsObj[indvName].songs.find(s => s.id === song.id)) {
+          artistsObj[indvName].songs.push(song);
+        }
+      });
     });
 
     Object.values(albumsObj).forEach(album => {

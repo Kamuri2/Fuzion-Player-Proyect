@@ -4,7 +4,50 @@ import CoverImage from '../components/CoverImage';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 // @ts-ignore
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState, useEffect, useRef } from 'react';
+
+const AlbumCard = ({ album, isFirst, letter, colors, t, navigate }: any) => {
+  const [inView, setInView] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      (entries) => {
+        setInView(entries[0].isIntersecting);
+      },
+      { rootMargin: '500px' } // ~5 items buffer margin
+    );
+
+    if (ref.current) {
+      observer.observe(ref.current);
+    }
+    return () => observer.disconnect();
+  }, []);
+
+  return (
+    <div
+      ref={ref}
+      id={isFirst ? `letter-${letter}` : undefined}
+      className="flex flex-col items-center p-4 rounded-xl hover:bg-black/5 dark:hover:bg-white/5 transition-all cursor-pointer group h-full"
+      onClick={() => navigate(`/detail/album/${encodeURIComponent(album.name)}`)}
+    >
+      <div
+        className="relative w-full aspect-square mb-3 rounded-xl overflow-hidden shadow-lg transition-all duration-300 group-hover:brightness-110 bg-black/5 dark:bg-white/5"
+      >
+        {inView && (
+          <CoverImage
+            coverUrl={album.cover}
+            audioPath={album.songs[0]?.path}
+            hq={true}
+            className="w-full h-full object-cover rounded-xl"
+          />
+        )}
+      </div>
+      <h2 className="text-center font-bold text-sm truncate w-full" style={{ color: colors.text }}>{album.name}</h2>
+      <p className="text-center text-xs opacity-70 truncate w-full" style={{ color: colors.subText }}>{album.artist} • {album.songs.length} {t('detail.tracks', 'pistas')}</p>
+    </div>
+  );
+};
 
 export default function AlbumsScreen() {
   const { albums } = useAudio();
@@ -47,8 +90,6 @@ export default function AlbumsScreen() {
   const scrollToLetter = (letter: string) => {
     const element = document.getElementById(`letter-${letter}`);
     if (element) {
-      // Find the scrollable container. It is usually the parent with overflow-auto.
-      // But scrollIntoView works fine by default.
       element.scrollIntoView({ behavior: 'smooth', block: 'center' });
     }
   };
@@ -75,25 +116,15 @@ export default function AlbumsScreen() {
           const isFirst = firstOfLetter.get(letter) === album.name;
 
           return (
-            <div
+            <AlbumCard
               key={album.name}
-              id={isFirst ? `letter-${letter}` : undefined}
-              className="flex flex-col items-center p-4 rounded-xl hover:bg-black/5 dark:hover:bg-white/5 transition-all cursor-pointer group h-full"
-              onClick={() => navigate(`/detail/album/${encodeURIComponent(album.name)}`)}
-            >
-              <div
-                className="relative w-full aspect-square mb-3 rounded-xl overflow-hidden shadow-lg transition-all duration-300 group-hover:brightness-110"
-              >
-                <CoverImage
-                  coverUrl={album.cover}
-                  audioPath={album.songs[0]?.path}
-                  hq={true}
-                  className="w-full h-full object-cover rounded-xl"
-                />
-              </div>
-              <h2 className="text-center font-bold text-sm truncate w-full" style={{ color: colors.text }}>{album.name}</h2>
-              <p className="text-center text-xs opacity-70 truncate w-full" style={{ color: colors.subText }}>{album.artist} • {album.songs.length} {t('detail.tracks', 'pistas')}</p>
-            </div>
+              album={album}
+              isFirst={isFirst}
+              letter={letter}
+              colors={colors}
+              t={t}
+              navigate={navigate}
+            />
           );
         })}
       </div>

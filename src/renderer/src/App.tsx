@@ -63,6 +63,12 @@ function AppContent() {
 
   return (
     <div className="flex flex-col md:flex-row h-screen overflow-hidden bg-transparent relative">
+      {/* Draggable Top Bar for frameless window */}
+      <div 
+        className="fixed top-0 left-0 right-0 h-10 z-[100]" 
+        style={{ WebkitAppRegion: 'drag' } as any}
+      />
+      
       <GlobalButtons />
       <Sidebar />
       <div id="main-scroll-container" className={`flex-1 overflow-y-auto overflow-x-hidden relative ${currentSong && !isPlayerOpen ? 'pb-[90px]' : 'pb-20 md:pb-0'}`}>

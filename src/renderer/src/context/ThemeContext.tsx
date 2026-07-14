@@ -166,7 +166,13 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     if (fam && baseThemes.find(t => t.id === fam)) setThemeFamilyState(fam);
 
     const dark = localStorage.getItem('@is_dark_mode');
-    if (dark !== null) setIsDarkModeState(dark === 'true');
+    if (dark !== null) {
+      const isDark = dark === 'true';
+      setIsDarkModeState(isDark);
+      if (window.api && (window.api as any).setTheme) {
+        (window.api as any).setTheme(isDark);
+      }
+    }
 
     const parts = localStorage.getItem('@particles') as ParticleType;
     if (parts) setParticlesState(parts);
@@ -276,6 +282,9 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const setIsDarkMode = (dark: boolean): void => {
     setIsDarkModeState(dark);
     localStorage.setItem('@is_dark_mode', dark ? 'true' : 'false');
+    if (window.api && (window.api as any).setTheme) {
+      (window.api as any).setTheme(dark);
+    }
   };
 
   const setParticles = (type: ParticleType): void => {
@@ -336,7 +345,35 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   };
 
   const themeId = `${themeFamily}${isDarkMode ? 'Dark' : 'Light'}`;
-  const currentTheme = themes[themeId] || themes.mintDark;
+  let currentTheme = themes[themeId] || themes.mintDark;
+
+  if (!currentTheme.isDark && currentTheme.colors.primary) {
+    const primary = currentTheme.colors.primary;
+    const r = parseInt(primary.slice(1, 3), 16);
+    const g = parseInt(primary.slice(3, 5), 16);
+    const b = parseInt(primary.slice(5, 7), 16);
+    
+    // 10% of primary mixed with 90% of bone color #f5ebe0 (245, 235, 224)
+    const baseR = 245;
+    const baseG = 235;
+    const baseB = 224;
+    const mix = 0.10;
+    
+    const bgR = Math.round(r * mix + baseR * (1 - mix));
+    const bgG = Math.round(g * mix + baseG * (1 - mix));
+    const bgB = Math.round(b * mix + baseB * (1 - mix));
+    
+    const newBg = `#${bgR.toString(16).padStart(2, '0')}${bgG.toString(16).padStart(2, '0')}${bgB.toString(16).padStart(2, '0')}`;
+    
+    currentTheme = {
+      ...currentTheme,
+      colors: {
+        ...currentTheme.colors,
+        background: newBg
+      }
+    };
+  }
+
   const isFrutiger = themeFamily === 'frutigerAero';
 
   return (

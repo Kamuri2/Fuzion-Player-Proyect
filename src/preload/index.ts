@@ -14,7 +14,8 @@ const api = {
   getArtistCache: () => ipcRenderer.invoke('api:getArtistCache'),
   translateLyrics: (songId: string, lines: string[], targetLang: string = 'es') => ipcRenderer.invoke('api:translateLyrics', songId, lines, targetLang),
   translateUI: (langCode: string, baseDictionary: any) => ipcRenderer.invoke('api:translateUI', langCode, baseDictionary),
-  getTranslatedUI: (langCode: string) => ipcRenderer.invoke('api:getTranslatedUI', langCode)
+  getTranslatedUI: (langCode: string) => ipcRenderer.invoke('api:getTranslatedUI', langCode),
+  setTheme: (isDark: boolean) => ipcRenderer.send('theme-changed', isDark)
 }
 // Use `contextBridge` APIs to expose Electron APIs to
 // renderer only if context isolation is enabled, otherwise

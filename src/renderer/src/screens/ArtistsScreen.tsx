@@ -3,9 +3,53 @@ import { useTheme } from '../context/ThemeContext';
 import { useTranslation } from 'react-i18next';
 import CoverImage from '../components/CoverImage';
 // @ts-ignore
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Search } from 'lucide-react';
+
+const ArtistCard = ({ artist, isFirst, letter, colors, navigate }: any) => {
+  const [inView, setInView] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      (entries) => {
+        setInView(entries[0].isIntersecting);
+      },
+      { rootMargin: '500px' } // ~5 items buffer margin
+    );
+
+    if (ref.current) {
+      observer.observe(ref.current);
+    }
+    return () => observer.disconnect();
+  }, []);
+
+  return (
+    <div 
+      ref={ref}
+      id={isFirst ? `letter-${letter}` : undefined}
+      className="flex flex-col items-center group cursor-pointer h-full"
+      onClick={() => navigate(`/detail/artist/${encodeURIComponent(artist.name)}`)}
+    >
+      <div 
+        className="w-full aspect-square rounded-full mb-4 overflow-hidden shadow-lg bg-black/5 dark:bg-white/5 transition-all duration-300 group-hover:brightness-110"
+      >
+        {inView && (
+          <CoverImage 
+            type="artist"
+            coverUrl={artist.cover} 
+            hq={true}
+            className="w-full h-full object-cover"
+            iconSize={80}
+          />
+        )}
+      </div>
+      <h2 className="text-center font-bold text-lg truncate w-full" style={{ color: colors.text }}>{artist.name}</h2>
+      <p className="text-center text-sm opacity-70 truncate w-full" style={{ color: colors.subText }}>{artist.songs.length} pistas</p>
+    </div>
+  );
+};
 
 export default function ArtistsScreen() {
   const { artists } = useAudio();
@@ -77,24 +121,14 @@ export default function ArtistsScreen() {
           const isFirst = firstOfLetter.get(letter) === artist.name;
 
           return (
-            <div 
-              key={artist.name} 
-              id={isFirst ? `letter-${letter}` : undefined}
-              className="flex flex-col items-center group cursor-pointer h-full"
-              onClick={() => navigate(`/detail/artist/${encodeURIComponent(artist.name)}`)}
-            >
-              <div 
-                className="w-full aspect-square rounded-full mb-4 overflow-hidden shadow-lg bg-black/5 dark:bg-white/5 transition-all duration-300 group-hover:brightness-110"
-              >
-                <CoverImage 
-                  coverUrl={artist.cover} 
-                  hq={true}
-                  className="w-full h-full object-cover"
-                />
-              </div>
-              <h2 className="text-center font-bold text-lg truncate w-full" style={{ color: colors.text }}>{artist.name}</h2>
-              <p className="text-center text-sm opacity-70 truncate w-full" style={{ color: colors.subText }}>{artist.songs.length} pistas</p>
-            </div>
+            <ArtistCard
+              key={artist.name}
+              artist={artist}
+              isFirst={isFirst}
+              letter={letter}
+              colors={colors}
+              navigate={navigate}
+            />
           );
         })}
       </div>

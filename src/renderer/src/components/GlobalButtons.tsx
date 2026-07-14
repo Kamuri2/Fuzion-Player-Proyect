@@ -5,24 +5,25 @@ import { useTheme } from '../context/ThemeContext';
 
 export default function GlobalButtons() {
   const navigate = useNavigate();
-  const { loadSongsFromUri, isPlayerOpen } = useAudio();
+  const { loadSongsFromUri, isPlayerOpen, isScanning } = useAudio();
   const { colors, isDarkMode, toggleTheme } = useTheme();
 
   if (isPlayerOpen) return null;
 
   return (
-    <div className="fixed top-6 right-6 flex flex-row z-50">
+    <div className="fixed top-3 right-[160px] flex flex-row z-[105]" style={{ WebkitAppRegion: 'no-drag' } as any}>
       <button
         className="w-11 h-11 rounded-lg border-2 border-b-4 border-r-4 flex justify-center items-center ml-4 transition-transform active:scale-95 bg-black/5 dark:bg-white/5 backdrop-blur-md"
         style={{ borderColor: colors.border }}
         onClick={() => {
+          if (isScanning) return;
           const folder = localStorage.getItem('@music_folder');
           if (folder) loadSongsFromUri(folder);
           else loadSongsFromUri();
         }}
         title="Refrescar Música"
       >
-        <RefreshCw size={20} color={colors.text} />
+        <RefreshCw size={20} color={colors.text} className={isScanning ? 'animate-spin' : ''} />
       </button>
       <button
         className="w-11 h-11 rounded-lg border-2 border-b-4 border-r-4 flex justify-center items-center ml-4 transition-transform active:scale-95 bg-black/5 dark:bg-white/5 backdrop-blur-md"

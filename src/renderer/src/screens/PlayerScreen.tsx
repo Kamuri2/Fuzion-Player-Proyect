@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ArrowLeft, Play, Pause, SkipBack, SkipForward, Repeat, Shuffle, ListMusic, Mic2, Heart, Plus, ThumbsDown, Home, FolderOpen, Disc3, Mic2 as Mic2Icon, Menu } from 'lucide-react';
+import { ArrowLeft, Play, Pause, SkipBack, SkipForward, Repeat, Shuffle, ListMusic, Mic2, Heart, Plus, ThumbsDown, FolderOpen, Disc3, Mic2 as Mic2Icon, Menu } from 'lucide-react';
 import { useAudio } from '../context/AudioContext';
 import { useTheme } from '../context/ThemeContext';
 import { useTranslation } from 'react-i18next';
@@ -355,13 +355,13 @@ export default function PlayerScreen() {
         <div className="absolute top-0 left-0 p-6 z-40 group flex flex-row gap-4 items-center h-20">
             {/* The back button appears only on hover or if not full mode */}
             {(!isFullMode || !isLeftPanelOpen) && (
-              <button onClick={() => setIsPlayerOpen(false)} className={`p-2 rounded-full bg-black/50 hover:bg-white/10 text-white transition-all shadow-xl ${isFullMode ? 'opacity-0 group-hover:opacity-100' : 'opacity-100'}`}>
+              <button onClick={() => setIsPlayerOpen(false)} style={{ WebkitAppRegion: 'no-drag' } as any} className={`p-3 rounded-full bg-black/50 hover:bg-white/10 text-white transition-all shadow-xl ${isFullMode ? 'opacity-0 group-hover:opacity-100' : 'opacity-100'}`}>
                 <ArrowLeft size={28} />
               </button>
             )}
             {/* Menu button to open the left panel */}
             {isFullMode && !isLeftPanelOpen && (
-              <button onClick={() => { setIsLeftPanelOpen(true); startLeftPanelTimer(); }} className="p-2 rounded-full bg-black/50 hover:bg-white/10 text-white transition-all shadow-xl">
+              <button onClick={() => { setIsLeftPanelOpen(true); startLeftPanelTimer(); }} style={{ WebkitAppRegion: 'no-drag' } as any} className="p-3 rounded-full bg-black/50 hover:bg-white/10 text-white transition-all shadow-xl">
                 <Menu size={28} />
               </button>
             )}
@@ -376,9 +376,6 @@ export default function PlayerScreen() {
           >
             <div className="w-[340px] h-full flex flex-col pt-6">
               <div className="flex flex-row items-center justify-between mb-4 pb-4 px-4 border-b border-white/10 shrink-0">
-                <button onClick={() => { setIsPlayerOpen(false); navigate('/'); }} className="p-2 hover:bg-white/10 rounded-lg text-white/70 hover:text-white" title={t('sidebar.home')}>
-                  <Home size={20} />
-                </button>
                 <button onClick={() => { setActiveMiniTab('playlists'); setMiniDetail(null); }} className={`p-2 rounded-lg ${activeMiniTab === 'playlists' ? 'bg-white/20 text-white' : 'hover:bg-white/10 text-white/70 hover:text-white'}`} title={t('sidebar.playlists')}>
                   <ListMusic size={20} />
                 </button>

@@ -11,6 +11,12 @@ function createWindow(): void {
     height: 670,
     show: false,
     autoHideMenuBar: true,
+    titleBarStyle: 'hidden',
+    titleBarOverlay: {
+      color: '#00000000',
+      symbolColor: '#808080',
+      height: 38
+    },
     title: 'CybeCat',
     ...(process.platform === 'linux' ? { icon } : {}),
     webPreferences: {
@@ -38,22 +44,58 @@ function createWindow(): void {
   }
 }
 
-// This method will be called when Electron has finished
-// initialization and is ready to create browser windows.
-// Some APIs can only be used after this event occurs.
-app.whenReady().then(() => {
-  // Set app user model id for windows
-  electronApp.setAppUserModelId('com.cybecat.app')
+// Prevent multiple instances which can cause cache lock issues
+const gotTheLock = app.requestSingleInstanceLock()
 
-  // Default open or close DevTools by F12 in development
-  // and ignore CommandOrControl + R in production.
-  // see https://github.com/alex8088/electron-toolkit/tree/master/packages/utils
-  app.on('browser-window-created', (_, window) => {
-    optimizer.watchWindowShortcuts(window)
+if (!gotTheLock) {
+  app.quit()
+} else {
+  // Configuración de caché dedicada de alto rendimiento
+  const cachePath = join(app.getPath('userData'), 'cybecat-cache')
+  app.commandLine.appendSwitch('disk-cache-dir', cachePath)
+  app.commandLine.appendSwitch('disk-cache-size', '1073741824') // 1GB
+  app.commandLine.appendSwitch('media-cache-size', '536870912') // 500MB
+
+  app.on('second-instance', () => {
+    // Alguien intentó abrir otra instancia, enfocamos la original
+    const mainWindow = BrowserWindow.getAllWindows()[0]
+    if (mainWindow) {
+      if (mainWindow.isMinimized()) mainWindow.restore()
+      mainWindow.focus()
+    }
   })
+
+
+
+  // This method will be called when Electron has finished
+  // initialization and is ready to create browser windows.
+  // Some APIs can only be used after this event occurs.
+  app.whenReady().then(() => {
+
+
+    // Set app user model id for windows
+    electronApp.setAppUserModelId('com.cybecat.app')
+
+    // Default open or close DevTools by F12 in development
+    // and ignore CommandOrControl + R in production.
+    // see https://github.com/alex8088/electron-toolkit/tree/master/packages/utils
+    app.on('browser-window-created', (_, window) => {
+      optimizer.watchWindowShortcuts(window)
+    })
 
   // IPC test
   ipcMain.on('ping', () => console.log('pong'))
+
+  ipcMain.on('theme-changed', (event, isDarkMode) => {
+    const win = BrowserWindow.fromWebContents(event.sender)
+    if (win) {
+      win.setTitleBarOverlay({
+        color: '#00000000',
+        symbolColor: isDarkMode ? '#ffffff' : '#000000',
+        height: 38
+      })
+    }
+  })
 
   setupIpc()
 
@@ -65,6 +107,7 @@ app.whenReady().then(() => {
     if (BrowserWindow.getAllWindows().length === 0) createWindow()
   })
 })
+}
 
 // Quit when all windows are closed, except on macOS. There, it's common
 // for applications and their menu bar to stay active until the user quits

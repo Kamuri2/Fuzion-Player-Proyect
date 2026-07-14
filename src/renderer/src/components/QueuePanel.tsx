@@ -13,7 +13,7 @@ interface QueuePanelProps {
 
 export default function QueuePanel({ onClose }: QueuePanelProps) {
   const { queue, queuePosition, currentSong, reorderQueue, playSound, currentContextId } = useAudio();
-  const { colors } = useTheme();
+  const { colors, isFullMode } = useTheme();
   const { t } = useTranslation();
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
   const virtuosoRef = useRef<VirtuosoHandle>(null);
@@ -118,9 +118,11 @@ export default function QueuePanel({ onClose }: QueuePanelProps) {
           <h2 className="text-xl font-bold text-white">Queue</h2>
           <p className="text-sm text-white/50">{upcomingQueue.length} {t('player.queueRemaining', 'canciones restantes')}</p>
         </div>
-        <button onClick={onClose} className="p-2 rounded-full hover:bg-white/10 text-white transition-colors">
-          <X size={24} />
-        </button>
+        {isFullMode && (
+          <button onClick={onClose} className="p-2 rounded-full hover:bg-white/10 text-white transition-colors">
+            <X size={24} />
+          </button>
+        )}
       </div>
 
       <div 

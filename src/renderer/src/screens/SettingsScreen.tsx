@@ -76,7 +76,8 @@ export default function SettingsScreen() {
       <div className="flex flex-row items-center mb-8">
         <button
           onClick={() => navigate(-1)}
-          className="p-2 rounded-full hover:bg-black/10 transition-colors mr-4"
+          style={{ WebkitAppRegion: 'no-drag' } as any}
+          className="p-3 rounded-full hover:bg-black/10 transition-colors mr-4"
         >
           <ArrowLeft size={28} color={colors.text} />
         </button>
@@ -213,8 +214,8 @@ export default function SettingsScreen() {
               step="5" 
               value={lyricsFontSize}
               onChange={(e) => setLyricsFontSize(Number(e.target.value))}
-              className="w-full h-2 rounded-lg appearance-none cursor-pointer bg-white/10 mt-1"
-              style={{ accentColor: colors.primary }}
+              className="w-full h-2 rounded-lg appearance-none cursor-pointer mt-1"
+              style={{ accentColor: colors.primary, backgroundColor: isDarkMode ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.3)' }}
             />
             <p className="text-xs opacity-70 mt-1" style={{ color: colors.subText }}>{t('settings.lyricsHelper')}</p>
           </div>
@@ -394,8 +395,8 @@ export default function SettingsScreen() {
                   step="0.1"
                   value={crossfadeDurationOut}
                   onChange={(e) => setCrossfadeDurationOut(Number(e.target.value))}
-                  className="w-full h-2 rounded-lg appearance-none cursor-pointer bg-white/10"
-                  style={{ accentColor: colors.primary }}
+                  className="w-full h-2 rounded-lg appearance-none cursor-pointer"
+                  style={{ accentColor: colors.primary, backgroundColor: isDarkMode ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.3)' }}
                 />
                 <div className="flex flex-row justify-between mt-1">
                   <span className="text-xs opacity-50" style={{ color: colors.subText }}>0s</span>
@@ -415,8 +416,8 @@ export default function SettingsScreen() {
                   step="0.1"
                   value={crossfadeDurationIn}
                   onChange={(e) => setCrossfadeDurationIn(Number(e.target.value))}
-                  className="w-full h-2 rounded-lg appearance-none cursor-pointer bg-white/10"
-                  style={{ accentColor: colors.primary }}
+                  className="w-full h-2 rounded-lg appearance-none cursor-pointer"
+                  style={{ accentColor: colors.primary, backgroundColor: isDarkMode ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.3)' }}
                 />
                 <div className="flex flex-row justify-between mt-1">
                   <span className="text-xs opacity-50" style={{ color: colors.subText }}>0s</span>

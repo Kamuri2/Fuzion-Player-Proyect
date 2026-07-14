@@ -12,5 +12,6 @@ interface Window {
     translateLyrics: (songId: string, lines: string[], targetLang?: string) => Promise<string[]>;
     translateUI: (langCode: string, baseDictionary: Record<string, any>) => Promise<Record<string, any> | null>;
     getTranslatedUI: (langCode: string) => Promise<Record<string, any> | null>;
+    setTheme: (isDark: boolean) => void;
   };
 }

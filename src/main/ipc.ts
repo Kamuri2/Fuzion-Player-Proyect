@@ -256,17 +256,7 @@ export function setupIpc() {
           }
         }
         
-        if (!coverBase64) {
-          try {
-            const baseName = path.basename(filePath, path.extname(filePath));
-            const query = encodeURIComponent(baseName.replace(/ - /g, ' '));
-            const response = await fetch(`https://itunes.apple.com/search?term=${query}&entity=song&limit=1`);
-            const data = await response.json();
-            if (data && data.results && data.results.length > 0) {
-              coverBase64 = data.results[0].artworkUrl100.replace('100x100bb.jpg', '600x600bb.jpg').replace('100x100', '600x600');
-            }
-          } catch(e) {}
-        }
+
         
         if (coverBase64) {
           try {

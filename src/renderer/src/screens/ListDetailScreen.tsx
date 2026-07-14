@@ -299,11 +299,13 @@ export default function ListDetailScreen() {
         className="absolute top-0 left-0 right-0 h-[600px] -z-10 overflow-hidden select-none pointer-events-none"
       >
         <CoverImage
+          type={type as any}
           coverUrl={cover}
           audioPath={audioPath}
           hq={true}
           className="w-full h-full object-cover opacity-50 blur-[60px] scale-125 transition-all duration-1000"
           placeholderClassName="w-full h-full bg-transparent"
+          iconSize={200}
         />
         <div 
           className="absolute inset-0"
@@ -314,7 +316,7 @@ export default function ListDetailScreen() {
       {/* Header Section (Spotify Style) */}
       <div className="relative pt-20 pb-8 px-8 flex flex-col lg:flex-row items-end justify-between gap-8">
         <div className="absolute top-6 left-6 z-10">
-          <button onClick={handleBack} className="p-2 rounded-full bg-black/20 hover:bg-black/40 text-white transition-colors backdrop-blur-md">
+          <button onClick={handleBack} style={{ WebkitAppRegion: 'no-drag' } as any} className="p-3 rounded-full bg-black/20 hover:bg-black/40 text-white transition-colors backdrop-blur-md">
             <ArrowLeft size={24} />
           </button>
         </div>
@@ -325,6 +327,7 @@ export default function ListDetailScreen() {
             className="relative w-64 h-64 md:w-[320px] md:h-[320px] shadow-[0_4px_60px_rgba(0,0,0,0.5)] overflow-hidden flex-shrink-0 z-10 mt-8 md:mt-0 rounded-2xl group"
           >
           <CoverImage
+            type={type as any}
             coverUrl={cover}
             audioPath={audioPath}
             hq={true}
@@ -540,7 +543,7 @@ export default function ListDetailScreen() {
           </button>
           
           <div className="w-full h-[60vh] relative">
-            <img src={artistDetails?.fanart || cover || ''} alt={title} className="w-full h-full object-cover" />
+            <img src={artistDetails?.fanart || cover || ''} alt={title} className="w-full h-full object-cover object-top" />
             <div 
               className="absolute inset-0 opacity-100" 
               style={{ background: `linear-gradient(to top, ${colors.background} -5%, transparent 100%)` }} 

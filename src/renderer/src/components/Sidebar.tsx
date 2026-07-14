@@ -29,8 +29,7 @@ export default function Sidebar() {
   };
 
   return (
-    <div className={`fixed bottom-0 left-0 right-0 md:relative md:h-screen flex md:flex-col items-center md:items-start justify-around md:justify-start p-2 md:p-6 z-40 border-t md:border-t-0 md:border-r border-white/10 transition-all duration-300 ${isNavHidden ? 'md:w-24' : 'md:w-64'}`}
-      style={{ backgroundColor: colors.background }}>
+    <div className={`fixed bottom-0 left-0 right-0 md:relative md:h-screen flex md:flex-col items-center md:items-start justify-around md:justify-start p-2 md:p-6 z-40 border-t md:border-t-0 md:border-r border-white/10 transition-all duration-300 ${isNavHidden ? 'md:w-24' : 'md:w-64'} bg-transparent`}>
 
       <div className="hidden md:flex w-full mb-8 px-2 justify-center md:justify-start">
         <img 
