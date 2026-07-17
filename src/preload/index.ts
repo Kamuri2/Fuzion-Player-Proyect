@@ -10,7 +10,7 @@ const api = {
   readMusicFiles: (folderPath: string) => ipcRenderer.invoke('fs:readMusicFiles', folderPath),
   getMetadata: (filePath: string) => ipcRenderer.invoke('fs:getMetadata', filePath),
   getCover: (filePath: string) => ipcRenderer.invoke('fs:getCover', filePath),
-  getArtistImage: (artistName: string) => ipcRenderer.invoke('api:getArtistImage', artistName),
+  getArtistImage: (artistName: string, sampleSongPath?: string) => ipcRenderer.invoke('api:getArtistImage', artistName, sampleSongPath),
   getArtistCache: () => ipcRenderer.invoke('api:getArtistCache'),
   translateLyrics: (songId: string, lines: string[], targetLang: string = 'es') => ipcRenderer.invoke('api:translateLyrics', songId, lines, targetLang),
   translateUI: (langCode: string, baseDictionary: any) => ipcRenderer.invoke('api:translateUI', langCode, baseDictionary),

@@ -51,6 +51,51 @@ const MarqueeText = ({ text, className }: { text: string, className?: string }) 
   );
 };
 
+const LazyMiniListItem = ({ item, type, onClick, isPlayingThis }: any) => {
+  const [inView, setInView] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      (entries) => {
+        setInView(entries[0].isIntersecting);
+      },
+      { rootMargin: '300px' }
+    );
+
+    if (ref.current) {
+      observer.observe(ref.current);
+    }
+    return () => observer.disconnect();
+  }, []);
+
+  const isArtist = type === 'artist';
+  const isFolder = type === 'folder';
+  const isSong = type === 'song';
+
+  return (
+    <div 
+      ref={ref} 
+      onClick={onClick} 
+      className={`flex flex-row items-center gap-3 p-2 rounded-lg cursor-pointer ${isPlayingThis ? 'bg-white/20' : 'hover:bg-white/10'}`}
+    >
+      <div className={`${isSong ? 'w-8 h-8' : 'w-10 h-10'} overflow-hidden shrink-0 flex items-center justify-center ${isFolder ? 'bg-white/10' : ''} ${isArtist ? 'rounded-full bg-white/10' : 'rounded'}`}>
+        {inView ? (
+          isFolder ? (
+            <FolderOpen size={20} className="text-white/70" />
+          ) : (
+            <CoverImage coverUrl={item.cover} audioPath={item.audioPath} hq={true} className="w-full h-full object-cover" iconSize={isSong ? 16 : 20} />
+          )
+        ) : null}
+      </div>
+      <div className="flex flex-col truncate">
+        <span className={`text-sm font-bold truncate ${isPlayingThis ? 'text-green-400' : 'text-white'} ${isSong ? 'text-xs' : ''}`}>{item.title}</span>
+        <span className={`${isSong ? 'text-[10px]' : 'text-xs'} text-white/50 truncate`}>{item.subtitle}</span>
+      </div>
+    </div>
+  );
+};
+
 let hasRunInitialLeftPanelTimer = false;
 let savedLeftPanelState = true;
 let savedActiveMiniTab: 'playlists' | 'folders' | 'albums' | 'artists' = 'playlists';
@@ -245,19 +290,19 @@ export default function PlayerScreen() {
             {detailSongs.map((s) => {
               const isPlayingThis = currentSong?.id === s.id;
               return (
-                <div 
-                  key={s.id} 
+                <LazyMiniListItem
+                  key={s.id}
                   onClick={() => playSound(s, `${contextPrefix}${miniDetail.id}`, detailSongs)}
-                  className={`flex flex-row items-center gap-3 p-2 rounded-lg cursor-pointer ${isPlayingThis ? 'bg-white/20' : 'hover:bg-white/10'}`}
-                >
-                  <div className="w-8 h-8 rounded overflow-hidden shrink-0">
-                    <CoverImage coverUrl={s.cover} audioPath={s.path} hq={true} className="w-full h-full object-cover" iconSize={16} />
-                  </div>
-                  <div className="flex flex-col truncate">
-                    <span className={`text-xs font-bold truncate ${isPlayingThis ? 'text-green-400' : 'text-white'}`}>{s.title}</span>
-                    <span className="text-[10px] text-white/50 truncate">{s.artist}</span>
-                  </div>
-                </div>
+                  type="song"
+                  isPlayingThis={isPlayingThis}
+                  item={{
+                    cover: s.cover,
+                    audioPath: s.path,
+                    title: s.title,
+                    subtitle: s.artist
+                  }}
+                  t={t}
+                />
               );
             })}
           </div>
@@ -269,15 +314,18 @@ export default function PlayerScreen() {
       return (
         <div className="flex flex-col gap-2 overflow-y-auto w-full pr-2 pb-24">
           {playlists.map((p) => (
-            <div key={p.id} onClick={() => setMiniDetail({type: 'playlist', id: p.id, name: p.name})} className="flex flex-row items-center gap-3 p-2 rounded-lg hover:bg-white/10 cursor-pointer">
-              <div className="w-10 h-10 rounded overflow-hidden shrink-0">
-                <CoverImage coverUrl={p.cover} audioPath={undefined} hq={true} className="w-full h-full object-cover" iconSize={20} />
-              </div>
-              <div className="flex flex-col truncate">
-                <span className="text-sm font-bold text-white truncate">{p.name}</span>
-                <span className="text-xs text-white/50 truncate">{p.songIds.length} {t('detail.songs')}</span>
-              </div>
-            </div>
+            <LazyMiniListItem
+              key={p.id}
+              onClick={() => setMiniDetail({type: 'playlist', id: p.id, name: p.name})}
+              type="playlist"
+              item={{
+                cover: p.cover,
+                audioPath: undefined,
+                title: p.name,
+                subtitle: `${p.songIds.length} ${t('detail.songs')}`
+              }}
+              t={t}
+            />
           ))}
         </div>
       );
@@ -286,15 +334,16 @@ export default function PlayerScreen() {
       return (
         <div className="flex flex-col gap-2 overflow-y-auto w-full pr-2 pb-24">
           {Object.values(folders || {}).map((f: any) => (
-            <div key={f.name} onClick={() => setMiniDetail({type: 'folder', id: f.name, name: f.name})} className="flex flex-row items-center gap-3 p-2 rounded-lg hover:bg-white/10 cursor-pointer">
-              <div className="w-10 h-10 rounded bg-white/10 flex items-center justify-center shrink-0">
-                <FolderOpen size={20} className="text-white/70" />
-              </div>
-              <div className="flex flex-col truncate">
-                <span className="text-sm font-bold text-white truncate">{f.name}</span>
-                <span className="text-xs text-white/50 truncate">{f.songs?.length || 0} {t('detail.songs')}</span>
-              </div>
-            </div>
+            <LazyMiniListItem
+              key={f.name}
+              onClick={() => setMiniDetail({type: 'folder', id: f.name, name: f.name})}
+              type="folder"
+              item={{
+                title: f.name,
+                subtitle: `${f.songs?.length || 0} ${t('detail.songs')}`
+              }}
+              t={t}
+            />
           ))}
         </div>
       );
@@ -303,15 +352,18 @@ export default function PlayerScreen() {
       return (
         <div className="flex flex-col gap-2 overflow-y-auto w-full pr-2 pb-24">
           {Object.values(albums || {}).map((a: any) => (
-            <div key={a.name} onClick={() => setMiniDetail({type: 'album', id: a.name, name: a.name})} className="flex flex-row items-center gap-3 p-2 rounded-lg hover:bg-white/10 cursor-pointer">
-              <div className="w-10 h-10 rounded overflow-hidden shrink-0">
-                <CoverImage coverUrl={a.cover} audioPath={a.songs?.[0]?.path} hq={true} className="w-full h-full object-cover" iconSize={20} />
-              </div>
-              <div className="flex flex-col truncate">
-                <span className="text-sm font-bold text-white truncate">{a.name}</span>
-                <span className="text-xs text-white/50 truncate">{a.artist}</span>
-              </div>
-            </div>
+            <LazyMiniListItem
+              key={a.name}
+              onClick={() => setMiniDetail({type: 'album', id: a.name, name: a.name})}
+              type="album"
+              item={{
+                cover: a.cover,
+                audioPath: a.songs?.[0]?.path,
+                title: a.name,
+                subtitle: a.artist
+              }}
+              t={t}
+            />
           ))}
         </div>
       );
@@ -320,15 +372,18 @@ export default function PlayerScreen() {
       return (
         <div className="flex flex-col gap-2 overflow-y-auto w-full pr-2 pb-24">
           {Object.values(artists || {}).map((a: any) => (
-            <div key={a.name} onClick={() => setMiniDetail({type: 'artist', id: a.name, name: a.name})} className="flex flex-row items-center gap-3 p-2 rounded-lg hover:bg-white/10 cursor-pointer">
-              <div className="w-10 h-10 rounded-full overflow-hidden shrink-0 flex items-center justify-center bg-white/10">
-                <CoverImage coverUrl={a.cover} audioPath={a.songs?.[0]?.path} hq={true} className="w-full h-full object-cover" iconSize={20} />
-              </div>
-              <div className="flex flex-col truncate">
-                <span className="text-sm font-bold text-white truncate">{a.name}</span>
-                <span className="text-xs text-white/50 truncate">{a.songs?.length || 0} {t('detail.songs')}</span>
-              </div>
-            </div>
+            <LazyMiniListItem
+              key={a.name}
+              onClick={() => setMiniDetail({type: 'artist', id: a.name, name: a.name})}
+              type="artist"
+              item={{
+                cover: a.cover,
+                audioPath: a.songs?.[0]?.path,
+                title: a.name,
+                subtitle: `${a.songs?.length || 0} ${t('detail.songs')}`
+              }}
+              t={t}
+            />
           ))}
         </div>
       );

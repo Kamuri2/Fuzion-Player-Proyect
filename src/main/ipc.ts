@@ -476,7 +476,7 @@ export function setupIpc() {
     }
   });
 
-  ipcMain.handle('api:getArtistImage', async (_, artistName: string) => {
+  ipcMain.handle('api:getArtistImage', async (_, artistName: string, sampleSongPath?: string) => {
     if (!artistName || artistName === 'Desconocido') return null;
     const cachePath = path.join(app.getPath('userData'), 'artistImagesCache_v2.json');
     let cache: Record<string, string | null> = {};
@@ -489,6 +489,26 @@ export function setupIpc() {
     }
 
     const normalizedName = artistName.trim().toLowerCase();
+
+    // Check local files first if sampleSongPath is provided
+    if (sampleSongPath) {
+      try {
+        const dir = path.dirname(sampleSongPath);
+        const safeName = artistName.replace(/[^a-z0-9]/gi, '_').toLowerCase();
+        const possibleNames = ['artist.jpg', 'artist.png', 'artist.jpeg', 'artist.webp', `${safeName}.jpg`, `${safeName}.png`, `${safeName}.jpeg`, `${safeName}.webp`, `${artistName}.jpg`, `${artistName}.png`, `${artistName}.jpeg`, `${artistName}.webp`];
+        for (const pName of possibleNames) {
+          const pPath = path.join(dir, pName);
+          if (existsSync(pPath)) {
+            const fileUrl = `file:///${pPath.replace(/\\/g, '/')}`;
+            cache[normalizedName] = fileUrl;
+            await fs.writeFile(cachePath, JSON.stringify(cache, null, 2), 'utf8');
+            return fileUrl;
+          }
+        }
+      } catch (e) {
+        // Ignore
+      }
+    }
     
     // Check if we already tried fetching this artist
     if (cache.hasOwnProperty(normalizedName)) {
@@ -524,12 +544,22 @@ export function setupIpc() {
       const response = await fetch(`https://api.deezer.com/search/artist?q=${encodeURIComponent(artistName)}`);
       if (response.ok) {
         const data = await response.json();
-        if (data && data.data && data.data.length > 0 && data.data[0].picture_xl) {
-          let imageUrl = data.data[0].picture_xl;
-          imageUrl = await downloadImage(imageUrl, artistName);
-          cache[normalizedName] = imageUrl;
-          await fs.writeFile(cachePath, JSON.stringify(cache, null, 2), 'utf8');
-          return imageUrl;
+        if (data && data.data && data.data.length > 0) {
+          // Sort by number of fans to get the most popular artist, prioritizing exact name matches
+          const bestMatch = data.data.sort((a: any, b: any) => {
+             const aExact = (a.name || '').toLowerCase() === (artistName || '').toLowerCase() ? 1 : 0;
+             const bExact = (b.name || '').toLowerCase() === (artistName || '').toLowerCase() ? 1 : 0;
+             if (aExact !== bExact) return bExact - aExact;
+             return (b.nb_fan || 0) - (a.nb_fan || 0);
+          })[0];
+          
+          if (bestMatch && bestMatch.picture_xl) {
+            let imageUrl = bestMatch.picture_xl;
+            imageUrl = await downloadImage(imageUrl, artistName);
+            cache[normalizedName] = imageUrl;
+            await fs.writeFile(cachePath, JSON.stringify(cache, null, 2), 'utf8');
+            return imageUrl;
+          }
         }
       }
     } catch (e) {
@@ -551,6 +581,27 @@ export function setupIpc() {
       }
     } catch (e) {
       console.error('Error fetching artist image from AudioDB for', artistName, e);
+    }
+
+    try {
+      // Third Fallback: iTunes Search API (use album cover of most popular track)
+      const response = await fetch(`https://itunes.apple.com/search?term=${encodeURIComponent(artistName)}&entity=musicTrack&limit=5`);
+      if (response.ok) {
+        const data = await response.json();
+        if (data && data.results && data.results.length > 0) {
+           // Try to find exact artist match
+           let bestResult = data.results.find((r: any) => (r.artistName || '').toLowerCase() === (artistName || '').toLowerCase()) || data.results[0];
+           if (bestResult.artworkUrl100) {
+             let imageUrl = bestResult.artworkUrl100.replace('100x100bb', '600x600bb');
+             imageUrl = await downloadImage(imageUrl, artistName);
+             cache[normalizedName] = imageUrl;
+             await fs.writeFile(cachePath, JSON.stringify(cache, null, 2), 'utf8');
+             return imageUrl;
+           }
+        }
+      }
+    } catch (e) {
+      console.error('Error fetching artist image from iTunes for', artistName, e);
     }
 
     // Cache null to prevent retrying the same missing artist over and over

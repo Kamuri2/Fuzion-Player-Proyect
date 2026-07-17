@@ -270,7 +270,8 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       const artistNames = Object.keys(artistsObj).filter(n => n !== 'Desconocido');
 
       for (const name of artistNames) {
-        const url = await window.api.getArtistImage(name);
+        const firstSong = artistsObj[name].songs[0];
+        const url = await window.api.getArtistImage(name, firstSong?.path);
         if (url && url !== artistsObj[name].cover) {
           setArtists(prev => ({
             ...prev,
