@@ -54,7 +54,7 @@
 
 > [!TIP]
 > **No necesitas compilar el proyecto para probarlo.**  
-> Puedes descargar el archivo ejecutable (`.exe`) listo para instalar y usar directamente desde el apartado de **[Releases (Lanzamientos)](https://github.com/Kamuri2/CybeCat-Project/releases)** de este repositorio.
+> Puedes descargar el archivo ejecutable (`.exe`) listo para instalar y usar directamente desde el apartado de **[Releases (Lanzamientos)](https://github.com/Kamuri2/Fuzion-Player-Proyect/releases)** de este repositorio.
 
 ---
 
@@ -73,10 +73,10 @@ Si deseas explorar el código fuente, clonar el proyecto y modificarlo por tu cu
 
 ```bash
 # Clonar el repositorio
-git clone https://github.com/Kamuri2/CybeCat-Project.git
+git clone https://github.com/Kamuri2/Fuzion-Player-Proyect.git
 
 # Entrar a la carpeta
-cd CybeCat-Project
+cd Fuzion-Player-Proyect
 
 # Instalar dependencias
 npm install
