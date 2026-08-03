@@ -1,41 +1,13 @@
 <div align="center">
 <pre>
-⠀⠀⠀⢀⣤⣤⣤⣀⣀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
-⠀⠀⣸⡿⠋⠀⠉⠙⠛⢷⣶⣄⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⣀⣀⢀⠀⠀⠀
-⠀⠀⣿⠁⠀⠀⠀⠀⠀⠀⠈⠻⣷⡄⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⣤⣦⣾⠟⠛⠛⠻⣷⣤⠀
-⠀⢸⡟⠀⠀⠀⠀⠀⠀⠀⠀⠀⠙⠛⠷⣤⣄⠀⠀⠀⣀⣀⣀⣀⣀⣀⣀⣀⣀⠀⠀⠀⠀⠀⠀⠀⠀⢠⣤⡾⠻⠛⠉⠉⠀⠀⠀⠀⠙⢿⣆
-⠀⣸⡇⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠈⠻⡶⠿⠛⠋⠉⠉⠉⠉⠉⠉⠉⠙⠛⠻⠷⢶⣤⣤⣤⣾⠟⠉⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢸⡟
-⢀⣿⠁⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠉⠉⠁⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢸⣟
-⢸⣿⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢸⣯
-⠈⣿⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⣀⣀⣀⣀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢸⣗
-⠀⢿⡄⠀⠀⢀⣠⣴⡶⠶⠿⠻⠷⢶⣦⣄⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢀⣴⡶⠿⠛⠛⠉⠉⠛⠛⠿⣶⣄⡀⠀⠀⠀⠀⠀⢸⡏
-⠀⢸⣇⢀⣼⣿⠿⣡⣴⣶⣿⣶⣿⣶⣬⡛⢿⣦⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢀⣼⡟⢉⣴⣶⣿⣿⣿⣿⣶⣷⣦⡈⠙⠿⣶⣤⡀⠀⢰⡿⠁
-⠀⠈⣿⣿⣟⣵⣿⣿⣿⣿⣿⣿⣿⣿⣿⣷⡄⢻⣷⠀⠀⠀⠀⠀⠀⠀⠀⠀⣼⡟⠀⣻⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣷⣦⡈⠻⣷⡀⣼⡏⠀
-⠀⠀⣽⣿⣾⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⡄⢻⡇⠀⠀⠀⠀⠀⠀⠀⢰⡿⠀⢸⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⡄⢹⣷⣿⠃⠀
-⠀⣼⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣧⠸⣷⠀⠀⠀⠀⠀⠀⠀⣿⠃⢀⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⡜⣿⡇⠀⠀
-⢰⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⠀⢿⡇⠀⠀⠀⠀⠀⠀⣿⡀⠘⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⡁⣿⣿⠀⠀
-⢸⡏⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⠀⢸⡇⠀⠀⠀⠀⠀⠀⢹⣇⠀⢹⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⡇⣿⣿⠀⠀
-⢸⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⡏⠀⣼⡇⠀⠀⠀⠀⠀⠀⠈⣿⠀⠸⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⢣⣿⣟⠀⠀
-⠈⣿⡏⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⡿⠀⣰⡿⠁⠀⠀⠀⠀⠀⠀⠀⢹⣷⠀⢹⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⡿⣸⣿⠇⠀⠀
-⠀⢺⣿⡽⢿⣿⣿⣿⣿⣿⣿⣿⣿⣿⡿⠋⢡⣿⡟⠀⠀⠀⠀⠀⠀⠀⠀⠀⠈⠻⣧⡀⢻⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⡿⣱⣿⡟⠀⠀⠀
-⠀⠀⢻⣿⣶⣤⣄⣈⡉⠉⠉⢉⣁⣀⣠⣼⠿⠋⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠙⣿⣦⠉⠻⠿⣿⣿⣿⣿⣿⣿⡿⢛⣴⣿⠏⠀⠀⠀⠀
-⠀⠀⠀⠛⢿⣯⡉⠛⠛⠛⠛⠛⠋⠉⠉⠁⣀⣀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠉⠻⠷⣶⣤⣄⣬⣩⣉⣭⣤⣶⢿⣿⠃⠀⠀⠀⠀⠀
-⠀⠀⠀⠀⠀⠙⢿⣷⣤⡀⠀⠀⠀⠀⠀⠀⠙⠻⠿⣶⣤⣤⣄⣀⣀⣀⣠⣠⣤⣴⡶⠆⠀⠀⠀⠁⠉⠀⠁⠉⠀⠁⣠⣿⠁⠀⠀⠀⠀⠀⠀
-⠀⠀⠀⠀⠀⠀⠀⠙⠻⢿⣶⡄⠀⠀⠀⠀⠀⠀⠀⠀⠀⠉⠉⠉⠉⠉⠉⠁⠉⠁⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⣠⣶⠟⠁⠀⠀⠀⠀⠀⠀⠀
-⠀⠀⠀⠀⠀⠀⠀⠀⠀⠉⠙⠻⠿⣶⡤⣤⣀⣀⣀⡀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⣀⣠⡶⠿⠋⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
-⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠈⡉⠙⠛⠛⠻⠶⠶⣦⣤⣤⣤⣤⣤⣤⣤⣤⣴⠞⠛⠛⠋⠁⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
-⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠸⣿⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠐⣿⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
-⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢸⡟⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠘⣿⡄⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
-⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⣾⠇⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢹⣷⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
-⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠐⡿⠂⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠈⣷⡄⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
-⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢸⣟⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠸⣿⡄⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
-⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠘⣯⠀⠀⠀⠀⠀⠀⠀⠀⠀⣿⡇⠀⠀⠀⠀⠀⠀⠸⣷⡀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
-⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠰⣇⠀⠀⠀⠀⠀⠀⠀⠀⠀⣿⣷⡄⠀⠀⠀⠀⠀⠀⢿⣧⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
-⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠘⣿⠀⠀⠀⠀⠀⠀⠀⠀⢠⣿⠹⣷⣄⠀⠀⠀⠀⠀⢸⣧⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
-⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢻⣧⠀⠀⠀⠀⠀⠀⢀⣾⠇⠀⠈⠻⣿⣦⣄⣀⢀⣼⡟⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
-⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠈⠻⣶⣤⣤⣤⣶⣶⠿⠋⠀⠀⠀⠀⠀⠈⠉⠋⠙⠉⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+  _____           _                  _____  _                       
+ |  ___|   _ ____(_) ___  _ __      |  ___|| | __ _ _   _  ___ _ __ 
+ | |_ | | | |_  /| |/ _ \| '_ \     | |_   | |/ _` | | | |/ _ \ '__|
+ |  _|| |_| |/ / | | (_) | | | |    |  _|  | | (_| | |_| |  __/ |   
+ |_|   \__,_/___||_|\___/|_| |_|    |_|    |_|\__,_|\__, |\___|_|   
+                                                    |___/           
 </pre>
-  <h1>CybeCat Music Player</h1>
+  <h1>Fuzion Player</h1>
   <p><strong>Un reproductor de música de escritorio moderno, estético y personalizable.</strong></p>
   <p>Construido con Electron, React y TypeScript.</p>
 
@@ -48,7 +20,7 @@
 
 ## Sobre el Proyecto
 
-**CybeCat** es una aplicación de escritorio diseñada para ofrecer una experiencia auditiva envolvente. Con una interfaz moderna que aprovecha efectos visuales atractivos (como fondos de partículas y acabados cristalinos), no solo te permite escuchar tu música local, sino que la presenta de la forma más estética posible.
+**Fuzion Player** es una aplicación de escritorio diseñada para ofrecer una experiencia auditiva envolvente. Con una interfaz moderna que aprovecha efectos visuales atractivos (como fondos de partículas y acabados cristalinos), no solo te permite escuchar tu música local, sino que la presenta de la forma más estética posible.
 
 ### Características Principales
 
@@ -61,6 +33,8 @@
 
 ### Novedades en esta versión
 
+- **Enfoque total en Escritorio:** Se ha retirado el soporte experimental de la aplicación móvil para centrar el 100% de los esfuerzos en ofrecer la mejor experiencia posible en PC.
+- **Mejoras de Internacionalización:** Se han corregido problemas de traducción donde elementos del menú de configuración (como el sonido de inicio) y textos del reproductor aparecían en español al usar la app en otros idiomas.
 - **Mejoras en la lectura de letras:** Ahora el reproductor es capaz de leer archivos de letras externos con formato .lrc. Tambien se corrigio un problema que impedia leer las letras si estas contenian marcas de tiempo que incluyeran horas.
 - **Prevencion de errores en la traduccion:** Se soluciono un problema tecnico que causaba que las letras no se mostraran si el servicio de traduccion fallaba. Ahora el sistema es mas inteligente y no guarda archivos vacios cuando hay errores de conexion, permitiendo que la traduccion se intente de nuevo mas tarde.
 - **Notificaciones de estado del traductor:** Se agregaron alertas visuales en la aplicacion para avisarte cuando el servicio de traduccion no esta disponible temporalmente (por exceso de uso) y otra alerta para avisarte cuando el servicio se restablece y vuelve a funcionar.
