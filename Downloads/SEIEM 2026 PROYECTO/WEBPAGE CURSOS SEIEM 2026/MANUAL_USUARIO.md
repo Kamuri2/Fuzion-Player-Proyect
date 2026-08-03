@@ -115,3 +115,34 @@ Una vez que vayas a publicar tu página en internet (ej. `https://cursos-seiem.c
    - Ve a **"Pantalla de consentimiento de OAuth"**.
    - Haz clic en el botón **"PUBLICAR LA APLICACIÓN"** para pasarla de "Testing" (Prueba) a "En producción". 
    - **IMPORTANTE:** Si no publicas la app, solo los correos que tú añadas manualmente a la lista de "Usuarios de prueba" podrán iniciar sesión (dará Error 403 al resto). Publicarla permite que *cualquier* usuario use su cuenta de Google.
+
+---
+
+## 📧 Recuperación de Contraseña y Servicio de Correo
+
+El sistema ahora cuenta con un flujo seguro de recuperación de contraseñas mediante **PIN de 6 dígitos**.
+
+### ¿Cómo funciona la recuperación?
+1. El usuario solicita recuperar su contraseña ingresando su **nombre de usuario** o su **correo electrónico**.
+2. El backend genera un PIN de 6 dígitos y se lo envía por correo electrónico usando un diseño institucional adaptado a la identidad de *Cursos SEIEM*.
+3. El usuario ingresa el PIN y su nueva contraseña en la plataforma.
+
+### Configuración del Servicio de Correo (Nodemailer)
+Para enviar estos correos globales sin requerir un dominio web verificado, el sistema utiliza **Nodemailer** conectado a una cuenta de Gmail por SMTP. 
+Actualmente, el correo configurado para los envíos es: **`seguridadcoeee@gmail.com`**.
+
+**Si necesitas cambiar el correo o actualizar la contraseña de aplicación en el futuro:**
+Debes editar las siguientes variables en el archivo `backend/.env`:
+```env
+SMTP_USER="seguridadcoeee@gmail.com"
+SMTP_PASS="tu_contraseña_de_aplicacion_de_16_letras"
+```
+*(Recuerda que `SMTP_PASS` no es la contraseña normal con la que inicias sesión en Gmail, sino una **"Contraseña de aplicación"** generada en los ajustes de seguridad de la cuenta de Google).*
+
+---
+
+## 👤 Mejoras en la Experiencia de Inicio de Sesión
+El sistema de autenticación ha sido optimizado para ser completamente a prueba de fallos y mejorar la experiencia del usuario (UX):
+- **Inicio de sesión Dual:** El usuario puede iniciar sesión escribiendo su *nombre de usuario* o su *correo electrónico* de forma indistinta, tanto para el Login como para la Recuperación.
+- **Insensibilidad a Mayúsculas (Case-Insensitive):** PostgreSQL suele ser estricto, pero el sistema ahora ignora mayúsculas y minúsculas. Si el usuario se registró como `Juan123`, puede iniciar sesión escribiendo `juan123` sin ser rechazado.
+- **Limpieza Automática (Trim):** Si el usuario deja espacios en blanco al inicio o al final de su usuario o correo por accidente al teclear, el sistema los limpia automáticamente antes de validar con la base de datos.

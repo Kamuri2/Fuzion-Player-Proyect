@@ -85,12 +85,14 @@ export const scanUploadsBot = async (req: Request, res: Response) => {
           
           // Comprobar duplicado en la base de datos comprobando que la URL termine en el nombre del archivo
           // Esto evita duplicados si el frontend usó un hostname diferente (ej. IP local vs localhost)
+          const encodedFilename = encodeURIComponent(file.filename);
           const existingEvidence = await prisma.evidence.findFirst({
             where: {
               courseId,
-              url: {
-                endsWith: `/${file.filename}`
-              }
+              OR: [
+                { url: { endsWith: `/${file.filename}` } },
+                { url: { endsWith: `/${encodedFilename}` } }
+              ]
             }
           });
 
@@ -133,12 +135,62 @@ export const scanUploadsBot = async (req: Request, res: Response) => {
     }
     
     if (res) {
-      res.json({ message: `Escaneo completado. Se agregaron ${addedCount} y se limpiaron ${removedCount} fantasmas.`, results, removedCount });
+      return res.status(200).json({ message: 'Escaneo manual completado', addedCount, results });
+    } else {
+      console.log(`[Bot] Escaneo automático completado. Se añadieron ${addedCount} evidencias nuevas.`);
     }
+    
   } catch (error) {
-    console.error('Error scanning uploads:', error);
+    console.error('Error en scanUploadsBot:', error);
     if (res) {
-      res.status(500).json({ error: 'Failed to scan uploads' });
+      return res.status(500).json({ error: 'Error durante el escaneo de archivos' });
     }
+  }
+};
+
+export const getSystemSettings = async (req: Request, res: Response) => {
+  try {
+    let settings = await prisma.systemSettings.findUnique({ where: { id: "global" } });
+    if (!settings) {
+      settings = await prisma.systemSettings.create({
+        data: { id: "global" }
+      });
+    }
+    res.json(settings);
+  } catch (error) {
+    console.error('Error fetching system settings:', error);
+    res.status(500).json({ error: 'Failed to fetch settings' });
+  }
+};
+
+export const updateSystemSettings = async (req: Request, res: Response) => {
+  try {
+    const data = req.body;
+    let settings = await prisma.systemSettings.findUnique({ where: { id: "global" } });
+    if (!settings) {
+      settings = await prisma.systemSettings.create({ data: { id: "global", ...data } });
+    } else {
+      settings = await prisma.systemSettings.update({
+        where: { id: "global" },
+        data
+      });
+    }
+    res.json(settings);
+  } catch (error) {
+    console.error('Error updating system settings:', error);
+    res.status(500).json({ error: 'Failed to update settings' });
+  }
+};
+
+export const uploadSystemLogo = async (req: Request, res: Response) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ error: 'No file uploaded' });
+    }
+    const fileUrl = `${req.protocol}://${req.get('host')}/uploads/system/${req.file.filename}`;
+    res.json({ url: fileUrl });
+  } catch (error) {
+    console.error('Error uploading system logo:', error);
+    res.status(500).json({ error: 'Failed to upload logo' });
   }
 };

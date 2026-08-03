@@ -3,7 +3,7 @@ import bcrypt from 'bcrypt';
 import crypto from 'crypto';
 import { prisma } from '../prisma';
 import { generateToken } from '../utils/jwt';
-import { sendPasswordResetEmail } from '../services/emailService';
+import { sendPasswordResetEmail, sendPasswordChangePinEmail } from '../services/emailService';
 import { OAuth2Client } from 'google-auth-library';
 
 const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID || 'PLACEHOLDER_CLIENT_ID');
@@ -41,7 +41,7 @@ export const register = async (req: Request, res: Response) => {
 
     res.status(201).json({
       token,
-      user: { id: user.id, username: user.username, name: user.name, role: user.role, avatarUrl: user.avatarUrl },
+      user: { id: user.id, username: user.username, name: user.name, role: user.role, avatarUrl: user.avatarUrl, usernameChangeDates: user.usernameChangeDates },
     });
   } catch (error) {
     res.status(500).json({ error: 'Server error during registration' });
@@ -52,11 +52,13 @@ export const login = async (req: Request, res: Response) => {
   try {
     const { username, password } = req.body;
 
+    const searchIdentifier = username.trim();
+
     const user = await prisma.user.findFirst({
       where: {
         OR: [
-          { username },
-          { email: username }
+          { username: { equals: searchIdentifier, mode: 'insensitive' } },
+          { email: { equals: searchIdentifier, mode: 'insensitive' } }
         ]
       }
     });
@@ -73,7 +75,7 @@ export const login = async (req: Request, res: Response) => {
 
     res.json({
       token,
-      user: { id: user.id, username: user.username, name: user.name, role: user.role, avatarUrl: user.avatarUrl },
+      user: { id: user.id, username: user.username, name: user.name, role: user.role, avatarUrl: user.avatarUrl, usernameChangeDates: user.usernameChangeDates },
     });
   } catch (error) {
     res.status(500).json({ error: 'Server error during login' });
@@ -89,7 +91,7 @@ export const getMe = async (req: Request, res: Response) => {
     const user = await prisma.user.findUnique({ where: { id: userId } });
     if (!user) return res.status(404).json({ error: 'User not found' });
 
-    res.json({ id: user.id, username: user.username, name: user.name, role: user.role, avatarUrl: user.avatarUrl });
+    res.json({ id: user.id, username: user.username, name: user.name, role: user.role, avatarUrl: user.avatarUrl, usernameChangeDates: user.usernameChangeDates });
   } catch (error) {
     res.status(500).json({ error: 'Server error fetching user' });
   }
@@ -101,9 +103,9 @@ export const changePassword = async (req: Request, res: Response) => {
     const userId = req.user?.id;
     if (!userId) return res.status(401).json({ error: 'Unauthorized' });
 
-    const { currentPassword, newPassword } = req.body;
-    if (!currentPassword || !newPassword) {
-      return res.status(400).json({ error: 'Current and new password are required' });
+    const { currentPassword, newPassword, pin } = req.body;
+    if (!currentPassword || !newPassword || !pin) {
+      return res.status(400).json({ error: 'Todos los campos (contraseña actual, nueva y PIN) son requeridos' });
     }
 
     const user = await prisma.user.findUnique({ where: { id: userId } });
@@ -114,10 +116,23 @@ export const changePassword = async (req: Request, res: Response) => {
       return res.status(400).json({ error: 'Contraseña actual incorrecta' });
     }
 
+    // Validar el PIN de cambio
+    if (!user.changePin || user.changePin !== pin) {
+      return res.status(400).json({ error: 'El código PIN es incorrecto' });
+    }
+
+    if (!user.changePinExpires || new Date() > user.changePinExpires) {
+      return res.status(400).json({ error: 'El código PIN ha expirado' });
+    }
+
     const passwordHash = await bcrypt.hash(newPassword, 10);
     await prisma.user.update({
       where: { id: userId },
-      data: { passwordHash }
+      data: { 
+        passwordHash,
+        changePin: null,
+        changePinExpires: null
+      }
     });
 
     res.json({ message: 'Password updated successfully' });
@@ -126,17 +141,55 @@ export const changePassword = async (req: Request, res: Response) => {
   }
 };
 
+export const requestPasswordChangePin = async (req: Request, res: Response) => {
+  try {
+    // @ts-ignore
+    const userId = req.user?.id;
+    if (!userId) return res.status(401).json({ error: 'Unauthorized' });
+
+    const user = await prisma.user.findUnique({ where: { id: userId } });
+    if (!user) return res.status(404).json({ error: 'User not found' });
+
+    if (!user.email && !process.env.SMTP_USER) {
+       // simulación
+    } else if (!user.email) {
+      return res.status(400).json({ error: 'El usuario no tiene un correo configurado. Contacta al administrador.' });
+    }
+
+    const pin = crypto.randomInt(100000, 999999).toString();
+    const expires = new Date();
+    expires.setMinutes(expires.getMinutes() + 10);
+
+    await prisma.user.update({
+      where: { id: user.id },
+      data: {
+        changePin: pin,
+        changePinExpires: expires
+      }
+    });
+
+    await sendPasswordChangePinEmail(user.email || 'simulated@local', user.username, pin);
+
+    res.json({ message: 'Se ha enviado un PIN a tu correo para confirmar el cambio de contraseña.' });
+  } catch (error) {
+    console.error('Password change pin request error:', error);
+    res.status(500).json({ error: 'Error interno del servidor al procesar la solicitud' });
+  }
+};
+
 export const requestPasswordReset = async (req: Request, res: Response) => {
   try {
     const { username } = req.body;
     if (!username) return res.status(400).json({ error: 'Username or email is required' });
 
+    const searchIdentifier = username.trim();
+
     // Look for user by username or email
     const user = await prisma.user.findFirst({
       where: {
         OR: [
-          { username },
-          { email: username } // Also allow searching by email
+          { username: { equals: searchIdentifier, mode: 'insensitive' } },
+          { email: { equals: searchIdentifier, mode: 'insensitive' } } // Also allow searching by email
         ]
       }
     });
@@ -188,11 +241,13 @@ export const resetPassword = async (req: Request, res: Response) => {
       return res.status(400).json({ error: 'Faltan campos requeridos' });
     }
 
+    const searchIdentifier = username.trim();
+
     const user = await prisma.user.findFirst({
       where: {
         OR: [
-          { username },
-          { email: username }
+          { username: { equals: searchIdentifier, mode: 'insensitive' } },
+          { email: { equals: searchIdentifier, mode: 'insensitive' } }
         ]
       }
     });
@@ -248,7 +303,8 @@ export const updateProfile = async (req: Request, res: Response) => {
       username: updatedUser.username,
       name: updatedUser.name,
       role: updatedUser.role,
-      avatarUrl: updatedUser.avatarUrl
+      avatarUrl: updatedUser.avatarUrl,
+      usernameChangeDates: updatedUser.usernameChangeDates
     });
   } catch (error) {
     console.error('Update profile error:', error);
@@ -310,10 +366,63 @@ export const googleLogin = async (req: Request, res: Response) => {
 
     res.json({
       token: jwtToken,
-      user: { id: user.id, username: user.username, name: user.name, role: user.role, avatarUrl: user.avatarUrl },
+      user: { id: user.id, username: user.username, name: user.name, role: user.role, avatarUrl: user.avatarUrl, usernameChangeDates: user.usernameChangeDates },
     });
   } catch (error) {
     console.error('Google login error:', error);
     res.status(500).json({ error: 'Server error during Google login' });
+  }
+};
+
+export const updateUsername = async (req: Request, res: Response) => {
+  try {
+    // @ts-ignore
+    const userId = req.user?.id;
+    if (!userId) return res.status(401).json({ error: 'Unauthorized' });
+
+    const { newUsername } = req.body;
+    if (!newUsername) return res.status(400).json({ error: 'El nombre de usuario es obligatorio' });
+
+    const user = await prisma.user.findUnique({ where: { id: userId } });
+    if (!user) return res.status(404).json({ error: 'Usuario no encontrado' });
+
+    const existing = await prisma.user.findUnique({ where: { username: newUsername } });
+    if (existing && existing.id !== userId) {
+      return res.status(400).json({ error: 'Este nombre de usuario ya está en uso' });
+    }
+
+    const startOfWeek = new Date();
+    const day = startOfWeek.getDay();
+    const diff = startOfWeek.getDate() - day + (day === 0 ? -6 : 1);
+    startOfWeek.setDate(diff);
+    startOfWeek.setHours(0, 0, 0, 0);
+
+    const recentChanges = user.usernameChangeDates.filter(date => new Date(date) >= startOfWeek);
+
+    if (recentChanges.length >= 2) {
+      return res.status(400).json({ error: 'Has alcanzado el límite de 2 cambios de nombre por semana. Inténtalo la próxima semana.' });
+    }
+
+    const updatedUser = await prisma.user.update({
+      where: { id: userId },
+      data: { 
+        username: newUsername,
+        usernameChangeDates: {
+          push: new Date()
+        }
+      },
+    });
+
+    res.json({
+      id: updatedUser.id,
+      username: updatedUser.username,
+      name: updatedUser.name,
+      role: updatedUser.role,
+      avatarUrl: updatedUser.avatarUrl,
+      usernameChangeDates: updatedUser.usernameChangeDates
+    });
+  } catch (error) {
+    console.error('Update username error:', error);
+    res.status(500).json({ error: 'Server error updating username' });
   }
 };

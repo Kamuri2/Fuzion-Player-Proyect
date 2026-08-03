@@ -1,14 +1,11 @@
 import nodemailer from 'nodemailer';
 
-// Configure the transport using environment variables
-// It expects SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS
+// Configuramos Nodemailer para usar Gmail
 const transporter = nodemailer.createTransport({
-  host: process.env.SMTP_HOST || 'smtp.gmail.com',
-  port: parseInt(process.env.SMTP_PORT || '587'),
-  secure: process.env.SMTP_PORT === '465', // true for 465, false for other ports (587)
+  service: 'gmail',
   auth: {
-    user: process.env.SMTP_USER,
-    pass: process.env.SMTP_PASS,
+    user: process.env.SMTP_USER, // Tu correo normal de Gmail
+    pass: process.env.SMTP_PASS, // Tu "Contraseña de Aplicación" de Google (16 letras)
   },
 });
 
@@ -21,66 +18,63 @@ export const sendPasswordResetEmail = async (to: string, username: string, pin: 
       <meta name="viewport" content="width=device-width, initial-scale=1.0">
       <title>Recuperación de Acceso</title>
       <style>
-        body {
-          margin: 0;
-          padding: 0;
-          background-color: #0a0a0f;
-          color: #ffffff;
-          font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-          -webkit-font-smoothing: antialiased;
+        body { 
+          margin: 0; 
+          padding: 0; 
+          background-color: #faf9f5; 
+          color: #333333; 
+          font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; 
         }
-        .container {
-          max-width: 600px;
-          margin: 0 auto;
-          padding: 40px 20px;
-          text-align: center;
+        .container { 
+          max-width: 600px; 
+          margin: 40px auto; 
+          padding: 40px 20px; 
+          text-align: center; 
+          background-color: #ffffff;
+          border-radius: 16px;
+          box-shadow: 0 4px 20px rgba(0,0,0,0.03);
         }
-        .header {
-          margin-bottom: 30px;
+        .header h1 { 
+          color: #56212f; 
+          font-size: 24px; 
+          margin: 0; 
+          font-weight: 700;
         }
-        .header h1 {
-          color: #00ffcc;
-          font-size: 28px;
-          margin: 0;
-          letter-spacing: 1px;
+        .message { 
+          font-size: 14px; 
+          line-height: 1.6; 
+          color: #4a4a4a; 
+          margin-bottom: 30px; 
+          margin-top: 20px; 
         }
-        .message {
-          font-size: 16px;
-          line-height: 1.6;
-          color: #a0a0b0;
-          margin-bottom: 40px;
+        .message strong { 
+          color: #1a1a1a; 
         }
-        .message strong {
-          color: #ffffff;
+        .pin-box { 
+          background-color: rgba(86, 33, 47, 0.05); 
+          border: 1px dashed #56212f; 
+          border-radius: 8px; 
+          padding: 24px; 
+          margin: 0 auto 25px auto; 
+          max-width: 300px; 
         }
-        .pin-box {
-          background-color: rgba(0, 255, 204, 0.05);
-          border: 2px dashed #00ffcc;
-          border-radius: 12px;
-          padding: 30px;
-          margin: 0 auto 30px auto;
-          max-width: 400px;
+        .pin { 
+          font-size: 36px; 
+          font-weight: 800; 
+          color: #56212f; 
+          letter-spacing: 16px; 
+          margin: 0; 
+          margin-right: -16px; /* Compensate for the last letter spacing to keep it centered */
         }
-        .pin {
-          font-size: 42px;
-          font-weight: bold;
-          color: #00ffcc;
-          letter-spacing: 12px;
-          margin: 0;
+        .timer { 
+          font-size: 12px; 
+          color: #888888; 
+          margin-bottom: 25px;
         }
         .footer {
-          font-size: 12px;
-          color: #606070;
-          margin-top: 40px;
-          border-top: 1px solid rgba(255, 255, 255, 0.1);
-          padding-top: 20px;
-        }
-        .timer {
-          display: inline-flex;
-          align-items: center;
-          gap: 6px;
-          font-size: 13px;
-          color: #808090;
+          font-size: 11px;
+          color: #999999;
+          margin-top: 30px;
         }
       </style>
     </head>
@@ -102,24 +96,15 @@ export const sendPasswordResetEmail = async (to: string, username: string, pin: 
         <div class="timer">
           ⏳ Este código caduca en 10 minutos.
         </div>
-        
+
         <div class="footer">
-          Si no solicitaste este cambio, puedes ignorar este correo de forma segura. El código expirará automáticamente.
+          Si no solicitaste este cambio, puedes ignorar este correo de forma segura.
         </div>
       </div>
     </body>
     </html>
   `;
 
-  // Define email options
-  const mailOptions = {
-    from: `"Plataforma SEIEM" <${process.env.SMTP_USER}>`,
-    to,
-    subject: 'Tu PIN de Recuperación de Contraseña',
-    html: htmlContent,
-  };
-
-  // Only attempt to send if SMTP_USER is configured
   if (!process.env.SMTP_USER || !process.env.SMTP_PASS) {
     console.warn('⚠️ No se han configurado credenciales SMTP. Simulación de envío:');
     console.warn(`[SIMULATED EMAIL TO ${to}] PIN: ${pin}`);
@@ -127,10 +112,131 @@ export const sendPasswordResetEmail = async (to: string, username: string, pin: 
   }
 
   try {
-    const info = await transporter.sendMail(mailOptions);
-    console.log('Message sent: %s', info.messageId);
+    const info = await transporter.sendMail({
+      from: '"Cursos SEIEM" <' + process.env.SMTP_USER + '>',
+      to,
+      subject: 'Tu código de recuperación - SEIEM',
+      html: htmlContent,
+    });
+    console.log('Correo enviado correctamente a cualquier parte del mundo:', info.messageId);
   } catch (error) {
-    console.error('Error sending email: ', error);
+    console.error('Error enviando el correo: ', error);
+    throw new Error('Error al enviar el correo electrónico.');
+  }
+};
+
+export const sendPasswordChangePinEmail = async (to: string, username: string, pin: string) => {
+  const htmlContent = `
+    <!DOCTYPE html>
+    <html lang="es">
+    <head>
+      <meta charset="UTF-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <title>Solicitud de Cambio de Contraseña</title>
+      <style>
+        body { 
+          margin: 0; 
+          padding: 0; 
+          background-color: #faf9f5; 
+          color: #333333; 
+          font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; 
+        }
+        .container { 
+          max-width: 600px; 
+          margin: 40px auto; 
+          padding: 40px 20px; 
+          text-align: center; 
+          background-color: #ffffff;
+          border-radius: 16px;
+          box-shadow: 0 4px 20px rgba(0,0,0,0.03);
+        }
+        .header h1 { 
+          color: #56212f; 
+          font-size: 24px; 
+          margin: 0; 
+          font-weight: 700;
+        }
+        .message { 
+          font-size: 14px; 
+          line-height: 1.6; 
+          color: #4a4a4a; 
+          margin-bottom: 30px; 
+          margin-top: 20px; 
+        }
+        .message strong { 
+          color: #1a1a1a; 
+        }
+        .pin-box { 
+          background-color: rgba(86, 33, 47, 0.05); 
+          border: 1px dashed #56212f; 
+          border-radius: 8px; 
+          padding: 24px; 
+          margin: 0 auto 25px auto; 
+          max-width: 300px; 
+        }
+        .pin { 
+          font-size: 36px; 
+          font-weight: 800; 
+          color: #56212f; 
+          letter-spacing: 16px; 
+          margin: 0; 
+          margin-right: -16px; /* Compensate for the last letter spacing to keep it centered */
+        }
+        .timer { 
+          font-size: 12px; 
+          color: #888888; 
+          margin-bottom: 25px;
+        }
+        .footer {
+          font-size: 11px;
+          color: #999999;
+          margin-top: 30px;
+        }
+      </style>
+    </head>
+    <body>
+      <div class="container">
+        <div class="header">
+          <h1>Solicitud de Cambio de Contraseña</h1>
+        </div>
+        
+        <div class="message">
+          Hola <strong>${username}</strong>, se ha solicitado un PIN para cambiar tu contraseña desde tu perfil.<br><br>
+          Ingresa el siguiente código de seguridad para confirmar el cambio:
+        </div>
+        
+        <div class="pin-box">
+          <p class="pin">${pin}</p>
+        </div>
+        
+        <div class="timer">
+          ⏳ Este código caduca en 10 minutos.
+        </div>
+
+        <div class="footer">
+          Si no solicitaste este cambio, ignora este correo. Tu cuenta sigue estando segura.
+        </div>
+      </div>
+    </body>
+    </html>
+  `;
+
+  if (!process.env.SMTP_USER || !process.env.SMTP_PASS) {
+    console.warn('⚠️ No se han configurado credenciales SMTP. Simulación de envío:');
+    console.warn(`[SIMULATED EMAIL TO ${to}] PIN: ${pin}`);
+    return;
+  }
+
+  try {
+    const info = await transporter.sendMail({
+      from: '"Cursos SEIEM" <' + process.env.SMTP_USER + '>',
+      to,
+      subject: 'Solicitud de Cambio de Contraseña - SEIEM',
+      html: htmlContent,
+    });
+    console.log('Correo enviado correctamente a cualquier parte del mundo:', info.messageId);
+  } catch (error) {
+    console.error('Error enviando el correo: ', error);
     throw new Error('Error al enviar el correo electrónico.');
   }
 };

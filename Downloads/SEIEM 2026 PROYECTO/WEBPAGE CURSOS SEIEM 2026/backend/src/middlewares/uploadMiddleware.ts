@@ -30,24 +30,50 @@ export const upload = multer({
 
 const avatarStorage = multer.diskStorage({
   destination: (req, file, cb) => {
+    const userId = (req as any).user?.id || 'unknown';
     const baseUploadDir = 'uploads/';
-    const finalPath = path.join(baseUploadDir, 'avatars');
-    if (!fs.existsSync(finalPath)) {
+    const finalPath = path.join(baseUploadDir, 'avatars', userId);
+    
+    if (fs.existsSync(finalPath)) {
+      // Vaciar la carpeta para destruir la imagen anterior
+      const files = fs.readdirSync(finalPath);
+      for (const existingFile of files) {
+        fs.unlinkSync(path.join(finalPath, existingFile));
+      }
+    } else {
       fs.mkdirSync(finalPath, { recursive: true });
     }
+    
     cb(null, finalPath);
   },
   filename: (req, file, cb) => {
-    // We expect the frontend to pass the user ID in a header or we decode it from auth token
-    // But middleware runs before we might have parsed the ID in this specific route if not careful.
-    // Since we'll use this with the auth middleware, req.user will be populated.
-    const userId = (req as any).user?.id || 'unknown';
-    // Overwrite the previous file by keeping a fixed name based on ID
-    cb(null, `avatar-${userId}${path.extname(file.originalname)}`);
+    const uniqueSuffix = Date.now();
+    cb(null, `avatar-${uniqueSuffix}${path.extname(file.originalname)}`);
   },
 });
 
 export const avatarUpload = multer({
   storage: avatarStorage,
   limits: { fileSize: 10 * 1024 * 1024 }, // 10MB limit for avatars
+});
+
+const systemStorage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    const baseUploadDir = 'uploads/';
+    const finalPath = path.join(baseUploadDir, 'system');
+    if (!fs.existsSync(finalPath)) {
+      fs.mkdirSync(finalPath, { recursive: true });
+    }
+    cb(null, finalPath);
+  },
+  filename: (req, file, cb) => {
+    const type = req.params.type || 'logo';
+    const uniqueSuffix = Date.now();
+    cb(null, `${type}-${uniqueSuffix}${path.extname(file.originalname)}`);
+  },
+});
+
+export const systemUpload = multer({
+  storage: systemStorage,
+  limits: { fileSize: 10 * 1024 * 1024 }, // 10MB limit
 });

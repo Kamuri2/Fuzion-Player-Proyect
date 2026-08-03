@@ -41,7 +41,8 @@ app.post('/api/upload/avatars', authenticate, avatarUpload.single('files'), (req
     return res.status(400).json({ error: 'No file uploaded' });
   }
   
-  const fileUrl = `${req.protocol}://${req.get('host')}/uploads/avatars/${req.file.filename}`;
+  const userId = (req as any).user?.id || 'unknown';
+  const fileUrl = `${req.protocol}://${req.get('host')}/uploads/avatars/${userId}/${req.file.filename}`;
   return res.json({ urls: [fileUrl] });
 });
 
