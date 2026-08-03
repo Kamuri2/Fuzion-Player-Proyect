@@ -38,6 +38,8 @@
     "mascotHelper": "Upload GIFs or PNGs with transparent background.",
     "import": "Import",
     "delete": "Delete",
+    "startupSound": "Startup Sound Volume",
+    "startupSoundHelper": "Adjust the welcome sound volume, or move it to zero to completely disable it.",
     "noMascots": "No imported mascots.",
     "library": "Music Library",
     "currentFolder": "Current folder:",
@@ -142,6 +144,9 @@
     "search": "Search albums...",
     "unknown": "Unknown Album"
   },
+  "folders": {
+    "title": "Folder"
+  },
   "sidebar": {
     "home": "Home",
     "folders": "Folders",
@@ -182,10 +187,27 @@
     "back": "Back",
     "playingFrom": "Playing from",
     "translationBlocked": "TRANSLATION SERVICE IS CURRENTLY UNAVAILABLE",
-    "translationRestored": "SERVICE RESTORED, THANK YOU FOR WAITING"
+    "translationRestored": "SERVICE RESTORED, THANK YOU FOR WAITING",
+    "playNext": "Play next",
+    "removeFromQueue": "Remove from queue",
+    "nextInQueue": "Next in queue",
+    "nextFrom": "Next from: {{context}}",
+    "addedToQueue": "Added to queue",
+    "removedFromQueue": "Removed from queue"
   },
   "common": {
     "cancel": "Cancel",
     "confirm": "Confirm"
+  },
+  "splash": {
+    "welcome": "Welcome"
+  },
+  "setup": {
+    "welcome": "Hi, What's your name?",
+    "desc": "Enter your name or nickname to personalize the experience.",
+    "placeholder": "Your name...",
+    "downloading": "Please wait while the language is being downloaded...",
+    "almostThere": "Almost there, thanks for waiting...",
+    "done": "Language ready!"
   }
 }

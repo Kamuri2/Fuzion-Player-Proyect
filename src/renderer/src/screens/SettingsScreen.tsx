@@ -24,6 +24,10 @@ export default function SettingsScreen() {
   const [draftFont, setDraftFont] = useState(customFont);
   const [isTranslatingUI, setIsTranslatingUI] = useState(false);
   const [languageMode, setLanguageMode] = useState(localStorage.getItem('app_language_mode') || 'system');
+  const [startupSoundVolume, setStartupSoundVolume] = useState(() => {
+    const vol = localStorage.getItem('app_startup_sound_volume');
+    return vol !== null ? parseFloat(vol) : 0.5;
+  });
 
   useEffect(() => {
     setDraftFont(customFont);
@@ -87,7 +91,7 @@ export default function SettingsScreen() {
       </div>
 
       <div className="space-y-6">
-        <div className="p-6 rounded-2xl border border-white/10 shadow-sm" style={{ backgroundColor: isDarkMode ? '#1e1e1e' : '#ffffff' }}>
+        <div className={`p-6 rounded-2xl border border-white/10 shadow-sm backdrop-blur-2xl ${isDarkMode ? 'bg-black/40' : 'bg-white/40'}`}>
           <h2 className="text-xl font-bold mb-4" style={{ color: colors.text }}>{t('settings.appearance')}</h2>
           <div className="flex flex-row items-center justify-between mb-6">
             <span className="font-medium" style={{ color: colors.subText }}>{t('settings.darkMode')}</span>
@@ -112,6 +116,30 @@ export default function SettingsScreen() {
             >
               <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${isFullMode ? 'translate-x-6' : 'translate-x-1'}`} />
             </button>
+          </div>
+
+          <div className="mb-6">
+            <div className="flex flex-row items-center justify-between mb-2">
+              <span className="font-medium" style={{ color: colors.text }}>{t('settings.startupSound', 'Volumen de sonido de inicio')}</span>
+              <span className="font-bold" style={{ color: colors.primary }}>{Math.round(startupSoundVolume * 100)}%</span>
+            </div>
+            <input
+              type="range"
+              min="0"
+              max="1"
+              step="0.01"
+              value={startupSoundVolume}
+              onChange={(e) => {
+                const val = Number(e.target.value);
+                setStartupSoundVolume(val);
+                localStorage.setItem('app_startup_sound_volume', val.toString());
+              }}
+              className="w-full h-2 rounded-lg appearance-none cursor-pointer"
+              style={{ accentColor: colors.primary, backgroundColor: isDarkMode ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.3)' }}
+            />
+            <p className="text-xs opacity-70 mt-2" style={{ color: colors.subText }}>
+              {t('settings.startupSoundHelper', 'Ajusta el volumen del sonido de bienvenida, o muévelo a cero para desactivarlo completamente.')}
+            </p>
           </div>
 
           <span className="font-medium mb-3 block" style={{ color: colors.subText }}>{t('settings.globalTheme')}</span>
@@ -263,7 +291,7 @@ export default function SettingsScreen() {
           </div>
         </div>
 
-        <div className="p-6 rounded-2xl border border-white/10 shadow-sm" style={{ backgroundColor: isDarkMode ? '#1e1e1e' : '#ffffff' }}>
+        <div className={`p-6 rounded-2xl border border-white/10 shadow-sm backdrop-blur-2xl ${isDarkMode ? 'bg-black/40' : 'bg-white/40'}`}>
           <h2 className="text-xl font-bold mb-4" style={{ color: colors.text }}>{t('settings.mascot')}</h2>
           <div className="flex flex-col gap-4">
             <div className="flex flex-row items-center justify-between">
@@ -311,7 +339,7 @@ export default function SettingsScreen() {
           </div>
         </div>
 
-        <div className="p-6 rounded-2xl border border-white/10 shadow-sm" style={{ backgroundColor: isDarkMode ? '#1e1e1e' : '#ffffff' }}>
+        <div className={`p-6 rounded-2xl border border-white/10 shadow-sm backdrop-blur-2xl ${isDarkMode ? 'bg-black/40' : 'bg-white/40'}`}>
           <h2 className="text-xl font-bold mb-4" style={{ color: colors.text }}>{t('settings.library')}</h2>
 
           {currentFolder ? (
@@ -363,7 +391,7 @@ export default function SettingsScreen() {
           </div>
         </div>
 
-        <div className="p-6 rounded-2xl border border-white/10 shadow-sm" style={{ backgroundColor: isDarkMode ? '#1e1e1e' : '#ffffff' }}>
+        <div className={`p-6 rounded-2xl border border-white/10 shadow-sm backdrop-blur-2xl ${isDarkMode ? 'bg-black/40' : 'bg-white/40'}`}>
           <h2 className="text-xl font-bold mb-4" style={{ color: colors.text }}>{t('settings.playback', 'Reproducción')}</h2>
 
           <div className="flex flex-row items-center justify-between">
@@ -429,7 +457,7 @@ export default function SettingsScreen() {
         </div>
 
         {/* Language Section */}
-        <div className="p-6 rounded-2xl border border-white/10 shadow-sm" style={{ backgroundColor: isDarkMode ? '#1e1e1e' : '#ffffff' }}>
+        <div className={`p-6 rounded-2xl border border-white/10 shadow-sm backdrop-blur-2xl ${isDarkMode ? 'bg-black/40' : 'bg-white/40'}`}>
           <h2 className="text-xl font-bold mb-4 flex items-center gap-2" style={{ color: colors.text }}>
             {t('settings.language')}
             {isTranslatingUI && <RefreshCw size={16} className="animate-spin text-primary" />}
@@ -462,10 +490,10 @@ export default function SettingsScreen() {
           </div>
         </div>
 
-        <div className="p-6 rounded-2xl border border-white/10 shadow-sm" style={{ backgroundColor: isDarkMode ? '#1e1e1e' : '#ffffff' }}>
+        <div className={`p-6 rounded-2xl border border-white/10 shadow-sm backdrop-blur-2xl ${isDarkMode ? 'bg-black/40' : 'bg-white/40'}`}>
           <h2 className="text-xl font-bold mb-4" style={{ color: colors.text }}>{t('settings.about', 'Acerca de')}</h2>
           <p className="text-sm" style={{ color: colors.subText }}>
-            CybeCat Desktop v1.0.0<br />
+            Fuzion Player v1.0.0<br />
             {t('settings.songsRead', 'Canciones Leídas:')} {songs.length}
           </p>
         </div>

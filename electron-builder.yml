@@ -1,8 +1,9 @@
-appId: com.kevin.scat
-productName: SCat
+appId: com.kevin.fuzionplayer
+productName: Fuzion Player
 directories:
   buildResources: build
-  output: dist/SCat
+  output: dist-player
+artifactName: "Fuzion Player-${version}-setup.${ext}"
 files:
   - '!**/.vscode/*'
   - '!src/*'
@@ -13,10 +14,10 @@ files:
 asarUnpack:
   - resources/**
 win:
-  executableName: SCat
+  executableName: Fuzion Player
   icon: build/icon.png
 nsis:
-  artifactName: SCat-${version}-setup.${ext}
+  artifactName: Fuzion Player-${version}-setup.${ext}
   shortcutName: ${productName}
   uninstallDisplayName: ${productName}
   createDesktopShortcut: always

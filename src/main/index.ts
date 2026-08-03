@@ -17,7 +17,7 @@ function createWindow(): void {
       symbolColor: '#808080',
       height: 38
     },
-    title: 'CybeCat',
+    title: 'Fuzion Player',
     ...(process.platform === 'linux' ? { icon } : {}),
     webPreferences: {
       preload: join(__dirname, '../preload/index.js'),
@@ -74,7 +74,7 @@ if (!gotTheLock) {
 
 
     // Set app user model id for windows
-    electronApp.setAppUserModelId('com.cybecat.app')
+    electronApp.setAppUserModelId('com.kevin.fuzionplayer')
 
     // Default open or close DevTools by F12 in development
     // and ignore CommandOrControl + R in production.

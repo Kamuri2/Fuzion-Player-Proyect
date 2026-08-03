@@ -38,6 +38,8 @@
     "mascotHelper": "Sube GIFs o PNGs con fondo transparente.",
     "import": "Importar",
     "delete": "Eliminar",
+    "startupSound": "Volumen de sonido de inicio",
+    "startupSoundHelper": "Ajusta el volumen del sonido de bienvenida, o muévelo a cero para desactivarlo completamente.",
     "noMascots": "No hay mascotas importadas.",
     "library": "Librería de Música",
     "currentFolder": "Carpeta actual:",
@@ -142,12 +144,15 @@
     "search": "Buscar álbumes...",
     "unknown": "Álbum Desconocido"
   },
+  "folders": {
+    "title": "Carpeta"
+  },
   "sidebar": {
-    "home": "Home",
+    "home": "Inicio",
     "folders": "Carpetas",
     "playlists": "Playlists",
     "albums": "Albums",
-    "artists": "Artists"
+    "artists": "Artistas"
   },
   "detail": {
     "unknown": "Desconocido",
@@ -182,10 +187,27 @@
     "back": "Volver",
     "playingFrom": "Reproduciendo desde",
     "translationBlocked": "EL SERVICIO DE TRADUCCION NO ESTA DISPONIBLE EN ESTE MOMENTO",
-    "translationRestored": "SERVICIO RESTABLECIDO NUEVAMENTE, GRACIAS POR LA ESPERA"
+    "translationRestored": "SERVICIO RESTABLECIDO NUEVAMENTE, GRACIAS POR LA ESPERA",
+    "playNext": "Añadir a continuación",
+    "removeFromQueue": "Eliminar de la fila",
+    "nextInQueue": "A continuación en la cola",
+    "nextFrom": "Siguiente de: {{context}}",
+    "addedToQueue": "Añadido a la cola",
+    "removedFromQueue": "Eliminado de la cola"
   },
   "common": {
     "cancel": "Cancelar",
     "confirm": "Aceptar"
+  },
+  "splash": {
+    "welcome": "Bienvenido"
+  },
+  "setup": {
+    "welcome": "Hola, ¿Cómo te llamas?",
+    "desc": "Ingresa tu nombre o apodo para personalizar la experiencia.",
+    "placeholder": "Tu nombre...",
+    "downloading": "Por favor espere mientras se descarga el idioma...",
+    "almostThere": "Ya casi está, gracias por esperar...",
+    "done": "¡Idioma listo!"
   }
 }

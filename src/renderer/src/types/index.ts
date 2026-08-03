@@ -14,6 +14,8 @@ export interface Song {
   hasLyrics?: boolean;
   trackNumber?: number;
   year?: string;
+  isManualQueue?: boolean;
+  queueId?: string;
 }
 
 export interface Metadata {
@@ -86,6 +88,8 @@ export interface AudioContextType {
   queuePosition: number;
   queueLength: number;
   reorderQueue: (startIndex: number, endIndex: number) => void;
+  addSongToNext: (song: Song) => void;
+  removeFromQueue: (indexToRemove: number) => void;
   
   toggleFavorite: (songId: string) => Promise<void>;
   isFavorite: (songId: string) => boolean;

@@ -8,6 +8,7 @@ import { Virtuoso } from 'react-virtuoso';
 import { motion } from 'framer-motion';
 import lutoImg from '../assets/luto.png';
 import { useTranslation } from 'react-i18next';
+import SongContextMenu from '../components/SongContextMenu';
 
 const SongListItem = React.memo(({ item, isPlaying, onPress, index, hideCover, onRemove }: any) => {
   const { colors } = useTheme();
@@ -47,14 +48,23 @@ const SongListItem = React.memo(({ item, isPlaying, onPress, index, hideCover, o
           {Math.floor(item.duration / 60)}:{(item.duration % 60).toString().padStart(2, '0')}
         </div>
       )}
-      {onRemove && (
-        <button
-          onClick={(e) => { e.stopPropagation(); onRemove(); }}
-          className="p-2 opacity-0 group-hover:opacity-100 hover:text-red-400 transition-all text-white/50"
-        >
-          <Trash2 size={18} />
-        </button>
-      )}
+      
+      <div className="flex items-center gap-2">
+        {onRemove && (
+          <button
+            className="p-2 rounded-full hover:bg-black/10 dark:hover:bg-white/10 transition-colors text-red-500 opacity-0 group-hover:opacity-100"
+            onClick={(e) => { e.stopPropagation(); onRemove(); }}
+            title={t('playlists.removeFromPlaylist', 'Eliminar de playlist')}
+          >
+            <Trash2 size={18} />
+          </button>
+        )}
+        {!isPlaying && (
+          <div className="opacity-0 group-hover:opacity-100 transition-opacity">
+            <SongContextMenu song={item} />
+          </div>
+        )}
+      </div>
     </div>
   );
 });

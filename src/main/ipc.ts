@@ -517,6 +517,8 @@ export function setupIpc() {
 
     // Delay to be polite to APIs ONLY when actually making a network request
     await new Promise(r => setTimeout(r, 300));
+    
+    let networkErrorCount = 0;
 
     const downloadImage = async (url: string, artistName: string) => {
       try {
@@ -563,6 +565,7 @@ export function setupIpc() {
         }
       }
     } catch (e) {
+      networkErrorCount++;
       console.error('Error fetching artist image from Deezer for', artistName, e);
     }
 
@@ -580,6 +583,7 @@ export function setupIpc() {
         }
       }
     } catch (e) {
+      networkErrorCount++;
       console.error('Error fetching artist image from AudioDB for', artistName, e);
     }
 
@@ -601,12 +605,18 @@ export function setupIpc() {
         }
       }
     } catch (e) {
+      networkErrorCount++;
       console.error('Error fetching artist image from iTunes for', artistName, e);
     }
 
-    // Cache null to prevent retrying the same missing artist over and over
-    cache[normalizedName] = null;
-    await fs.writeFile(cachePath, JSON.stringify(cache, null, 2), 'utf8');
+    // Only cache null if it wasn't a complete network failure
+    if (networkErrorCount < 3) {
+      cache[normalizedName] = null;
+      await fs.writeFile(cachePath, JSON.stringify(cache, null, 2), 'utf8');
+    } else {
+      console.warn(`Network failed for ${artistName}, not caching null so it can be retried later.`);
+    }
+    
     return null;
   });
 

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useEffect } from 'react';
 import { HashRouter as Router, Routes, Route, useLocation } from 'react-router-dom';
 import { AnimatePresence, motion } from 'framer-motion';
 import { AudioProvider, useAudio } from './context/AudioContext';
@@ -8,7 +8,9 @@ import MiniPlayer from './components/MiniPlayer';
 import Sidebar from './components/Sidebar';
 import GlobalButtons from './components/GlobalButtons';
 import Mascot from './components/Mascot';
+import SplashScreen from './components/SplashScreen';
 import { useTranslation } from 'react-i18next';
+import { useState } from 'react';
 import enDict from './locales/en.json';
 
 import PlayerScreen from './screens/PlayerScreen';
@@ -22,8 +24,8 @@ import ErrorBoundary from './components/ErrorBoundary';
 
 function AppContent() {
   const { isPlayerOpen, currentSong, toastMessage } = useAudio();
-  const [renderPlayer, setRenderPlayer] = useState(isPlayerOpen);
   const { i18n } = useTranslation();
+  const [showSplash, setShowSplash] = useState(true);
 
   // Load dynamic language cache on boot if needed
   useEffect(() => {
@@ -49,26 +51,20 @@ function AppContent() {
     }
   }, [i18n, i18n.language]);
 
-  useEffect(() => {
-    if (isPlayerOpen) {
-      setRenderPlayer(true);
-      return undefined;
-    } else {
-      const t = setTimeout(() => setRenderPlayer(false), 400);
-      return () => clearTimeout(t);
-    }
-  }, [isPlayerOpen]);
-
   const location = useLocation();
 
   return (
     <div className="flex flex-col md:flex-row h-screen overflow-hidden bg-transparent relative">
+      <AnimatePresence>
+        {showSplash && <SplashScreen onComplete={() => setShowSplash(false)} />}
+      </AnimatePresence>
+      
       {/* Draggable Top Bar for frameless window */}
-      <div 
-        className="fixed top-0 left-0 right-0 h-10 z-[100]" 
+      <div
+        className="fixed top-0 left-0 right-0 h-10 z-[100]"
         style={{ WebkitAppRegion: 'drag' } as any}
       />
-      
+
       <GlobalButtons />
       <Sidebar />
       <div id="main-scroll-container" className={`flex-1 overflow-y-auto overflow-x-hidden relative ${currentSong && !isPlayerOpen ? 'pb-[90px]' : 'pb-20 md:pb-0'}`}>
@@ -85,22 +81,45 @@ function AppContent() {
         </AnimatePresence>
       </div>
       <MiniPlayer />
-      {renderPlayer && (
-        <div 
-          className={`absolute inset-0 z-50 transition-transform duration-400 ease-[cubic-bezier(0.16,1,0.3,1)] ${isPlayerOpen ? 'translate-y-0' : 'translate-y-full'}`}
+      {/* Player Screen (Genie Effect Simulation) */}
+      <div className="absolute inset-0 z-50 pointer-events-none" style={{ perspective: '1200px' }}>
+        <motion.div
+          animate={isPlayerOpen ? "open" : "closed"}
+          initial="closed"
+          variants={{
+            open: {
+              opacity: 1,
+              scale: 1,
+              y: 0,
+              rotateX: 0,
+              borderRadius: '0px',
+              pointerEvents: 'auto',
+              transition: { duration: 0.50, ease: [0.25, 1, 0.35, 1], delay: 0.23 }
+            },
+            closed: {
+              opacity: 0,
+              scale: 0.15,
+              y: '45vh',
+              rotateX: -55,
+              borderRadius: '150px',
+              pointerEvents: 'none',
+              transition: { duration: 0.50, ease: [0.65, 0, 0.35, 1] }
+            }
+          }}
+          className="absolute inset-0 bg-[#0a0a0a] overflow-hidden shadow-2xl"
+          style={{ transformOrigin: 'bottom center' }}
         >
           <PlayerScreen />
-        </div>
-      )}
+        </motion.div>
+      </div>
       <AnimatePresence>
         {toastMessage && (
           <motion.div
             initial={{ opacity: 0, y: 50, scale: 0.9 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, scale: 0.9, transition: { duration: 0.2 } }}
-            className={`fixed bottom-24 left-1/2 -translate-x-1/2 z-[100] px-6 py-3 rounded-full shadow-2xl backdrop-blur-md border ${
-              toastMessage.type === 'error' ? 'bg-red-500/20 border-red-500/50 text-red-100' : 'bg-emerald-500/20 border-emerald-500/50 text-emerald-100'
-            }`}
+            className={`fixed bottom-24 left-1/2 -translate-x-1/2 z-[100] px-6 py-3 rounded-full shadow-2xl backdrop-blur-md border ${toastMessage.type === 'error' ? 'bg-red-500/20 border-red-500/50 text-red-100' : 'bg-emerald-500/20 border-emerald-500/50 text-emerald-100'
+              }`}
           >
             <span className="font-bold">{toastMessage.msg}</span>
           </motion.div>

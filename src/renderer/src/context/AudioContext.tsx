@@ -775,6 +775,45 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     }
   };
 
+  const addSongToNext = (song: Song) => {
+    const manualSong: Song = { ...song, isManualQueue: true, queueId: Math.random().toString(36).substring(7) };
+    
+    // Add directly after the current song
+    const insertIndex = currentQueueIndex.current + 1;
+    const result = Array.from(queueRef.current);
+    result.splice(insertIndex, 0, manualSong);
+    
+    queueRef.current = result;
+    setQueue(result);
+    setQueueLength(result.length);
+    showToast(t('player.addedToQueue', 'Añadida a la cola'), 'success');
+  };
+
+  const removeFromQueue = (indexToRemove: number) => {
+    // Determine the actual index in the full queue
+    // Note: The UI usually passes the offset index, so we need to ensure the caller passes the absolute index.
+    const result = Array.from(queueRef.current);
+    
+    if (indexToRemove < 0 || indexToRemove >= result.length) return;
+    
+    // Don't remove currently playing song via this method
+    if (indexToRemove === currentQueueIndex.current) return;
+
+    result.splice(indexToRemove, 1);
+    
+    queueRef.current = result;
+    setQueue(result);
+    setQueueLength(result.length);
+
+    // If we removed a song that was BEFORE the current song, our current index shifted!
+    if (currentSong && indexToRemove < currentQueueIndex.current) {
+      currentQueueIndex.current -= 1;
+      setQueuePosition(currentQueueIndex.current + 1);
+    }
+    
+    showToast(t('player.removedFromQueue', 'Eliminada de la cola'), 'success');
+  };
+
   useEffect(() => {
     // @ts-ignore
     if (window.electron?.ipcRenderer) {
@@ -794,6 +833,35 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     return undefined;
   }, [t]);
 
+  useEffect(() => {
+    const handleOnline = async () => {
+      // Re-fetch missing artist covers automatically when internet returns
+      setArtists(prevArtists => {
+        const fetchMissing = async (currentArtists: Record<string, Artist>) => {
+           const artistNames = Object.keys(currentArtists).filter(n => n !== 'Desconocido');
+           for (const name of artistNames) {
+             if (!currentArtists[name].cover) {
+               const firstSong = currentArtists[name].songs[0];
+               // Try to fetch again now that we are online
+               const url = await window.api.getArtistImage(name, firstSong?.path);
+               if (url) {
+                 setArtists(a => ({
+                   ...a,
+                   [name]: { ...a[name], cover: url }
+                 }));
+               }
+             }
+           }
+        };
+        fetchMissing(prevArtists);
+        return prevArtists;
+      });
+    };
+
+    window.addEventListener('online', handleOnline);
+    return () => window.removeEventListener('online', handleOnline);
+  }, []);
+
   return (
     <AudioContext.Provider value={{
       isScanning, songs, setSongs, albums, folders, artists, playlists,
@@ -802,11 +870,10 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       playSound, playWithShuffle, pauseOrResumeSound, playNext, playPrevious, seekTo,
       progress, duration,
       metadataCache: {}, extractMetadataOnDemand, currentContextId,
-      loadSongsFromUri, queue, queuePosition, queueLength, reorderQueue,
-      toggleFavorite, isFavorite, repeatMode, toggleRepeatMode, isShuffle,
-      toggleShuffle, changeMusicFolder, isPlayerOpen, setIsPlayerOpen,
-      showLyrics, setShowLyrics, isCrossfadeEnabled, setIsCrossfadeEnabled,
-      crossfadeDurationIn, setCrossfadeDurationIn,
+      loadSongsFromUri, queue, queuePosition, queueLength, reorderQueue, addSongToNext, removeFromQueue,
+      toggleFavorite, isFavorite, repeatMode, toggleRepeatMode,
+      isShuffle, toggleShuffle, changeMusicFolder, isPlayerOpen, setIsPlayerOpen,
+      showLyrics, setShowLyrics, isCrossfadeEnabled, setIsCrossfadeEnabled, crossfadeDurationIn, setCrossfadeDurationIn,
       crossfadeDurationOut, setCrossfadeDurationOut,
       toastMessage, showToast
     }}>

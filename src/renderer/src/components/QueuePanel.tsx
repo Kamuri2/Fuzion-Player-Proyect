@@ -3,6 +3,7 @@ import { useAudio } from '../context/AudioContext';
 import { useTheme } from '../context/ThemeContext';
 import { X, GripVertical } from 'lucide-react';
 import CoverImage from './CoverImage';
+import SongContextMenu from './SongContextMenu';
 import { Virtuoso, VirtuosoHandle } from 'react-virtuoso';
 import { useTranslation } from 'react-i18next';
 
@@ -12,7 +13,7 @@ interface QueuePanelProps {
 }
 
 export default function QueuePanel({ onClose }: QueuePanelProps) {
-  const { queue, queuePosition, currentSong, reorderQueue, playSound, currentContextId } = useAudio();
+  const { queue, queuePosition, currentSong, reorderQueue, playSound, currentContextId, playlists } = useAudio();
   const { colors, isFullMode } = useTheme();
   const { t } = useTranslation();
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
@@ -139,9 +140,61 @@ export default function QueuePanel({ onClose }: QueuePanelProps) {
           itemContent={(index, song) => {
             const isPlaying = currentSong?.id === song.id;
             
+            let showHeader: string | null = null;
+            if (index === 0 && song.isManualQueue) {
+              showHeader = t('player.nextInQueue', 'A continuación en la cola');
+            } else if (index === 0 && !song.isManualQueue && upcomingQueue.length > 1) { // If it's the first item and not manual, but wait: the first item is the CURRENT song!
+              // Actually index 0 is currentSong (if offset = queuePosition - 1). 
+              // Wait, offset = Math.max(0, queuePosition - 1);
+              // If we are at queuePosition 1, offset is 0. 
+              // upcomingQueue[0] is the current song.
+            }
+            
+            // The logic: 
+            // index === 0 is ALWAYS the currently playing song (because offset = queuePosition - 1).
+            // Actually, if queuePosition > 0, offset = queuePosition - 1, so upcomingQueue[0] is queue[queuePosition - 1] (the current song).
+            // So index 1 is the first "next" song.
+            
+            if (index === 1) {
+              if (song.isManualQueue) {
+                showHeader = t('player.nextInQueue', 'A continuación en la cola');
+              } else {
+                let contextName = currentContextId;
+                if (contextName === 'all') contextName = t('sidebar.allSongs', 'Todas las canciones');
+                else if (contextName === 'favorites') contextName = t('playlists.favorites', 'Me Gusta');
+                else if (contextName.startsWith('folder:')) contextName = contextName.replace('folder:', '');
+                else if (contextName.startsWith('album:')) contextName = contextName.replace('album:', '');
+                else if (contextName.startsWith('artist:')) contextName = contextName.replace('artist:', '');
+                else {
+                  const p = playlists.find(p => p.id === contextName);
+                  if (p) contextName = p.name;
+                }
+                showHeader = t('player.nextFrom', 'Siguiente de: {{context}}', { context: contextName });
+              }
+            } else if (index > 1 && !song.isManualQueue && upcomingQueue[index - 1].isManualQueue) {
+              // Transition from manual queue to auto queue
+              let contextName = currentContextId;
+              if (contextName === 'all') contextName = t('sidebar.allSongs', 'Todas las canciones');
+              else if (contextName === 'favorites') contextName = t('playlists.favorites', 'Me Gusta');
+              else if (contextName.startsWith('folder:')) contextName = contextName.replace('folder:', '');
+              else if (contextName.startsWith('album:')) contextName = contextName.replace('album:', '');
+              else if (contextName.startsWith('artist:')) contextName = contextName.replace('artist:', '');
+              else {
+                const p = playlists.find(p => p.id === contextName);
+                if (p) contextName = p.name;
+              }
+              showHeader = t('player.nextFrom', 'Siguiente de: {{context}}', { context: contextName });
+            }
+
             return (
-              <div 
-                draggable
+              <div className="flex flex-col">
+                {showHeader && (
+                  <div className="px-5 py-3 mt-2 text-sm font-bold text-white/60 uppercase tracking-wider">
+                    {showHeader}
+                  </div>
+                )}
+                <div 
+                  draggable
                 onDragStart={(e) => handleDragStart(e, index)}
                 onDragOver={handleDragOver}
                 onDrop={(e) => handleDrop(e, index)}
@@ -180,6 +233,13 @@ export default function QueuePanel({ onClose }: QueuePanelProps) {
                   </p>
                   <p className="text-xs text-white/50 truncate mt-0.5">{song.artist || t('artists.unknown', 'Desconocido')}</p>
                 </div>
+
+                {!isPlaying && (
+                  <div className="ml-2">
+                    <SongContextMenu song={song} inQueue={true} queueIndex={offset + index} />
+                  </div>
+                )}
+              </div>
               </div>
             );
           }}

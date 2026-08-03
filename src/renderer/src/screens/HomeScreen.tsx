@@ -6,6 +6,7 @@ import { useTheme } from '../context/ThemeContext';
 import { useTranslation } from 'react-i18next';
 import CoverImage from '../components/CoverImage';
 import { Virtuoso } from 'react-virtuoso';
+import SongContextMenu from '../components/SongContextMenu';
 
 const SongListItem = React.memo(({ item, isPlaying, onPress, index }: any) => {
   const { colors } = useTheme();
@@ -13,7 +14,7 @@ const SongListItem = React.memo(({ item, isPlaying, onPress, index }: any) => {
 
   return (
     <div 
-      className="flex flex-row items-center p-3 rounded-xl mb-3 cursor-pointer hover:bg-black/5 transition-colors"
+      className="flex flex-row items-center p-3 rounded-xl mb-3 cursor-pointer hover:bg-black/5 dark:hover:bg-white/5 transition-colors group"
       onClick={onPress}
       style={{ animationDelay: `${index * 30}ms` }}
     >
@@ -36,9 +37,16 @@ const SongListItem = React.memo(({ item, isPlaying, onPress, index }: any) => {
           {item.artist || t('detail.unknown')}
         </span>
       </div>
-      {isPlaying && (
-        <Activity size={18} color={colors.primary} className="ml-3" />
-      )}
+      <div className="flex items-center gap-3 ml-3">
+        {isPlaying && (
+          <Activity size={18} color={colors.primary} />
+        )}
+        {!isPlaying && (
+          <div className="opacity-0 group-hover:opacity-100 transition-opacity">
+            <SongContextMenu song={item} />
+          </div>
+        )}
+      </div>
     </div>
   );
 });
