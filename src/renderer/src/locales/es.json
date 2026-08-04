@@ -59,7 +59,9 @@
     "songsRead": "Canciones Leídas:",
     "deleteFolder": "Eliminar Carpeta",
     "fullMode": "Modo Compacto",
-    "fullModeDesc": "Habilitar el diseño de escritorio compacto para el reproductor con barras laterales."
+    "fullModeDesc": "Habilitar el diseño de escritorio compacto para el reproductor con barras laterales.",
+    "scanCompleteNew": "Escaneo completo. {{count}} canciones nuevas encontradas.",
+    "scanCompleteNoNew": "Escaneo completo. No se encontraron canciones nuevas."
   },
   "home": {
     "welcome": "Bienvenido de nuevo",

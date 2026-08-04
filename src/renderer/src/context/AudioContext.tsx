@@ -428,11 +428,13 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
       // Build an oldId→path map from the previously cached songs
       const oldIdToPath: Record<string, string> = {};
+      let previousCount = 0;
       try {
         const oldCached = localStorage.getItem('@cached_songs');
         if (oldCached) {
           const oldSongs = JSON.parse(oldCached);
           if (Array.isArray(oldSongs)) {
+            previousCount = oldSongs.length;
             for (const os of oldSongs) {
               if (os.id && os.path) {
                 oldIdToPath[os.id] = os.path;
@@ -471,6 +473,15 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       try {
         localStorage.setItem('@cached_songs', JSON.stringify(formattedSongs));
       } catch (e) { }
+
+      const newCount = Math.max(0, formattedSongs.length - previousCount);
+      if (!_isBackgroundLoad || newCount > 0) {
+        if (newCount > 0) {
+          showToast(t('settings.scanCompleteNew', 'Escaneo completo. {{count}} canciones nuevas encontradas.', { count: newCount }));
+        } else {
+          showToast(t('settings.scanCompleteNoNew', 'Escaneo completo. No se encontraron canciones nuevas.'));
+        }
+      }
     } catch (e) {
       console.error("Error loading songs:", e);
     } finally {
@@ -596,6 +607,19 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       setAudioDetails({ bitrate: meta.bitrate, sampleRate: meta.sampleRate, format: meta.format });
       const updatedSong = { ...song, title: meta.title, artist: meta.artist, album: meta.album, cover: meta.cover, duration: meta.duration };
       setCurrentSong(updatedSong);
+
+      if ('mediaSession' in navigator) {
+        navigator.mediaSession.metadata = new MediaMetadata({
+          title: updatedSong.title || updatedSong.filename,
+          artist: updatedSong.artist || 'Unknown Artist',
+          album: updatedSong.album || 'Unknown Album',
+          artwork: updatedSong.cover ? [
+            { src: updatedSong.cover, sizes: '512x512', type: 'image/png' },
+            { src: updatedSong.cover, sizes: '256x256', type: 'image/png' }
+          ] : []
+        });
+      }
+
       return updatedSong;
     } catch (e) {
       console.error(e);
@@ -860,6 +884,36 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
     window.addEventListener('online', handleOnline);
     return () => window.removeEventListener('online', handleOnline);
+  }, [artists, songs]);
+
+  // MediaSession Action Handlers and Playback State
+  const mediaSessionHandlers = useRef({
+    playPause: pauseOrResumeSound,
+    next: playNext,
+    prev: playPrevious
+  });
+  
+  useEffect(() => {
+    mediaSessionHandlers.current = {
+      playPause: pauseOrResumeSound,
+      next: playNext,
+      prev: playPrevious
+    };
+  }, [pauseOrResumeSound, playNext, playPrevious]);
+
+  useEffect(() => {
+    if ('mediaSession' in navigator) {
+      navigator.mediaSession.playbackState = isPlaying ? 'playing' : 'paused';
+    }
+  }, [isPlaying]);
+
+  useEffect(() => {
+    if ('mediaSession' in navigator) {
+      navigator.mediaSession.setActionHandler('play', () => mediaSessionHandlers.current.playPause());
+      navigator.mediaSession.setActionHandler('pause', () => mediaSessionHandlers.current.playPause());
+      navigator.mediaSession.setActionHandler('previoustrack', () => mediaSessionHandlers.current.prev());
+      navigator.mediaSession.setActionHandler('nexttrack', () => mediaSessionHandlers.current.next());
+    }
   }, []);
 
   return (

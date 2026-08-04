@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ArrowLeft, Play, Pause, SkipBack, SkipForward, Repeat, Shuffle, ListMusic, Mic2, Heart, Plus, ThumbsDown, FolderOpen, Disc3, Mic2 as Mic2Icon, Menu } from 'lucide-react';
+import { Virtuoso } from 'react-virtuoso';
 import { useAudio } from '../context/AudioContext';
 import { useTheme } from '../context/ThemeContext';
 import { useTranslation } from 'react-i18next';
@@ -312,8 +313,11 @@ export default function PlayerScreen() {
 
     if (activeMiniTab === 'playlists') {
       return (
-        <div className="flex flex-col gap-2 overflow-y-auto w-full pr-2 pb-24">
-          {playlists.map((p) => (
+        <Virtuoso
+          style={{ height: '100%' }}
+          className="w-full pr-2 pb-24 scrollbar-hide"
+          data={playlists}
+          itemContent={(_, p) => (
             <LazyMiniListItem
               key={p.id}
               onClick={() => setMiniDetail({ type: 'playlist', id: p.id, name: p.name })}
@@ -326,14 +330,18 @@ export default function PlayerScreen() {
               }}
               t={t}
             />
-          ))}
-        </div>
+          )}
+        />
       );
     }
     if (activeMiniTab === 'folders') {
+      const foldersArray = Object.values(folders || {});
       return (
-        <div className="flex flex-col gap-2 overflow-y-auto w-full pr-2 pb-24">
-          {Object.values(folders || {}).map((f: any) => (
+        <Virtuoso
+          style={{ height: '100%' }}
+          className="w-full pr-2 pb-24 scrollbar-hide"
+          data={foldersArray}
+          itemContent={(_, f: any) => (
             <LazyMiniListItem
               key={f.name}
               onClick={() => setMiniDetail({ type: 'folder', id: f.name, name: f.name })}
@@ -344,14 +352,18 @@ export default function PlayerScreen() {
               }}
               t={t}
             />
-          ))}
-        </div>
+          )}
+        />
       );
     }
     if (activeMiniTab === 'albums') {
+      const albumsArray = Object.values(albums || {});
       return (
-        <div className="flex flex-col gap-2 overflow-y-auto w-full pr-2 pb-24">
-          {Object.values(albums || {}).map((a: any) => (
+        <Virtuoso
+          style={{ height: '100%' }}
+          className="w-full pr-2 pb-24 scrollbar-hide"
+          data={albumsArray}
+          itemContent={(_, a: any) => (
             <LazyMiniListItem
               key={a.name}
               onClick={() => setMiniDetail({ type: 'album', id: a.name, name: a.name })}
@@ -364,14 +376,18 @@ export default function PlayerScreen() {
               }}
               t={t}
             />
-          ))}
-        </div>
+          )}
+        />
       );
     }
     if (activeMiniTab === 'artists') {
+      const artistsArray = Object.values(artists || {});
       return (
-        <div className="flex flex-col gap-2 overflow-y-auto w-full pr-2 pb-24">
-          {Object.values(artists || {}).map((a: any) => (
+        <Virtuoso
+          style={{ height: '100%' }}
+          className="w-full pr-2 pb-24 scrollbar-hide"
+          data={artistsArray}
+          itemContent={(_, a: any) => (
             <LazyMiniListItem
               key={a.name}
               onClick={() => setMiniDetail({ type: 'artist', id: a.name, name: a.name })}
@@ -384,8 +400,8 @@ export default function PlayerScreen() {
               }}
               t={t}
             />
-          ))}
-        </div>
+          )}
+        />
       );
     }
     return null;

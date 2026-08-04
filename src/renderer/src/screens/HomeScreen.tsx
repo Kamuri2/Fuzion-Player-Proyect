@@ -72,8 +72,12 @@ export default function HomeScreen() {
     playWithShuffle('all', songs);
   };
 
-  const getSearchResults = () => {
-    if (!searchQuery) return songs.map(s => ({ type: 'song', data: s }));
+  const allSongsData = React.useMemo(() => {
+    return songs.map(s => ({ type: 'song', data: s }));
+  }, [songs]);
+
+  const searchResults = React.useMemo(() => {
+    if (!searchQuery) return allSongsData;
 
     const lowerQuery = searchQuery.toLowerCase();
     
@@ -94,7 +98,7 @@ export default function HomeScreen() {
     }
 
     if (matchedSongs.length > 0) {
-      results.push({ type: 'header', title: t('sidebar.home') }); // Assuming songs title can map to something else, or let's use 'Songs' literally. Let's just use "Songs" or add it later.
+      results.push({ type: 'header', title: t('sidebar.home') });
       matchedSongs.forEach(s => results.push({ type: 'song', data: s }));
     }
 
@@ -103,7 +107,7 @@ export default function HomeScreen() {
     }
 
     return results;
-  };
+  }, [searchQuery, allSongsData, albums, artists, t]);
 
   return (
     <div className="flex-1 min-h-screen px-8 pb-24 max-w-full w-full pt-10 animate-fade-in">
@@ -163,7 +167,7 @@ export default function HomeScreen() {
           </div>
           <Virtuoso
             customScrollParent={document.getElementById('main-scroll-container') as HTMLElement}
-            data={getSearchResults()}
+            data={searchResults}
             itemContent={(index, item) => {
               if (item.type === 'header') {
                 return <h2 className="text-2xl font-black mt-6 mb-4 ml-2 uppercase tracking-wider" style={{ color: colors.text }}>{item.title}</h2>;

@@ -59,7 +59,9 @@
     "songsRead": "Songs Read:",
     "deleteFolder": "Delete Folder",
     "fullMode": "Compact Mode",
-    "fullModeDesc": "Enable the compact desktop layout for the player with sidebars."
+    "fullModeDesc": "Enable the compact desktop layout for the player with sidebars.",
+    "scanCompleteNew": "Scan complete. {{count}} new songs found.",
+    "scanCompleteNoNew": "Scan complete. No new songs found."
   },
   "home": {
     "welcome": "Welcome back",
