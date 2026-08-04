@@ -95,4 +95,13 @@
   .animate-marquee-text {
     animation: marquee-text 12s linear infinite;
   }
+
+  @keyframes drag-bounce {
+    0%, 100% { transform: scale(0.96) translateY(0); }
+    50% { transform: scale(0.96) translateY(-4px); }
+  }
+
+  .animate-drag-bounce {
+    animation: drag-bounce 0.5s cubic-bezier(0.25, 1, 0.5, 1) infinite;
+  }
 }

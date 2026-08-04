@@ -17,6 +17,8 @@ export default function QueuePanel({ onClose }: QueuePanelProps) {
   const { colors, isFullMode } = useTheme();
   const { t } = useTranslation();
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
+  const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
+  const [ghostIndex, setGhostIndex] = useState<number | null>(null);
   const virtuosoRef = useRef<VirtuosoHandle>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const scrollAnimationRef = useRef<number | null>(null);
@@ -34,11 +36,31 @@ export default function QueuePanel({ onClose }: QueuePanelProps) {
     }
   }, [currentSong?.id]);
 
+  useEffect(() => {
+    const cleanupDrag = () => {
+      setDraggedIndex(null);
+      setDragOverIndex(null);
+      setGhostIndex(null);
+      speedRef.current = 0;
+    };
+
+    window.addEventListener('dragend', cleanupDrag);
+    window.addEventListener('drop', cleanupDrag);
+    window.addEventListener('mouseup', cleanupDrag);
+
+    return () => {
+      window.removeEventListener('dragend', cleanupDrag);
+      window.removeEventListener('drop', cleanupDrag);
+      window.removeEventListener('mouseup', cleanupDrag);
+    };
+  }, []);
+
   const handleDragStart = (e: React.DragEvent, index: number) => {
     setDraggedIndex(index);
     e.dataTransfer.effectAllowed = 'move';
+
     setTimeout(() => {
-      (e.target as HTMLElement).style.opacity = '0.5';
+      setGhostIndex(index);
     }, 0);
   };
 
@@ -49,20 +71,28 @@ export default function QueuePanel({ onClose }: QueuePanelProps) {
 
   const handleDrop = (e: React.DragEvent, targetIndex: number) => {
     e.preventDefault();
+    setDragOverIndex(null);
     if (draggedIndex === null) return;
-    if (draggedIndex !== targetIndex) {
-      reorderQueue(draggedIndex + offset, targetIndex + offset);
+
+    const currentIndex = draggedIndex;
+    setDraggedIndex(null);
+    setGhostIndex(null);
+    speedRef.current = 0;
+
+    if (currentIndex !== targetIndex) {
+      reorderQueue(currentIndex + offset, targetIndex + offset);
     }
   };
 
-  const handleDragEnd = (e: React.DragEvent) => {
+  const handleDragEnd = () => {
     setDraggedIndex(null);
+    setDragOverIndex(null);
+    setGhostIndex(null);
     speedRef.current = 0;
     if (scrollAnimationRef.current) {
       cancelAnimationFrame(scrollAnimationRef.current);
       scrollAnimationRef.current = null;
     }
-    (e.target as HTMLElement).style.opacity = '1';
   };
 
   const handleContainerDragOver = (e: React.DragEvent) => {
@@ -110,6 +140,7 @@ export default function QueuePanel({ onClose }: QueuePanelProps) {
 
   const handleContainerDragLeave = () => {
     speedRef.current = 0;
+    setDragOverIndex(null);
   };
 
   return (
@@ -126,7 +157,7 @@ export default function QueuePanel({ onClose }: QueuePanelProps) {
         )}
       </div>
 
-      <div 
+      <div
         ref={containerRef}
         className="flex-1 overflow-hidden p-0 pt-4"
         onDragOver={handleContainerDragOver}
@@ -139,7 +170,7 @@ export default function QueuePanel({ onClose }: QueuePanelProps) {
           data={upcomingQueue}
           itemContent={(index, song) => {
             const isPlaying = currentSong?.id === song.id;
-            
+
             let showHeader: string | null = null;
             if (index === 0 && song.isManualQueue) {
               showHeader = t('player.nextInQueue', 'A continuación en la cola');
@@ -149,12 +180,12 @@ export default function QueuePanel({ onClose }: QueuePanelProps) {
               // If we are at queuePosition 1, offset is 0. 
               // upcomingQueue[0] is the current song.
             }
-            
+
             // The logic: 
             // index === 0 is ALWAYS the currently playing song (because offset = queuePosition - 1).
             // Actually, if queuePosition > 0, offset = queuePosition - 1, so upcomingQueue[0] is queue[queuePosition - 1] (the current song).
             // So index 1 is the first "next" song.
-            
+
             if (index === 1) {
               if (song.isManualQueue) {
                 showHeader = t('player.nextInQueue', 'A continuación en la cola');
@@ -187,59 +218,77 @@ export default function QueuePanel({ onClose }: QueuePanelProps) {
             }
 
             return (
-              <div className="flex flex-col">
+              <div
+                className="flex flex-col"
+                onDragOver={(e) => { handleDragOver(e); setDragOverIndex(index); }}
+                onDragEnter={(e) => { handleDragOver(e); }}
+                onDrop={(e) => handleDrop(e, index)}
+              >
                 {showHeader && (
                   <div className="px-5 py-3 mt-2 text-sm font-bold text-white/60 uppercase tracking-wider">
                     {showHeader}
                   </div>
                 )}
-                <div 
-                  draggable
-                onDragStart={(e) => handleDragStart(e, index)}
-                onDragOver={handleDragOver}
-                onDrop={(e) => handleDrop(e, index)}
-                onDragEnd={handleDragEnd}
-                className={`flex flex-row items-center p-3 rounded-xl mb-2 mx-4 transition-colors cursor-pointer group
-                  ${isPlaying ? 'bg-white/10' : 'hover:bg-white/5'}
-                  ${draggedIndex === index ? 'opacity-50 scale-95' : 'opacity-100'}
-                `}
-                onClick={() => playSound(song, currentContextId, undefined, undefined, false)}
-              >
-                <div className="mr-3 cursor-grab text-white/30 hover:text-white/70 active:cursor-grabbing p-1" onClick={(e) => e.stopPropagation()}>
-                  <GripVertical size={20} />
-                </div>
-                
-                <div className="w-10 h-10 rounded mr-4 flex-shrink-0 flex items-center justify-center overflow-hidden relative">
-                  <CoverImage 
-                    coverUrl={song.cover} 
-                    audioPath={song.path}
-                    hq={true}
-                    className="w-full h-full object-cover"
-                    placeholderClassName="w-full h-full bg-white/10"
-                    iconSize={16}
+                {/* Drop Indicator / Abertura */}
+                <div
+                  className={`w-full transition-all duration-300 ease-out flex items-center justify-center overflow-hidden px-6
+                    ${dragOverIndex === index && draggedIndex !== index ? 'h-12 opacity-100' : 'h-0 opacity-0'}
+                  `}
+                >
+                  <div
+                    className="w-full h-[3px] rounded-full"
+                    style={{
+                      backgroundColor: colors.primary,
+                      boxShadow: `0 0 15px ${colors.primary}, 0 0 5px ${colors.primary}`
+                    }}
                   />
-                  {isPlaying && (
-                    <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
-                      <div className="w-1.5 h-3 bg-white mx-0.5 animate-pulse" style={{ animationDelay: '0ms' }} />
-                      <div className="w-1.5 h-4 bg-white mx-0.5 animate-pulse" style={{ animationDelay: '150ms' }} />
-                      <div className="w-1.5 h-2 bg-white mx-0.5 animate-pulse" style={{ animationDelay: '300ms' }} />
+                </div>
+
+                <div
+                  draggable
+                  onDragStart={(e) => handleDragStart(e, index)}
+                  onDragEnd={handleDragEnd}
+                  className={`flex flex-row items-center p-3 rounded-xl mb-2 mx-4 transition-all duration-300 cursor-pointer group relative
+                  ${isPlaying ? 'bg-white/10' : 'hover:bg-white/5'}
+                  ${ghostIndex === index ? 'opacity-60 border border-dashed border-white/40 bg-black/40 scale-95' : 'opacity-100 border border-transparent'}
+                `}
+                  onClick={() => playSound(song, currentContextId, undefined, undefined, false)}
+                >
+                  <div className="mr-3 cursor-grab text-white/30 hover:text-white/70 active:cursor-grabbing p-1" onClick={(e) => e.stopPropagation()}>
+                    <GripVertical size={20} />
+                  </div>
+
+                  <div className="w-10 h-10 rounded mr-4 flex-shrink-0 flex items-center justify-center overflow-hidden relative">
+                    <CoverImage
+                      coverUrl={song.cover}
+                      audioPath={song.path}
+                      hq={true}
+                      className="w-full h-full object-cover"
+                      placeholderClassName="w-full h-full bg-white/10"
+                      iconSize={16}
+                    />
+                    {isPlaying && (
+                      <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
+                        <div className="w-1.5 h-3 bg-white mx-0.5 animate-pulse" style={{ animationDelay: '0ms' }} />
+                        <div className="w-1.5 h-4 bg-white mx-0.5 animate-pulse" style={{ animationDelay: '150ms' }} />
+                        <div className="w-1.5 h-2 bg-white mx-0.5 animate-pulse" style={{ animationDelay: '300ms' }} />
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="flex-1 overflow-hidden">
+                    <p className={`font-bold text-sm truncate ${isPlaying ? 'text-white' : 'text-white/90'}`} style={{ color: isPlaying ? colors.primary : undefined }}>
+                      {song.title || song.filename.replace(/\.[^/.]+$/, "")}
+                    </p>
+                    <p className="text-xs text-white/50 truncate mt-0.5">{song.artist || t('artists.unknown', 'Desconocido')}</p>
+                  </div>
+
+                  {!isPlaying && (
+                    <div className="ml-2">
+                      <SongContextMenu song={song} inQueue={true} queueIndex={offset + index} />
                     </div>
                   )}
                 </div>
-                
-                <div className="flex-1 overflow-hidden">
-                  <p className={`font-bold text-sm truncate ${isPlaying ? 'text-white' : 'text-white/90'}`} style={{ color: isPlaying ? colors.primary : undefined }}>
-                    {song.title || song.filename.replace(/\.[^/.]+$/, "")}
-                  </p>
-                  <p className="text-xs text-white/50 truncate mt-0.5">{song.artist || t('artists.unknown', 'Desconocido')}</p>
-                </div>
-
-                {!isPlaying && (
-                  <div className="ml-2">
-                    <SongContextMenu song={song} inQueue={true} queueIndex={offset + index} />
-                  </div>
-                )}
-              </div>
               </div>
             );
           }}
