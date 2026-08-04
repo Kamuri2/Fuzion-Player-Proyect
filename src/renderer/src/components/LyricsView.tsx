@@ -12,11 +12,18 @@ interface LyricLine {
 
 export default function LyricsView() {
   const { t } = useTranslation();
-  const { metadata, progress, currentSong } = useAudio();
+  const { metadata, subscribeToProgress, currentSong } = useAudio();
   const { lyricsFontSize, showTranslatedLyrics, lyricsLanguage } = useTheme();
   const [lyrics, setLyrics] = useState<LyricLine[]>([]);
   const [staticLyrics, setStaticLyrics] = useState<string | null>(null);
   const [isSynced, setIsSynced] = useState(true);
+  const [progress, setProgress] = useState(0);
+
+  useEffect(() => {
+    return subscribeToProgress((p) => {
+      setProgress(p);
+    });
+  }, [subscribeToProgress]);
   const containerRef = useRef<HTMLDivElement>(null);
   const activeLineRef = useRef<HTMLDivElement>(null);
 

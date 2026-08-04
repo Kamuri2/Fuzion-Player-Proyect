@@ -133,7 +133,7 @@ export default function PlayerScreen() {
     pauseOrResumeSound,
     playNext,
     playPrevious,
-    progress,
+    subscribeToProgress,
     duration,
     seekTo,
     isShuffle,
@@ -155,6 +155,14 @@ export default function PlayerScreen() {
     toggleFavorite,
     isFavorite
   } = useAudio();
+
+  const [progress, setProgress] = useState(0);
+
+  useEffect(() => {
+    return subscribeToProgress((p) => {
+      setProgress(p);
+    });
+  }, [subscribeToProgress]);
 
   const leftPanelTimerRef = useRef<NodeJS.Timeout | null>(null);
 

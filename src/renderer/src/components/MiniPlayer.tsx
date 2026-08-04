@@ -1,3 +1,4 @@
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAudio } from '../context/AudioContext';
 import { useTheme } from '../context/ThemeContext';
@@ -7,11 +8,19 @@ import CoverImage from './CoverImage';
 export default function MiniPlayer() {
   const {
     currentSong, pauseOrResumeSound, playNext, playPrevious, metadata,
-    isPlaying, progress, duration, seekTo, isShuffle, toggleShuffle,
+    isPlaying, subscribeToProgress, duration, seekTo, isShuffle, toggleShuffle,
     repeatMode, toggleRepeatMode, isPlayerOpen, setIsPlayerOpen
   } = useAudio();
   const { colors } = useTheme();
   const navigate = useNavigate();
+
+  const [progress, setProgress] = useState(0);
+
+  useEffect(() => {
+    return subscribeToProgress((p) => {
+      setProgress(p);
+    });
+  }, [subscribeToProgress]);
 
   if (!currentSong) return null;
 

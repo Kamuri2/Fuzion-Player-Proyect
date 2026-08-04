@@ -29,11 +29,20 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const [isShuffle, setIsShuffle] = useState(false);
   const [playlists, setPlaylists] = useState<Playlist[]>([]);
   const [isPlaying, setIsPlaying] = useState(false);
-  const [progress, setProgress] = useState(0);
   const [duration, setDuration] = useState(0);
 
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const secondaryAudioRef = useRef<HTMLAudioElement | null>(null);
+  
+  const progressListeners = useRef<Set<(p: number, d: number) => void>>(new Set());
+  const subscribeToProgress = (cb: (p: number, d: number) => void) => {
+    progressListeners.current.add(cb);
+    if (audioRef.current) {
+      cb(audioRef.current.currentTime, audioRef.current.duration || 0);
+    }
+    return () => progressListeners.current.delete(cb);
+  };
+  
   const queueRef = useRef<Song[]>([]);
   const currentQueueIndex = useRef(-1);
   const originalQueueRef = useRef<Song[]>([]);
@@ -88,8 +97,15 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     audio.onpause = () => setIsPlaying(false);
     audio.onended = () => handleTrackEnded();
     audio.ontimeupdate = () => {
-      setProgress(audio.currentTime);
-      setDuration(audio.duration || 0);
+      const currentProgress = audio.currentTime;
+      const currentDuration = audio.duration || 0;
+      progressListeners.current.forEach(cb => cb(currentProgress, currentDuration));
+      
+      // We only update duration state if it genuinely changed to avoid re-renders
+      setDuration(prev => {
+        if (prev !== currentDuration && currentDuration > 0) return currentDuration;
+        return prev;
+      });
 
       const CROSSFADE_DURATION_OUT = crossfadeDurationOutRef.current;
       if (
@@ -922,7 +938,7 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       createPlaylist, updatePlaylist, deletePlaylist, addSongToPlaylist, removeSongFromPlaylist, updatePlaylistCover,
       currentSong, isPlaying, metadata: { cover: currentSong?.cover || null, lyrics, audioDetails },
       playSound, playWithShuffle, pauseOrResumeSound, playNext, playPrevious, seekTo,
-      progress, duration,
+      subscribeToProgress, duration,
       metadataCache: {}, extractMetadataOnDemand, currentContextId,
       loadSongsFromUri, queue, queuePosition, queueLength, reorderQueue, addSongToNext, removeFromQueue,
       toggleFavorite, isFavorite, repeatMode, toggleRepeatMode,

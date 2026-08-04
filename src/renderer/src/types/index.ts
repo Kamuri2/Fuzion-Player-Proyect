@@ -80,7 +80,7 @@ export interface AudioContextType {
   seekTo: (millis: number) => Promise<void>;
   metadataCache: Record<string, { title: string | null; artist: string | null; album: string | null; coverUri: string | null; lyrics: string | null }>;
   extractMetadataOnDemand: (uri: string) => Promise<{ title: string | null; artist: string | null; album: string | null; cover: string | null; lyrics: string | null }>;
-  progress: number;
+  subscribeToProgress: (cb: (progress: number, duration: number) => void) => () => void;
   duration: number;
   loadSongsFromUri: (uri?: string, isBackgroundLoad?: boolean) => Promise<void>;
   currentContextId: string;
