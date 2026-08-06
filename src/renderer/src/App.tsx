@@ -21,10 +21,13 @@ import FoldersScreen from './screens/FoldersScreen';
 import PlaylistsScreen from './screens/PlaylistsScreen';
 import ListDetailScreen from './screens/ListDetailScreen';
 import ErrorBoundary from './components/ErrorBoundary';
+import { useTheme } from './context/ThemeContext';
+import { Music } from 'lucide-react';
 
 function AppContent() {
   const { isPlayerOpen, currentSong, toastMessage } = useAudio();
-  const { i18n } = useTranslation();
+  const { albumZenMode, isZenLoading } = useTheme();
+  const { i18n, t } = useTranslation();
   const [showSplash, setShowSplash] = useState(true);
 
   // Load dynamic language cache on boot if needed
@@ -57,6 +60,45 @@ function AppContent() {
     <div className="flex flex-col md:flex-row h-screen overflow-hidden bg-transparent relative">
       <AnimatePresence>
         {showSplash && <SplashScreen onComplete={() => setShowSplash(false)} />}
+        
+        {isZenLoading && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0, transition: { duration: 0.5 } }}
+            className="fixed inset-0 z-[9999] flex flex-col items-center justify-center bg-black/90 backdrop-blur-2xl"
+          >
+            <div className="relative w-64 h-64 mb-12 flex items-center justify-center">
+               <motion.div 
+                 initial={{ x: 0 }}
+                 animate={{ x: -50 }}
+                 transition={{ duration: 0.8, ease: "easeOut", delay: 0.1 }}
+                 className="absolute w-48 h-48 bg-zinc-800 rounded-lg shadow-[0_20px_50px_rgba(0,0,0,0.8)] z-10 flex items-center justify-center border border-zinc-700"
+               >
+                 <Music size={64} className="text-zinc-500 opacity-50" />
+               </motion.div>
+               <motion.div 
+                 initial={{ x: 0, rotate: 0 }}
+                 animate={{ x: 50, rotate: 360 }}
+                 transition={{ duration: 1.2, ease: "easeOut", delay: 0.1 }}
+                 className="absolute w-44 h-44 bg-[#0a0a0a] rounded-full shadow-2xl border-4 border-[#222] flex items-center justify-center z-0"
+               >
+                 <div className="w-14 h-14 bg-red-700 rounded-full border border-zinc-900 flex items-center justify-center shadow-inner">
+                   <div className="w-3 h-3 bg-black rounded-full" />
+                 </div>
+               </motion.div>
+            </div>
+            
+            <motion.h2 
+               initial={{ opacity: 0, y: 20 }}
+               animate={{ opacity: 1, y: 0 }}
+               transition={{ delay: 0.4 }}
+               className="text-4xl font-black tracking-[0.3em] uppercase text-white drop-shadow-lg"
+            >
+              {t('settings.albumMode')}
+            </motion.h2>
+          </motion.div>
+        )}
       </AnimatePresence>
       
       {/* Draggable Top Bar for frameless window */}
@@ -65,9 +107,10 @@ function AppContent() {
         style={{ WebkitAppRegion: 'drag' } as any}
       />
 
-      <GlobalButtons />
-      <Sidebar />
-      <div id="main-scroll-container" className={`flex-1 overflow-y-auto overflow-x-hidden relative ${currentSong && !isPlayerOpen ? 'pb-[90px]' : 'pb-20 md:pb-0'}`}>
+      {(!albumZenMode || location.pathname !== '/albums') && <GlobalButtons />}
+      {(!albumZenMode || location.pathname !== '/albums') && <Sidebar />}
+      
+      <div id="main-scroll-container" className={`flex-1 overflow-y-auto overflow-x-hidden relative ${currentSong && !isPlayerOpen && (!albumZenMode || location.pathname !== '/albums') ? 'pb-[90px]' : 'pb-20 md:pb-0'}`}>
         <AnimatePresence mode="wait">
           <Routes location={location} key={location.pathname}>
             <Route path="/" element={<HomeScreen />} />
@@ -80,7 +123,7 @@ function AppContent() {
           </Routes>
         </AnimatePresence>
       </div>
-      <MiniPlayer />
+      {(!albumZenMode || location.pathname !== '/albums') && <MiniPlayer />}
       {/* Player Screen (Genie Effect Simulation) */}
       <div className="absolute inset-0 z-50 pointer-events-none" style={{ perspective: '1200px' }}>
         <motion.div
@@ -125,7 +168,7 @@ function AppContent() {
           </motion.div>
         )}
       </AnimatePresence>
-      <Mascot />
+      {(!albumZenMode || location.pathname !== '/albums') && <Mascot />}
     </div>
   );
 }

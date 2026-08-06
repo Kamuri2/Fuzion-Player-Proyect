@@ -114,6 +114,9 @@ type ThemeContextType = {
   setIsFullMode: (val: boolean) => void;
   isNavHidden: boolean;
   setIsNavHidden: (val: boolean) => void;
+  albumZenMode: boolean;
+  setAlbumZenMode: (val: boolean) => void;
+  isZenLoading: boolean;
 };
 
 const ThemeContext = createContext<ThemeContextType>({
@@ -143,7 +146,10 @@ const ThemeContext = createContext<ThemeContextType>({
   isFullMode: false,
   setIsFullMode: () => { },
   isNavHidden: false,
-  setIsNavHidden: () => { }
+  setIsNavHidden: () => { },
+  albumZenMode: false,
+  setAlbumZenMode: () => { },
+  isZenLoading: false,
 });
 
 export const useTheme = (): ThemeContextType => useContext(ThemeContext);
@@ -160,6 +166,8 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const [lyricsLanguage, setLyricsLanguageState] = useState<string>('es');
   const [isFullMode, setIsFullModeState] = useState<boolean>(false);
   const [isNavHidden, setIsNavHiddenState] = useState<boolean>(false);
+  const [albumZenMode, setAlbumZenModeState] = useState<boolean>(false);
+  const [isZenLoading, setIsZenLoading] = useState<boolean>(false);
 
   useEffect(() => {
     const fam = localStorage.getItem('@theme_family');
@@ -340,6 +348,17 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     localStorage.setItem('@is_nav_hidden', val ? 'true' : 'false');
   };
 
+  const setAlbumZenMode = (val: boolean) => {
+    setAlbumZenModeState(val);
+    localStorage.setItem('@album_zen_mode', val ? 'true' : 'false');
+    if (val) {
+      setIsZenLoading(true);
+      setTimeout(() => {
+        setIsZenLoading(false);
+      }, 1500);
+    }
+  };
+
   const toggleTheme = (): void => {
     setIsDarkMode(!isDarkMode);
   };
@@ -383,7 +402,8 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       backgroundImage, setBackgroundImage, pickBackgroundImage,
       customFont, setCustomFont, mascots, addMascot, removeMascot,
       lyricsFontSize, setLyricsFontSize, showTranslatedLyrics, setShowTranslatedLyrics,
-      lyricsLanguage, setLyricsLanguage, isFullMode, setIsFullMode, isNavHidden, setIsNavHidden
+      lyricsLanguage, setLyricsLanguage, isFullMode, setIsFullMode, isNavHidden, setIsNavHidden,
+      albumZenMode, setAlbumZenMode, isZenLoading
     }}>
       <div style={{
         flex: 1,

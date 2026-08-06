@@ -112,4 +112,6 @@ export interface AudioContextType {
   setCrossfadeDurationOut: (duration: number) => void;
   toastMessage: { msg: string, type: 'success' | 'error' } | null;
   showToast: (msg: string, type?: 'success' | 'error') => void;
+  volume: number;
+  setVolume: (volume: number) => void;
 }

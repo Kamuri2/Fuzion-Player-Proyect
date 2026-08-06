@@ -15,6 +15,7 @@ const api = {
   translateLyrics: (songId: string, lines: string[], targetLang: string = 'es') => ipcRenderer.invoke('api:translateLyrics', songId, lines, targetLang),
   translateUI: (langCode: string, baseDictionary: any) => ipcRenderer.invoke('api:translateUI', langCode, baseDictionary),
   getTranslatedUI: (langCode: string) => ipcRenderer.invoke('api:getTranslatedUI', langCode),
+  getAlbumInfo: (artistName: string, albumName: string) => ipcRenderer.invoke('api:getAlbumInfo', artistName, albumName),
   setTheme: (isDark: boolean) => ipcRenderer.send('theme-changed', isDark)
 }
 // Use `contextBridge` APIs to expose Electron APIs to

@@ -677,6 +677,74 @@ export function setupIpc() {
   });
 
   // Dynamic UI Translation
+  ipcMain.handle('api:getAlbumInfo', async (_, artistName: string, albumName: string, targetLang: string = 'es') => {
+    try {
+      const albumInfoDir = path.join(app.getPath('userData'), 'album_info');
+      if (!existsSync(albumInfoDir)) {
+        await fs.mkdir(albumInfoDir, { recursive: true });
+      }
+      const safeArtist = artistName.replace(/[^a-z0-9]/gi, '_').toLowerCase();
+      const safeAlbum = albumName.replace(/[^a-z0-9]/gi, '_').toLowerCase();
+      const cachePath = path.join(albumInfoDir, `${safeArtist}_${safeAlbum}_${targetLang}.json`);
+
+      if (existsSync(cachePath)) {
+        const data = await fs.readFile(cachePath, 'utf8');
+        return JSON.parse(data).info;
+      }
+
+      const headers = { 'User-Agent': 'FuzionPlayer/1.0' };
+
+      // Fetch from Wikipedia API (English first for better coverage)
+      const searchUrl = `https://en.wikipedia.org/w/api.php?action=query&list=search&srsearch=${encodeURIComponent('intitle:"' + albumName + '" album')}&utf8=&format=json`;
+      const searchRes = await fetch(searchUrl, { headers });
+      const searchData = await searchRes.json();
+      
+      let info = `Este álbum ofrece un viaje sonoro increíble, mezclando estilos únicos con la firma inconfundible de ${artistName}. Es una pieza esencial para cualquier coleccionista.`; // Default fallback
+      let foundInfo = false;
+
+      if (searchData.query && searchData.query.search && searchData.query.search.length > 0) {
+        const pageId = searchData.query.search[0].pageid;
+        const extractUrl = `https://en.wikipedia.org/w/api.php?action=query&prop=extracts&exintro=1&explaintext=1&pageids=${pageId}&utf8=&format=json`;
+        const extractRes = await fetch(extractUrl, { headers });
+        const extractData = await extractRes.json();
+        
+        const pages = extractData.query?.pages;
+        if (pages && pages[pageId] && pages[pageId].extract) {
+           info = pages[pageId].extract;
+           foundInfo = true;
+           // Limit to first ~800 chars to keep it clean, cut at last full stop
+           if (info.length > 800) {
+               const cutInfo = info.substring(0, 800);
+               const lastStop = cutInfo.lastIndexOf('.');
+               info = lastStop > 0 ? cutInfo.substring(0, lastStop + 1) : cutInfo + '...';
+           }
+        }
+      }
+
+      // Translate if target language is not English
+      if (foundInfo && targetLang !== 'en') {
+        try {
+          const transRes = await translate(info, { to: targetLang });
+          info = transRes.text;
+        } catch(e) {
+          console.error('Error translating album info:', e);
+        }
+      } else if (!foundInfo && targetLang !== 'es') {
+        try {
+          const transRes = await translate(info, { to: targetLang });
+          info = transRes.text;
+        } catch(e) {}
+      }
+
+      await fs.writeFile(cachePath, JSON.stringify({ info }));
+      return info;
+    } catch (error) {
+      console.error('Error fetching album info:', error);
+      return `Este álbum ofrece un viaje sonoro increíble, mezclando estilos únicos con la firma inconfundible de ${artistName}. Es una pieza esencial para cualquier coleccionista.`;
+    }
+  });
+
+  // Dynamic UI Translation
   ipcMain.handle('api:getTranslatedUI', async (_, langCode: string) => {
     const translationsDir = path.join(app.getPath('userData'), 'ui_translations');
     const cacheFile = path.join(translationsDir, `${langCode}.json`);

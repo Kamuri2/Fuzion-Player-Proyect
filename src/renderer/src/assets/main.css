@@ -104,4 +104,13 @@
   .animate-drag-bounce {
     animation: drag-bounce 0.5s cubic-bezier(0.25, 1, 0.5, 1) infinite;
   }
+
+  @keyframes shine {
+    0% { transform: translateX(-150%) skewX(-20deg); }
+    100% { transform: translateX(150%) skewX(-20deg); }
+  }
+
+  .animate-shine {
+    animation: shine 4s infinite linear;
+  }
 }

@@ -2,6 +2,7 @@
 import React, { createContext, useState, useEffect, useContext, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Song, Album, Folder, Artist, AudioContextType, Playlist } from '../types';
+import vinylDustSound from '../assets/vinyl dust.mp3';
 
 const AudioContext = createContext<AudioContextType | undefined>(undefined);
 
@@ -30,6 +31,14 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const [playlists, setPlaylists] = useState<Playlist[]>([]);
   const [isPlaying, setIsPlaying] = useState(false);
   const [duration, setDuration] = useState(0);
+  const [volume, setVolumeState] = useState(1);
+  const volumeRef = useRef(1);
+
+  const setVolume = (val: number) => {
+    setVolumeState(val);
+    volumeRef.current = val;
+    if (audioRef.current && !isCrossfadingRef.current) audioRef.current.volume = val;
+  };
 
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const secondaryAudioRef = useRef<HTMLAudioElement | null>(null);
@@ -362,8 +371,8 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         const fractionIn = CROSSFADE_DURATION_IN > 0 ? Math.min(1, elapsedSecs / CROSSFADE_DURATION_IN) : 1;
 
         // Use equal-power crossfade curves (logarithmic perception)
-        if (primary) primary.volume = Math.max(0, Math.cos(fractionOut * 0.5 * Math.PI));
-        if (secondary) secondary.volume = Math.min(1, Math.sin(fractionIn * 0.5 * Math.PI));
+        if (primary) primary.volume = Math.max(0, Math.cos(fractionOut * 0.5 * Math.PI)) * volumeRef.current;
+        if (secondary) secondary.volume = Math.min(1, Math.sin(fractionIn * 0.5 * Math.PI)) * volumeRef.current;
 
         if (elapsedSecs >= maxDuration) {
           clearInterval(crossfadeTimerRef.current);
@@ -371,7 +380,7 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
           clearListeners(primary); // Prevent onpause firing
           primary.pause();
-          primary.volume = 1;
+          primary.volume = volumeRef.current;
 
           // Swap references
           audioRef.current = secondary;
@@ -404,7 +413,13 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       audioRef.current!.play();
     } else {
       if (!isCrossfadingRef.current) {
-        playNext();
+        // Play vinyl dust sound before advancing to next track
+        const dust = new Audio(vinylDustSound);
+        dust.volume = 0.5;
+        dust.play();
+        setTimeout(() => {
+          playNext();
+        }, 1200);
       }
     }
   };
@@ -945,7 +960,7 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       isShuffle, toggleShuffle, changeMusicFolder, isPlayerOpen, setIsPlayerOpen,
       showLyrics, setShowLyrics, isCrossfadeEnabled, setIsCrossfadeEnabled, crossfadeDurationIn, setCrossfadeDurationIn,
       crossfadeDurationOut, setCrossfadeDurationOut,
-      toastMessage, showToast
+      toastMessage, showToast, volume, setVolume
     }}>
       {children}
     </AudioContext.Provider>

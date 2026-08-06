@@ -61,7 +61,10 @@
     "fullMode": "Modo Compacto",
     "fullModeDesc": "Habilitar el diseño de escritorio compacto para el reproductor con barras laterales.",
     "scanCompleteNew": "Escaneo completo. {{count}} canciones nuevas encontradas.",
-    "scanCompleteNoNew": "Escaneo completo. No se encontraron canciones nuevas."
+    "scanCompleteNoNew": "Escaneo completo. No se encontraron canciones nuevas.",
+    "albumMode": "Album Mode",
+    "classicMode": "Modo de Reproducción Clásica",
+    "classicModeDesc": "Activa un modo inmersivo donde el reproductor y la barra lateral se ocultan y el tocadiscos toma el control completo."
   },
   "home": {
     "welcome": "Bienvenido de nuevo",

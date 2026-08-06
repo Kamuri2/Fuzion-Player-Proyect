@@ -61,7 +61,10 @@
     "fullMode": "Compact Mode",
     "fullModeDesc": "Enable the compact desktop layout for the player with sidebars.",
     "scanCompleteNew": "Scan complete. {{count}} new songs found.",
-    "scanCompleteNoNew": "Scan complete. No new songs found."
+    "scanCompleteNoNew": "Scan complete. No new songs found.",
+    "albumMode": "Album Mode",
+    "classicMode": "Classic Playback Mode",
+    "classicModeDesc": "Enable an immersive mode where the player and sidebar are hidden and the turntable takes full control."
   },
   "home": {
     "welcome": "Welcome back",
