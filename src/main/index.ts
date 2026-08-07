@@ -56,6 +56,11 @@ if (!gotTheLock) {
   app.commandLine.appendSwitch('disk-cache-size', '1073741824') // 1GB
   app.commandLine.appendSwitch('media-cache-size', '536870912') // 500MB
 
+  // Disable OS DPI Scaling
+  app.commandLine.appendSwitch('high-dpi-support', '1')
+  app.commandLine.appendSwitch('force-device-scale-factor', '1')
+
+
   app.on('second-instance', () => {
     // Alguien intentó abrir otra instancia, enfocamos la original
     const mainWindow = BrowserWindow.getAllWindows()[0]

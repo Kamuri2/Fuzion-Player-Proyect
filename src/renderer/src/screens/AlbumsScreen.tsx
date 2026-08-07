@@ -103,10 +103,10 @@ export default function AlbumsScreen() {
       {!isCoverFlowExpanded && !albumZenMode && (
         <div className="animate-fade-in">
           <h1 className="text-4xl font-black uppercase tracking-widest mb-8" style={{ color: colors.text }}>{t('albums.title')}</h1>
-          
+
           <div className="mb-8 flex gap-4 items-center">
-            <input 
-              type="text" 
+            <input
+              type="text"
               placeholder={t('albums.search')}
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
@@ -114,7 +114,7 @@ export default function AlbumsScreen() {
               style={{ color: colors.text }}
             />
             <div className="flex bg-black/5 dark:bg-white/5 rounded-xl p-1">
-              <button 
+              <button
                 className={`p-3 rounded-lg transition-all ${viewMode === 'grid' ? 'bg-black/10 dark:bg-white/10 shadow-sm' : 'opacity-50 hover:opacity-100'}`}
                 onClick={() => setViewMode('grid')}
                 title="Cuadrícula"
@@ -122,7 +122,7 @@ export default function AlbumsScreen() {
               >
                 <LayoutGrid size={24} />
               </button>
-              <button 
+              <button
                 className={`p-3 rounded-lg transition-all ${viewMode === 'coverflow' ? 'bg-black/10 dark:bg-white/10 shadow-sm' : 'opacity-50 hover:opacity-100'}`}
                 onClick={() => setViewMode('coverflow')}
                 title="Cover Flow"

@@ -3,7 +3,8 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useAudio } from '../context/AudioContext';
 import { useTheme } from '../context/ThemeContext';
 import CoverImage from './CoverImage';
-import { Pause, Play, SkipBack, SkipForward, ListMusic, X, Settings } from 'lucide-react';
+import { Pause, Play, SkipBack, SkipForward, ListMusic, X, Settings, Mic2, Power } from 'lucide-react';
+import LyricsView from './LyricsView';
 import { useTranslation } from 'react-i18next';
 import vinylDustSound from '../assets/vinyl dust.mp3';
 
@@ -11,13 +12,13 @@ import vinylDustSound from '../assets/vinyl dust.mp3';
 const VinylPlayer = ({
   album, currentSong, isPlaying, subscribeToProgress, playSound,
   isPaperOpen, volume, setVolume, pauseOrResumeSound, playNext,
-  playPrevious, isDiscOnPlatter, turntableRef, onDiscDragStart, isInstantSnap
+  playPrevious, isDiscOnPlatter, turntableRef, onDiscDragStart, isInstantSnap, onPowerOff
 }: any) => {
+  const { t } = useTranslation();
   const [progress, setProgress] = useState(0);
   const [isDragging, setIsDragging] = useState(false);
   const [dragAngle, setDragAngle] = useState(0);
   const [showVinylSettings, setShowVinylSettings] = useState(false);
-  const [isControlsOpen, setIsControlsOpen] = useState(false);
   const [customTexture, setCustomTexture] = useState<string | null>(null);
   const [customScale, setCustomScale] = useState<number>(100);
   const [isPendingPause, setIsPendingPause] = useState(false);
@@ -295,20 +296,41 @@ const VinylPlayer = ({
 
   return (
     <div className="absolute inset-0 pointer-events-none" style={{ zIndex: -1 }}>
+
+      {/* 1. BASE DEL TOCADISCOS (z-10) */}
       <motion.div
         ref={turntableRef}
         initial={{ opacity: 0, x: 50 }}
         animate={{ opacity: 1, x: '110%' }}
         exit={{ opacity: 0, x: 50 }}
         transition={{ type: 'spring', damping: 20 }}
-        className="absolute top-1/2 -translate-y-1/2 w-[100%] aspect-square rounded-t-[2rem] rounded-b-none bg-[#f5f5f5] border-[3px] border-white shadow-[0_30px_100px_rgba(0,0,0,0.9)] flex items-center justify-center pointer-events-auto"
+        className="absolute top-1/2 -translate-y-1/2 w-[100%] aspect-square rounded-t-[2rem] rounded-b-none bg-[#f5f5f5] border-[3px] border-white shadow-[0_30px_100px_rgba(0,0,0,0.9)] flex items-center justify-center pointer-events-auto z-10"
       >
         <div className="absolute inset-[3.5%] rounded-full bg-[#e8e8e8] shadow-[inset_0_10px_20px_rgba(0,0,0,0.1),inset_0_-2px_5px_rgba(255,255,255,1)] pointer-events-none" />
         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-8 h-8 bg-[#d1d5db] rounded-full shadow-inner flex items-center justify-center pointer-events-none">
           <div className="w-2 h-2 bg-[#9ca3af] rounded-full shadow-sm" />
         </div>
 
-        {/* --- PESTAÑA DE REPRODUCCIÓN (Esquina Inferior Izquierda Extendida) --- */}
+        {/* Botón de Apagado (Power) */}
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            if (isPlaying && !isPendingPause) {
+              handlePauseOrResumeDelay(e as any);
+              setTimeout(() => {
+                if (onPowerOff) onPowerOff();
+              }, 1500);
+            } else {
+              if (onPowerOff) onPowerOff();
+            }
+          }}
+          className="absolute top-6 left-6 p-3 bg-[#e0e0e0] hover:bg-[#d0d0d0] text-zinc-500 hover:text-red-500 rounded-full shadow-inner transition-colors z-20 cursor-pointer"
+          title="Album Mode Off"
+        >
+          <Power size={22} />
+        </button>
+
+        {/* Pestaña de Reproducción */}
         <div
           className="absolute top-[calc(100%-3px)] left-[-3px] bg-[#f5f5f5] rounded-bl-[2rem] rounded-br-2xl shadow-xl border-[3px] border-t-0 border-white px-6 py-4 flex flex-col min-w-[220px] max-w-[280px]"
           style={{ zIndex: -1 }}
@@ -317,8 +339,8 @@ const VinylPlayer = ({
             <>
               <div className="flex items-center gap-2 mb-1.5">
                 <div className={`w-2 h-2 rounded-full ${isPlaying && !isPendingPause ? 'bg-green-500 animate-pulse shadow-[0_0_6px_#22c55e]' : 'bg-zinc-400'}`} />
-                <span className="text-[10px] font-black text-zinc-500 tracking-widest uppercase">
-                  {isPlaying && !isPendingPause ? 'Reproduciendo' : 'Pausado'}
+                <span className="text-xs font-bold text-zinc-500 tracking-widest">
+                  {isPlaying && !isPendingPause ? t('player.playing', 'REPRODUCIENDO').toUpperCase() : t('player.paused', 'PAUSADO').toUpperCase()}
                 </span>
               </div>
               <span className="text-lg font-black text-zinc-800 truncate leading-tight">
@@ -333,100 +355,38 @@ const VinylPlayer = ({
               <div className="flex items-center gap-2 mb-1.5 opacity-60">
                 <div className="w-2 h-2 rounded-full bg-zinc-400" />
                 <span className="text-[10px] font-black text-zinc-500 tracking-widest uppercase">
-                  En Espera
+                  {t('player.standby', 'En Espera')}
                 </span>
               </div>
               <span className="text-lg font-black text-zinc-400 truncate leading-tight">
-                Sin pista activa
+                {t('player.noActiveTrack', 'Sin pista activa')}
               </span>
             </>
           )}
         </div>
 
-        {/* --- PESTAÑA DE CONTROLES (Esquina Inferior Derecha Extendida) --- */}
-        <AnimatePresence>
-          {!isControlsOpen ? (
-            <motion.button
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1, transition: { delay: 0.3 } }}
-              exit={{ opacity: 0 }}
-              onClick={(e) => { e.stopPropagation(); setIsControlsOpen(true); }}
-              className="absolute top-[calc(100%-3px)] right-[-3px] h-10 px-6 bg-[#f5f5f5] rounded-br-[2rem] rounded-bl-2xl shadow-xl border-[3px] border-t-0 border-white flex items-center justify-center cursor-pointer hover:bg-white transition-colors"
-              style={{ zIndex: -1 }}
-            >
-              <div className="text-zinc-500 font-bold tracking-widest text-[10px] flex items-center gap-2">
-                CONTROLS <Settings size={12} />
-              </div>
-            </motion.button>
-          ) : (
-            <motion.div
-              initial={{ y: '-100%', opacity: 0 }}
-              animate={{ y: '0%', opacity: 1 }}
-              exit={{ y: '-100%', opacity: 0 }}
-              className="absolute top-[calc(100%-3px)] right-[-3px] h-[3.5rem] bg-[#f5f5f5] rounded-br-[2rem] rounded-bl-2xl shadow-xl border-[3px] border-t-0 border-white flex flex-row items-center gap-3 px-4 z-0 pointer-events-auto"
-              style={{ zIndex: -1 }}
-            >
-              <button
-                onClick={(e) => { e.stopPropagation(); setIsControlsOpen(false); }}
-                className="absolute -top-7 right-1 p-1 text-zinc-400 hover:text-black rounded-full hover:bg-black/5 transition-colors"
-              >
-                <X size={14} />
-              </button>
-
-              <button onClick={(e) => { e.stopPropagation(); setShowVinylSettings(!showVinylSettings); }} className="w-7 h-7 flex items-center justify-center text-zinc-500 hover:text-black transition-colors" title="Diseño de Vinilo">
-                <Settings size={16} />
-              </button>
-              <div className="w-[1px] h-6 bg-zinc-300 mx-1" />
-              <button onClick={handlePlayPrevWithDust} className="w-8 h-8 flex items-center justify-center bg-white hover:bg-zinc-50 text-black rounded shadow-sm border border-zinc-200 active:shadow-inner active:translate-y-[1px] transition-all"><SkipBack size={14} fill="currentColor" /></button>
-              <button onClick={handlePauseOrResumeDelay} className="w-9 h-9 flex items-center justify-center bg-white hover:bg-zinc-50 text-black rounded-full shadow-md border border-zinc-200 active:shadow-inner active:translate-y-[1px] transition-all">
-                {isPlaying && !isPendingPause ? <Pause size={16} fill="currentColor" /> : <Play size={16} fill="currentColor" className="ml-0.5" />}
-              </button>
-              <button onClick={handlePlayNextWithDust} className="w-8 h-8 flex items-center justify-center bg-white hover:bg-zinc-50 text-black rounded shadow-sm border border-zinc-200 active:shadow-inner active:translate-y-[1px] transition-all"><SkipForward size={14} fill="currentColor" /></button>
-            </motion.div>
-          )}
-        </AnimatePresence>
-
-        <AnimatePresence>
-          {showVinylSettings && (
-            <motion.div
-              initial={{ opacity: 0, y: 10, scale: 0.95 }}
-              animate={{ opacity: 1, y: 0, scale: 1 }}
-              exit={{ opacity: 0, y: 10, scale: 0.95 }}
-              // Optimización: Retirado el backdrop-blur, usamos color sólido para cuidar la GPU
-              className="absolute bottom-[20%] right-[10%] w-64 bg-white/98 p-4 rounded-xl shadow-[0_20px_40px_rgba(0,0,0,0.4)] border border-black/10 z-40"
-              onClick={(e) => e.stopPropagation()}
-            >
-              <div className="flex justify-between items-center mb-4">
-                <h3 className="font-bold text-sm text-zinc-800">Diseño del Disco</h3>
-                <button onClick={() => setShowVinylSettings(false)} className="text-zinc-500 hover:text-black p-1 rounded-full hover:bg-zinc-100"><X size={16} /></button>
-              </div>
-              <div className="flex flex-col gap-4">
-                <label className="flex flex-col gap-1 cursor-pointer">
-                  <span className="text-xs font-semibold text-zinc-600">TEXTURA DEL VINILO</span>
-                  <div className="w-full h-9 bg-zinc-100 hover:bg-zinc-200 border border-zinc-300 rounded flex items-center justify-center text-xs font-medium transition-colors">
-                    Subir Imagen...
-                  </div>
-                  <input type="file" accept="image/*" className="hidden" onChange={handleTextureUpload} />
-                </label>
-                <div className="flex flex-col gap-1">
-                  <div className="flex justify-between">
-                    <span className="text-xs font-semibold text-zinc-600">ESCALA DE IMAGEN</span>
-                    <span className="text-xs text-zinc-500 font-mono">{customScale}%</span>
-                  </div>
-                  <input type="range" min="20" max="250" value={customScale} onChange={handleScaleChange} className="w-full accent-zinc-800 cursor-ew-resize" />
-                </div>
-                <button onClick={handleResetTexture} className="mt-1 w-full h-8 bg-red-50 hover:bg-red-100 text-red-600 border border-red-200 rounded text-xs font-semibold transition-colors">
-                  Restablecer
-                </button>
-              </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
+        {/* Pestaña de Controles - Siempre Visible */}
+        <div
+          className="absolute top-[calc(100%-3px)] right-[-3px] h-[3.5rem] bg-[#f5f5f5] rounded-br-[2rem] rounded-bl-2xl shadow-xl border-[3px] border-t-0 border-white flex flex-row items-center gap-3 px-4 pointer-events-auto"
+          style={{ zIndex: -1 }}
+        >
+          <button onClick={(e) => { e.stopPropagation(); setShowVinylSettings(!showVinylSettings); }} className="w-7 h-7 flex items-center justify-center text-zinc-500 hover:text-black transition-colors" title="Diseño de Vinilo">
+            <Settings size={16} />
+          </button>
+          <div className="w-[1px] h-6 bg-zinc-300 mx-1" />
+          <button onClick={handlePlayPrevWithDust} className="w-8 h-8 flex items-center justify-center bg-white hover:bg-zinc-50 text-black rounded shadow-sm border border-zinc-200 active:shadow-inner active:translate-y-[1px] transition-all"><SkipBack size={14} fill="currentColor" /></button>
+          <button onClick={handlePauseOrResumeDelay} className="w-9 h-9 flex items-center justify-center bg-white hover:bg-zinc-50 text-black rounded-full shadow-md border border-zinc-200 active:shadow-inner active:translate-y-[1px] transition-all">
+            {isPlaying && !isPendingPause ? <Pause size={16} fill="currentColor" /> : <Play size={16} fill="currentColor" className="ml-0.5" />}
+          </button>
+          <button onClick={handlePlayNextWithDust} className="w-8 h-8 flex items-center justify-center bg-white hover:bg-zinc-50 text-black rounded shadow-sm border border-zinc-200 active:shadow-inner active:translate-y-[1px] transition-all"><SkipForward size={14} fill="currentColor" /></button>
+        </div>
       </motion.div>
 
+      {/* 2. DISCO GIRANDO (z-20) */}
       <motion.div
         initial={{ x: 0, scale: 0.9, opacity: 0 }}
         animate={isVinylOut ? { x: '110%', scale: 1, opacity: 1 } : { x: 0, scale: 0.9, opacity: 0 }}
+        exit={{ opacity: 0, scale: 0.9, transition: { duration: 0.2 } }}
         transition={isInstantSnap ? { duration: 0 } : { type: 'spring', damping: 15, mass: 1, stiffness: 100 }}
         className="absolute top-1/2 -translate-y-1/2 w-[100%] aspect-square flex items-center justify-center z-20 pointer-events-none"
       >
@@ -443,7 +403,6 @@ const VinylPlayer = ({
           <div
             ref={vinylRef}
             className="absolute inset-0 rounded-full flex items-center justify-center overflow-hidden pointer-events-none"
-            // Optimización: Aplicar will-change: transform a las cosas que giran o se mueven
             style={{ backgroundColor: '#111', willChange: 'transform' }}
           >
             <div className="absolute inset-0 pointer-events-none" style={{ transform: `scale(${customScale / 100})`, transformOrigin: 'center' }}>
@@ -493,6 +452,7 @@ const VinylPlayer = ({
         </div>
       </motion.div>
 
+      {/* 3. BRAZO DE LA AGUJA (z-30) */}
       <motion.div
         initial={{ opacity: 0, x: 50 }}
         animate={{ opacity: 1, x: '110%' }}
@@ -503,7 +463,6 @@ const VinylPlayer = ({
         <div ref={pivotRef} className="absolute top-[8%] right-[8%] w-10 h-10 pointer-events-none" />
         <div
           className={`absolute top-[8%] right-[8%] w-8 h-[65%] origin-top pointer-events-none ${isDragging ? '' : 'transition-transform duration-1000 ease-linear'}`}
-          // Optimización: Aplicar will-change: transform a las cosas que se mueven
           style={{ transform: `rotate(${tonearmAngle}deg)`, willChange: 'transform' }}
         >
           <div className="w-12 h-12 rounded-full bg-zinc-300 shadow-2xl border-[5px] border-zinc-800 absolute -top-2 -left-2 flex items-center justify-center pointer-events-auto">
@@ -511,29 +470,77 @@ const VinylPlayer = ({
           </div>
           <div className="w-2.5 h-[85%] bg-[#c0c0c0] absolute left-1/2 -translate-x-1/2 top-4 shadow-xl rounded-full origin-top pointer-events-auto" />
           <div
-            className={`w-8 h-20 absolute bottom-[-5%] left-1/2 -translate-x-1/2 flex items-start justify-center cursor-grab pointer-events-auto ${isDragging ? 'cursor-grabbing' : ''}`}
+            className={`w-8 h-20 absolute bottom-[3%] left-1/2 -translate-x-1/2 flex items-start justify-center cursor-grab pointer-events-auto ${isDragging ? 'cursor-grabbing' : ''}`}
             style={{ transformOrigin: 'top center', transform: 'rotate(5deg)' }}
             onPointerDown={(e) => { e.stopPropagation(); setIsDragging(true); }}
           >
-            <div className="w-5 h-12 bg-zinc-800 rounded-sm shadow-2xl border-t-2 border-zinc-500 flex flex-col items-center mt-2 pointer-events-none">
+            <div className="relative w-5 h-12 bg-zinc-800 rounded-sm shadow-2xl border-t-2 border-zinc-500 flex flex-col items-center pointer-events-none">
               <div className="w-full h-1/2 bg-zinc-700 rounded-t-sm border-b border-zinc-900" />
-              <div className="w-0.5 h-3 bg-zinc-400 absolute -bottom-3 left-1/2 -translate-x-1/2" />
+              <div className="w-0.5 h-3 bg-zinc-400 absolute -bottom-2 left-1/2 -translate-x-1/2 rounded-b-full" />
             </div>
           </div>
         </div>
       </motion.div>
+
+      {/* 4. MODAL AJUSTES DEL VINILO (z-50) Componente hermano a la base para evitar el Stacking Context */}
+      <motion.div
+        initial={{ opacity: 0, x: 50 }}
+        animate={{ opacity: 1, x: '110%' }}
+        exit={{ opacity: 0, x: 50 }}
+        transition={{ type: 'spring', damping: 20 }}
+        className="absolute top-1/2 -translate-y-1/2 w-[100%] aspect-square pointer-events-none z-50"
+      >
+        <AnimatePresence>
+          {showVinylSettings && (
+            <motion.div
+              initial={{ opacity: 0, y: 15, scale: 0.95 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: 15, scale: 0.95 }}
+              className="absolute bottom-[12%] right-[-10px] w-64 bg-[#fcfcfc] p-4 rounded-2xl shadow-[0_30px_60px_rgba(0,0,0,0.5)] border-[3px] border-white pointer-events-auto"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="flex justify-between items-center mb-4">
+                <h3 className="font-bold text-sm text-zinc-800">{t('player.discDesign', 'Diseño del Disco')}</h3>
+                <button onClick={() => setShowVinylSettings(false)} className="text-zinc-500 hover:text-black p-1 rounded-full hover:bg-zinc-100"><X size={16} /></button>
+              </div>
+              <div className="flex flex-col gap-4">
+                <label className="flex flex-col gap-1 cursor-pointer">
+                  <span className="text-xs font-semibold text-zinc-600">{t('player.vinylTexture', 'TEXTURA DEL VINILO')}</span>
+                  <div className="w-full h-9 bg-zinc-100 hover:bg-zinc-200 border border-zinc-300 rounded flex items-center justify-center text-xs font-medium transition-colors text-zinc-700">
+                    {t('player.uploadImage', 'Subir Imagen...')}
+                  </div>
+                  <input type="file" accept="image/*" className="hidden" onChange={handleTextureUpload} />
+                </label>
+                <div className="flex flex-col gap-1">
+                  <div className="flex justify-between">
+                    <span className="text-xs font-semibold text-zinc-600">{t('player.imageScale', 'ESCALA DE IMAGEN')}</span>
+                    <span className="text-xs text-zinc-500 font-mono">{customScale}%</span>
+                  </div>
+                  <input type="range" min="20" max="250" value={customScale} onChange={handleScaleChange} className="w-full accent-zinc-800 cursor-ew-resize" />
+                </div>
+                <button onClick={handleResetTexture} className="mt-1 w-full h-8 bg-red-50 hover:bg-red-100 text-red-600 border border-red-200 rounded text-xs font-semibold transition-colors">
+                  {t('player.reset', 'Restablecer')}
+                </button>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </motion.div>
+
     </div>
   );
 };
 
 export default function AlbumsCoverFlow({ albums, onExpand }: any) {
-  const { colors } = useTheme();
+  const { colors, albumZenMode, setAlbumZenMode } = useTheme();
   const { playSound, pauseOrResumeSound, playNext, playPrevious, currentSong, subscribeToProgress, isPlaying: globalIsPlaying, volume, setVolume } = useAudio();
   const { t } = useTranslation();
 
   const [activeIndex, setActiveIndex] = useState(Math.floor(albums.length / 2));
   const [expandedIndex, setExpandedIndex] = useState<number | null>(null);
   const [isPaperOpen, setIsPaperOpen] = useState(false);
+  const [showLyrics, setShowLyrics] = useState(false);
+  const [modeAnimation, setModeAnimation] = useState<'on' | 'off' | null>(null);
   const [albumInfo, setAlbumInfo] = useState<string>('');
   const [isDiscOnPlatter, setIsDiscOnPlatter] = useState(false);
   const [isDraggingDisc, setIsDraggingDisc] = useState(false);
@@ -546,21 +553,36 @@ export default function AlbumsCoverFlow({ albums, onExpand }: any) {
   const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Tab') {
+        e.preventDefault();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
+
+  useEffect(() => {
     if (isPaperOpen) wasPaperOpen.current = true;
   }, [isPaperOpen]);
 
   useEffect(() => {
     onExpand?.(expandedIndex !== null);
     if (expandedIndex !== null) {
+      setModeAnimation('on');
+      setTimeout(() => setModeAnimation(null), 1500);
       setIsPaperOpen(false);
       const currentAlbum = albums[expandedIndex];
       if (currentAlbum) {
-        setAlbumInfo(`Álbum: ${currentAlbum.name}\n\nArtista: ${currentAlbum.artist}\n\nLanzamiento: ${currentAlbum.year || 'Desconocido'}\n\nCanciones: ${currentAlbum.songs.length}\n\nDuración total: ${Math.floor(currentAlbum.songs.reduce((acc: number, s: any) => acc + (s.duration || 0), 0) / 60)} min`);
+        const totalDurationSecs = currentAlbum.songs.reduce((acc: number, s: any) => acc + (Number(s.duration) || 0), 0);
+        const totalDurationMins = Math.floor(totalDurationSecs / 60);
+        setAlbumInfo(`${t('detail.album', 'Álbum')}: ${currentAlbum.name}\n\n${t('detail.artist', 'Artista')}: ${currentAlbum.artist}\n\n${t('detail.release', 'Lanzamiento')}: ${currentAlbum.year || t('detail.unknown', 'Desconocido')}\n\n${t('detail.songs', 'Canciones')}: ${currentAlbum.songs.length}\n\n${t('detail.totalDuration', 'Duración total')}: ${totalDurationMins} min`);
       }
     }
   }, [expandedIndex, onExpand, albums]);
 
   const handleCloseAlbum = () => {
+    setShowLyrics(false);
     if (isPaperOpen) {
       setIsPaperOpen(false);
       setTimeout(() => {
@@ -648,7 +670,6 @@ export default function AlbumsCoverFlow({ albums, onExpand }: any) {
     >
       <div className="relative w-full h-full flex items-center justify-center" style={{ transformStyle: 'preserve-3d' }}>
         {albums.map((album: any, index: number) => {
-          // Optimización 1: Destruir componentes muy lejanos del DOM para liberar GPU
           if (Math.abs(activeIndex - index) > 3) return null;
 
           const isActive = index === activeIndex;
@@ -667,7 +688,7 @@ export default function AlbumsCoverFlow({ albums, onExpand }: any) {
           let translateY = '-50%';
 
           if (isExpanded) {
-            translateX = -300; translateY = '-45%'; translateZ = 200; rotateY = 0; scale = 0.82; zIndex = 200; opacity = 1;
+            translateX = -410; translateY = '-45%'; translateZ = 200; rotateY = 0; scale = 0.88; zIndex = 200; opacity = 1;
           } else if (expandedIndex !== null) {
             translateZ -= 500; opacity = 0; scale = 0.5;
           }
@@ -688,15 +709,35 @@ export default function AlbumsCoverFlow({ albums, onExpand }: any) {
               }}
             >
               <div className="relative w-full h-full shadow-[0_30px_80px_rgba(0,0,0,0.9)] rounded-lg bg-black/20" style={{ transformStyle: 'preserve-3d' }}>
-                {isExpanded && (
-                  <VinylPlayer
-                    album={album} currentSong={currentSong} isPlaying={globalIsPlaying} subscribeToProgress={subscribeToProgress}
-                    playSound={playSound} isPaperOpen={isPaperOpen} volume={volume} setVolume={setVolume}
-                    pauseOrResumeSound={pauseOrResumeSound} playNext={playNext} playPrevious={playPrevious}
-                    isDiscOnPlatter={isDiscOnPlatter} turntableRef={turntableRef} onDiscDragStart={handleDiscDragStart}
-                    isInstantSnap={isInstantSnap}
-                  />
-                )}
+                <AnimatePresence>
+                  {isExpanded && (
+                    <VinylPlayer
+                      album={album} currentSong={currentSong} isPlaying={globalIsPlaying} subscribeToProgress={subscribeToProgress}
+                      playSound={playSound} isPaperOpen={isPaperOpen} volume={volume} setVolume={setVolume}
+                      pauseOrResumeSound={pauseOrResumeSound} playNext={playNext} playPrevious={playPrevious}
+                      isDiscOnPlatter={isDiscOnPlatter} turntableRef={turntableRef} onDiscDragStart={handleDiscDragStart}
+                      isInstantSnap={isInstantSnap}
+                      onPowerOff={() => {
+                        setIsDiscOnPlatter(false);
+                        if (albumZenMode) {
+                          setTimeout(() => {
+                            setAlbumZenMode(false, true);
+                          }, 500);
+                        } else {
+                          setTimeout(() => {
+                            setModeAnimation('off');
+                            setTimeout(() => {
+                              handleCloseAlbum();
+                            }, 500);
+                            setTimeout(() => {
+                              setModeAnimation(null);
+                            }, 1500);
+                          }, 400);
+                        }
+                      }}
+                    />
+                  )}
+                </AnimatePresence>
 
                 {isExpanded && !isDiscOnPlatter && !isDraggingDisc && (
                   <div
@@ -704,6 +745,11 @@ export default function AlbumsCoverFlow({ albums, onExpand }: any) {
                     onPointerDown={(e) => {
                       e.stopPropagation();
                       e.preventDefault();
+                      // --- BLOQUEO: Prevenir que arrastren el disco si otro álbum está sonando ---
+                      const isThisAlbumActive = currentSong && album.songs.some((s: any) => s.path === currentSong.path);
+                      if (globalIsPlaying && !isThisAlbumActive) {
+                        return;
+                      }
                       handleDiscDragStart(e);
                     }}
                   >
@@ -714,7 +760,6 @@ export default function AlbumsCoverFlow({ albums, onExpand }: any) {
                         </div>
                         <div className="absolute inset-0 rounded-full bg-black/15 pointer-events-none" />
 
-                        {/* Optimización 2: SVG simplificado con solo 8 círculos para los discos inactivos o asomados */}
                         <svg viewBox="0 0 100 100" className="w-full h-full opacity-60 z-10 pointer-events-none">
                           {Array.from({ length: 8 }).map((_, i) => (
                             <circle key={i} cx="50" cy="50" r={18 + i * 3.8} fill="none" stroke="#222" strokeWidth="0.5" />
@@ -745,10 +790,26 @@ export default function AlbumsCoverFlow({ albums, onExpand }: any) {
                       animate={{ opacity: 1, x: 0, transition: { delay: 0.5 } }}
                       exit={{ opacity: 0, x: -20 }}
                       onClick={(e) => { e.stopPropagation(); setIsPaperOpen(true); }}
-                      className="absolute top-0 right-0 translate-x-[80%] w-12 h-40 bg-[#f4f0ea] rounded-r-xl shadow-xl border-y border-r border-[#d8cdbc] flex items-center justify-center cursor-pointer hover:bg-white transition-colors z-[15]"
+                      className="absolute top-4 right-0 translate-x-[80%] w-12 h-40 bg-[#f4f0ea] rounded-r-xl shadow-xl border-y border-r border-[#d8cdbc] flex items-center justify-center cursor-pointer hover:bg-white transition-colors z-[15]"
                     >
                       <div className="rotate-90 whitespace-nowrap text-[#5c5444] font-bold tracking-widest text-sm flex items-center gap-2">
-                        INFO & TRACKS <ListMusic size={16} />
+                        {t('player.infoTracks', 'INFO & TRACKS')} <ListMusic size={16} />
+                      </div>
+                    </motion.button>
+                  )}
+                </AnimatePresence>
+
+                <AnimatePresence>
+                  {isExpanded && !isPaperOpen && (
+                    <motion.button
+                      initial={{ opacity: 0, x: -20 }}
+                      animate={{ opacity: 1, x: 0, transition: { delay: 0.6 } }}
+                      exit={{ opacity: 0, x: -20 }}
+                      onClick={(e) => { e.stopPropagation(); setShowLyrics(!showLyrics); }}
+                      className="absolute bottom-8 right-0 translate-x-[80%] w-12 h-32 bg-[#f4f0ea] rounded-r-xl shadow-xl border-y border-r border-[#d8cdbc] flex items-center justify-center cursor-pointer hover:bg-white transition-colors z-[15]"
+                    >
+                      <div className="rotate-90 whitespace-nowrap text-[#5c5444] font-bold tracking-widest text-sm flex items-center gap-2">
+                        {t('player.lyricsBtn', 'LETRAS')} <Mic2 size={16} />
                       </div>
                     </motion.button>
                   )}
@@ -771,12 +832,25 @@ export default function AlbumsCoverFlow({ albums, onExpand }: any) {
 
                   {isExpanded && (
                     <button
-                      // Optimización 3: Quitamos el blur de botones que cambian de color
-                      className="absolute top-4 left-4 p-3 rounded-full bg-black/70 hover:bg-black/90 transition text-white"
+                      className="absolute top-4 left-4 p-3 rounded-full bg-black/70 hover:bg-black/90 transition text-white z-40"
                       onClick={(e) => { e.stopPropagation(); handleCloseAlbum(); }}
                     >
                       <X size={24} />
                     </button>
+                  )}
+
+                  {showLyrics && isExpanded && (
+                    <div className="absolute inset-0 z-30 bg-black/80 backdrop-blur-md overflow-hidden rounded-lg">
+                      <button
+                        className="absolute top-4 right-4 p-3 rounded-full bg-white/20 hover:bg-white/40 transition text-white z-40"
+                        onClick={(e) => { e.stopPropagation(); setShowLyrics(false); }}
+                      >
+                        <X size={24} />
+                      </button>
+                      <div className="w-full h-full p-6 pt-16 pb-8" onClick={(e) => e.stopPropagation()}>
+                        <LyricsView />
+                      </div>
+                    </div>
                   )}
                 </div>
               </div>
@@ -789,27 +863,29 @@ export default function AlbumsCoverFlow({ albums, onExpand }: any) {
                     exit="closed"
                     variants={{
                       open: {
-                        x: ['0%', '105%', '105%', '0%'],
+                        x: ['0%', '105%', '105%', '25%'],
                         z: [-10, -10, 20, 20],
+                        zIndex: [30, 30, 30, 30],
                         opacity: [0, 1, 1, 1],
                         transition: { duration: 0.9, times: [0, 0.4, 0.5, 1], ease: 'easeInOut', delay: 0.5 }
                       },
                       closed: {
-                        x: ['0%', '105%', '105%', '0%'],
+                        x: ['25%', '105%', '105%', '0%'],
                         z: [20, 20, -10, -10],
-                        opacity: [1, 1, 1, 0],
+                        zIndex: [30, 30, 15, 15],
+                        opacity: [1, 1, 1, 1],
                         transition: { duration: 0.9, times: [0, 0.4, 0.5, 1], ease: 'easeInOut', delay: 0.6 }
                       }
                     }}
                     className="absolute top-[2%] bottom-[2%] left-0 w-[88%] bg-[#f4f0ea] shadow-[inset_-10px_0_20px_rgba(0,0,0,0.05),_5px_0_15px_rgba(0,0,0,0.3)] flex flex-col p-8 rounded-r-lg border border-[#d8cdbc]"
-                    style={{ transformOrigin: 'center', perspective: '2000px', zIndex: 30 }}
+                    style={{ transformOrigin: 'center', perspective: '2000px' }}
                     onClick={(e) => e.stopPropagation()}
                   >
                     <motion.div
                       className="w-full h-full relative z-10 flex flex-col"
                       variants={{
                         open: { opacity: 1, transition: { delay: 0.4, duration: 0.3 } },
-                        closed: { opacity: 0, transition: { duration: 0.2 } }
+                        closed: { opacity: 0, transition: { duration: 0.2, delay: 0.4 } }
                       }}
                     >
                       <h3 className="text-4xl font-black text-black mb-2 leading-tight">{album.name}</h3>
@@ -844,7 +920,7 @@ export default function AlbumsCoverFlow({ albums, onExpand }: any) {
                         </button>
 
                         <div className="flex justify-between items-center mb-6 border-b border-zinc-300 pb-4">
-                          <h4 className="font-bold text-black text-2xl">Tracklist</h4>
+                          <h4 className="font-bold text-black text-2xl">{t('detail.tracklist', 'Tracklist')}</h4>
                         </div>
 
                         <div className="flex-1 overflow-y-auto pr-4 flex flex-col gap-1 customized-scrollbar-light">
@@ -856,6 +932,13 @@ export default function AlbumsCoverFlow({ albums, onExpand }: any) {
                                 className={`flex items-center gap-4 p-3 rounded-md cursor-pointer transition ${isSongPlaying ? 'bg-black/10 shadow-sm' : 'hover:bg-black/5'}`}
                                 onClick={(e) => {
                                   e.stopPropagation();
+
+                                  // --- BLOQUEO: Prevenir reproducir si hay otro álbum activo y sonando ---
+                                  const isThisAlbumActive = currentSong && album.songs.some((s: any) => s.path === currentSong.path);
+                                  if (globalIsPlaying && !isThisAlbumActive) {
+                                    return;
+                                  }
+
                                   if (isPaperOpen) {
                                     setIsPaperOpen(false);
                                     setTimeout(() => {
@@ -932,21 +1015,32 @@ export default function AlbumsCoverFlow({ albums, onExpand }: any) {
             initial={{ opacity: 0, x: -50 }}
             animate={{ opacity: 1, x: 0 }}
             exit={{ opacity: 0, x: -50 }}
-            // Optimización 3: Retiramos blur de elementos fijos de la interfaz
-            className="fixed bottom-4 left-6 w-[300px] flex items-center gap-4 bg-[#111]/95 p-4 rounded-3xl shadow-2xl border border-white/10 hover:bg-black transition group z-50 text-left"
+            className="fixed bottom-4 left-6 w-[320px] flex items-center gap-4 bg-[#111]/95 p-3 pr-4 rounded-3xl shadow-2xl border border-white/10 hover:bg-black transition group z-50 text-left"
             onClick={(e) => {
               e.stopPropagation();
               setActiveIndex(playingAlbumIndex);
               setTimeout(() => setExpandedIndex(playingAlbumIndex), 300);
             }}
           >
-            <div className="relative w-16 h-16 rounded-xl overflow-hidden shadow-lg border border-white/5">
+            <div className="relative w-16 h-16 rounded-2xl overflow-hidden shadow-lg border border-white/5 flex-shrink-0">
               <CoverImage coverUrl={currentSong?.cover || playingAlbum.cover} audioPath={currentSong?.path || playingAlbum.songs[0]?.path} hq={true} className="w-full h-full object-cover" />
             </div>
-            <div className="pr-4 flex flex-col justify-center">
-              <p className="text-[10px] text-white/50 mb-1 uppercase font-bold tracking-widest">{t('player.nowPlaying', 'Reproduciendo')}</p>
-              <p className="text-base text-white font-black truncate max-w-[220px] leading-tight mb-0.5">{currentSong?.title || currentSong?.filename.replace(/\.[^/.]+$/, "") || playingAlbum.name}</p>
-              <p className="text-xs text-white/70 font-medium truncate max-w-[220px]">{currentSong?.artist || playingAlbum.artist}</p>
+            <div className="flex flex-col justify-center flex-1 min-w-0">
+              <p className="text-[10px] text-white/50 mb-0.5 uppercase font-bold tracking-widest">{t('player.nowPlaying', 'Reproduciendo')}</p>
+              <p className="text-base text-white font-black truncate leading-tight mb-0.5">{currentSong?.title || currentSong?.filename.replace(/\.[^/.]+$/, "") || playingAlbum.name}</p>
+              <p className="text-xs text-white/70 font-medium truncate">{currentSong?.artist || playingAlbum.artist}</p>
+            </div>
+            {/* NUEVO BOTÓN PARA PAUSAR DESDE EL MINI REPRODUCTOR */}
+            <div
+              className="ml-auto flex-shrink-0 pl-2"
+              onClick={(e) => {
+                e.stopPropagation(); // Evita que se abra el álbum al hacer clic en play/pausa
+                pauseOrResumeSound();
+              }}
+            >
+              <div className="w-10 h-10 flex items-center justify-center rounded-full bg-white/10 hover:bg-white/20 text-white transition-colors cursor-pointer">
+                {globalIsPlaying ? <Pause size={18} fill="currentColor" /> : <Play size={18} fill="currentColor" className="ml-0.5" />}
+              </div>
             </div>
           </motion.button>
         )}
@@ -969,7 +1063,6 @@ export default function AlbumsCoverFlow({ albums, onExpand }: any) {
               </div>
               <div className="absolute inset-0 rounded-full bg-black/15 pointer-events-none" />
 
-              {/* Optimización 2: SVG simplificado con solo 8 círculos para los discos en drag */}
               <svg viewBox="0 0 100 100" className="w-full h-full opacity-60 z-10 pointer-events-none">
                 {Array.from({ length: 8 }).map((_, i) => (
                   <circle key={i} cx="50" cy="50" r={18 + i * 3.8} fill="none" stroke="#222" strokeWidth="0.5" />

@@ -178,7 +178,10 @@
     "title": "Title",
     "followers": "Followers",
     "monthlyListeners": "Monthly listeners",
-    "origin": "Origin"
+    "origin": "Origin",
+    "release": "Release",
+    "totalDuration": "Total duration",
+    "tracklist": "Tracklist"
   },
   "player": {
     "queueRemaining": "songs remaining",
@@ -198,7 +201,20 @@
     "nextInQueue": "Next in queue",
     "nextFrom": "Next from: {{context}}",
     "addedToQueue": "Added to queue",
-    "removedFromQueue": "Removed from queue"
+    "removedFromQueue": "Removed from queue",
+    "playing": "Playing",
+    "paused": "Paused",
+    "standby": "Standby",
+    "noActiveTrack": "No active track",
+    "lyricsBtn": "Lyrics",
+    "modeOn": "ALBUM MODE ON",
+    "modeOff": "ALBUM MODE OFF",
+    "discDesign": "Disc Design",
+    "vinylTexture": "VINYL TEXTURE",
+    "uploadImage": "Upload Image...",
+    "imageScale": "IMAGE SCALE",
+    "reset": "Reset",
+    "infoTracks": "INFO & TRACKS"
   },
   "common": {
     "cancel": "Cancel",

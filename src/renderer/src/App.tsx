@@ -70,16 +70,16 @@ function AppContent() {
           >
             <div className="relative w-64 h-64 mb-12 flex items-center justify-center">
                <motion.div 
-                 initial={{ x: 0 }}
-                 animate={{ x: -50 }}
+                 initial={{ x: isZenLoading === 'off' ? -50 : 0 }}
+                 animate={{ x: isZenLoading === 'off' ? 0 : -50 }}
                  transition={{ duration: 0.8, ease: "easeOut", delay: 0.1 }}
                  className="absolute w-48 h-48 bg-zinc-800 rounded-lg shadow-[0_20px_50px_rgba(0,0,0,0.8)] z-10 flex items-center justify-center border border-zinc-700"
                >
                  <Music size={64} className="text-zinc-500 opacity-50" />
                </motion.div>
                <motion.div 
-                 initial={{ x: 0, rotate: 0 }}
-                 animate={{ x: 50, rotate: 360 }}
+                 initial={{ x: isZenLoading === 'off' ? 50 : 0, rotate: isZenLoading === 'off' ? 360 : 0 }}
+                 animate={{ x: isZenLoading === 'off' ? 0 : 50, rotate: isZenLoading === 'off' ? 0 : 360 }}
                  transition={{ duration: 1.2, ease: "easeOut", delay: 0.1 }}
                  className="absolute w-44 h-44 bg-[#0a0a0a] rounded-full shadow-2xl border-4 border-[#222] flex items-center justify-center z-0"
                >
@@ -95,7 +95,7 @@ function AppContent() {
                transition={{ delay: 0.4 }}
                className="text-4xl font-black tracking-[0.3em] uppercase text-white drop-shadow-lg"
             >
-              {t('settings.albumMode')}
+              {isZenLoading === 'on' ? t('player.modeOn', 'ALBUM MODE ON') : t('player.modeOff', 'ALBUM MODE OFF')}
             </motion.h2>
           </motion.div>
         )}

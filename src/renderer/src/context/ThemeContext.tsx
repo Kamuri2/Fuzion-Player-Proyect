@@ -115,8 +115,8 @@ type ThemeContextType = {
   isNavHidden: boolean;
   setIsNavHidden: (val: boolean) => void;
   albumZenMode: boolean;
-  setAlbumZenMode: (val: boolean) => void;
-  isZenLoading: boolean;
+  setAlbumZenMode: (val: boolean, isTurningOff?: boolean) => void;
+  isZenLoading: 'on' | 'off' | null;
 };
 
 const ThemeContext = createContext<ThemeContextType>({
@@ -149,7 +149,7 @@ const ThemeContext = createContext<ThemeContextType>({
   setIsNavHidden: () => { },
   albumZenMode: false,
   setAlbumZenMode: () => { },
-  isZenLoading: false,
+  isZenLoading: null,
 });
 
 export const useTheme = (): ThemeContextType => useContext(ThemeContext);
@@ -167,7 +167,7 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const [isFullMode, setIsFullModeState] = useState<boolean>(false);
   const [isNavHidden, setIsNavHiddenState] = useState<boolean>(false);
   const [albumZenMode, setAlbumZenModeState] = useState<boolean>(false);
-  const [isZenLoading, setIsZenLoading] = useState<boolean>(false);
+  const [isZenLoading, setIsZenLoading] = useState<'on' | 'off' | null>(null);
 
   useEffect(() => {
     const fam = localStorage.getItem('@theme_family');
@@ -348,14 +348,26 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     localStorage.setItem('@is_nav_hidden', val ? 'true' : 'false');
   };
 
-  const setAlbumZenMode = (val: boolean) => {
-    setAlbumZenModeState(val);
-    localStorage.setItem('@album_zen_mode', val ? 'true' : 'false');
+  const setAlbumZenMode = (val: boolean, isTurningOff?: boolean) => {
     if (val) {
-      setIsZenLoading(true);
+      setAlbumZenModeState(val);
+      localStorage.setItem('@album_zen_mode', 'true');
+      setIsZenLoading('on');
       setTimeout(() => {
-        setIsZenLoading(false);
+        setIsZenLoading(null);
       }, 1500);
+    } else {
+      if (isTurningOff) {
+        setIsZenLoading('off');
+        setTimeout(() => {
+          setAlbumZenModeState(false);
+          localStorage.setItem('@album_zen_mode', 'false');
+          setIsZenLoading(null);
+        }, 1620);
+      } else {
+        setAlbumZenModeState(false);
+        localStorage.setItem('@album_zen_mode', 'false');
+      }
     }
   };
 

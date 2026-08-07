@@ -8,9 +8,9 @@ import { useTranslation } from 'react-i18next';
 import enDict from '../locales/en.json';
 
 const popularFonts = [
-  "Inter", "Roboto", "Outfit", "Space Grotesk", "Syne", 
-  "Montserrat", "Poppins", "Oswald", "Raleway", "Nunito", 
-  "Playfair Display", "Cinzel", "Cormorant Garamond", "Josefin Sans", 
+  "Inter", "Roboto", "Outfit", "Space Grotesk", "Syne",
+  "Montserrat", "Poppins", "Oswald", "Raleway", "Nunito",
+  "Playfair Display", "Cinzel", "Cormorant Garamond", "Josefin Sans",
   "Caveat", "Pacifico", "Dancing Script", "VT323", "Press Start 2P"
 ];
 
@@ -40,7 +40,7 @@ export default function SettingsScreen() {
 
   const handleLanguageChange = async (langCode: string) => {
     setLanguageMode(langCode);
-    
+
     let targetLang = langCode;
     if (langCode === 'system') {
       localStorage.setItem('app_language_mode', 'system');
@@ -201,7 +201,7 @@ export default function SettingsScreen() {
           <span className="font-medium mb-3 block mt-6" style={{ color: colors.subText }}>{t('settings.fonts')}</span>
           <div className="flex flex-col gap-3">
             <div className="flex flex-row gap-3">
-              <select 
+              <select
                 value={popularFonts.includes(draftFont) ? draftFont : (draftFont === '' ? '' : 'custom')}
                 onChange={(e) => {
                   if (e.target.value !== 'custom') {
@@ -227,10 +227,10 @@ export default function SettingsScreen() {
                 {t('settings.reset')}
               </button>
             </div>
-            
+
             <div className="flex flex-row gap-3">
-              <input 
-                type="text" 
+              <input
+                type="text"
                 placeholder={t('settings.fontPlaceholder')}
                 value={draftFont}
                 onChange={(e) => setDraftFont(e.target.value)}
@@ -247,7 +247,7 @@ export default function SettingsScreen() {
             </div>
           </div>
           <p className="text-xs opacity-70 mt-1" style={{ color: colors.subText }}>{t('settings.fontHelper')}</p>
-          
+
           <span className="font-medium mb-3 block mt-8" style={{ color: colors.subText }}>{t('settings.lyricsSize')}</span>
           <div className="flex flex-col gap-2">
             <div className="flex flex-row items-center justify-between">
@@ -255,11 +255,11 @@ export default function SettingsScreen() {
               <span className="font-bold" style={{ color: colors.text }}>{lyricsFontSize}%</span>
               <span className="text-sm opacity-70" style={{ color: colors.subText }}>{t('settings.larger')}</span>
             </div>
-            <input 
-              type="range" 
-              min="50" 
-              max="150" 
-              step="5" 
+            <input
+              type="range"
+              min="50"
+              max="150"
+              step="5"
               value={lyricsFontSize}
               onChange={(e) => setLyricsFontSize(Number(e.target.value))}
               className="w-full h-2 rounded-lg appearance-none cursor-pointer mt-1"
@@ -287,7 +287,7 @@ export default function SettingsScreen() {
             {showTranslatedLyrics && (
               <div className="flex flex-col gap-2 mt-2 pt-4 border-t border-white/10">
                 <span className="text-sm font-medium" style={{ color: colors.text }}>{t('settings.translationLanguage')}</span>
-                <select 
+                <select
                   value={lyricsLanguage}
                   onChange={(e) => setLyricsLanguage(e.target.value)}
                   className="w-full px-4 py-2 rounded-lg border bg-transparent font-bold appearance-none cursor-pointer outline-none text-sm"
@@ -336,7 +336,7 @@ export default function SettingsScreen() {
                 {t('settings.import')}
               </button>
             </div>
-            
+
             <div className="flex flex-col gap-2">
               {mascots.map((m, index) => (
                 <div key={m.id} className="flex flex-row justify-between items-center bg-black/5 dark:bg-white/5 p-4 rounded-lg">
@@ -483,7 +483,7 @@ export default function SettingsScreen() {
             {isTranslatingUI && <RefreshCw size={16} className="animate-spin text-primary" />}
           </h2>
           <div className="flex flex-col gap-2">
-            <select 
+            <select
               value={languageMode === 'system' ? 'system' : i18n.language.split('-')[0]}
               onChange={(e) => handleLanguageChange(e.target.value)}
               disabled={isTranslatingUI}

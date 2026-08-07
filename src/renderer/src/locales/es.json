@@ -178,7 +178,10 @@
     "title": "Título",
     "followers": "Seguidores",
     "monthlyListeners": "Oyentes mensuales",
-    "origin": "Origen"
+    "origin": "Origen",
+    "release": "Lanzamiento",
+    "totalDuration": "Duración total",
+    "tracklist": "Tracklist"
   },
   "player": {
     "queueRemaining": "canciones restantes",
@@ -198,7 +201,20 @@
     "nextInQueue": "A continuación en la cola",
     "nextFrom": "Siguiente de: {{context}}",
     "addedToQueue": "Añadido a la cola",
-    "removedFromQueue": "Eliminado de la cola"
+    "removedFromQueue": "Eliminado de la cola",
+    "playing": "Reproduciendo",
+    "paused": "Pausado",
+    "standby": "En Espera",
+    "noActiveTrack": "Sin pista activa",
+    "lyricsBtn": "LETRAS",
+    "modeOn": "MODO ÁLBUM ACTIVADO",
+    "modeOff": "MODO ÁLBUM DESACTIVADO",
+    "discDesign": "Diseño del Disco",
+    "vinylTexture": "TEXTURA DEL VINILO",
+    "uploadImage": "Subir Imagen...",
+    "imageScale": "ESCALA DE IMAGEN",
+    "reset": "Restablecer",
+    "infoTracks": "INFO & TRACKS"
   },
   "common": {
     "cancel": "Cancelar",
