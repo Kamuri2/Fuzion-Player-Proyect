@@ -59,7 +59,9 @@ const LazyMiniListItem = ({ item, type, onClick, isPlayingThis }: any) => {
   useEffect(() => {
     const observer = new IntersectionObserver(
       (entries) => {
-        setInView(entries[0].isIntersecting);
+        if (entries[0].isIntersecting) {
+          setInView(true);
+        }
       },
       { rootMargin: '300px' }
     );
@@ -140,6 +142,7 @@ export default function PlayerScreen() {
     toggleShuffle,
     repeatMode,
     toggleRepeatMode,
+    isPlayerOpen,
     setIsPlayerOpen,
     currentContextId,
     playlists,
@@ -423,7 +426,7 @@ export default function PlayerScreen() {
           coverUrl={currentSong?.cover}
           audioPath={currentSong?.path}
           hq={true}
-          className="w-full h-full object-cover opacity-80 blur-[80px] animate-gradient-move origin-center scale-110"
+          className={`w-full h-full object-cover opacity-80 blur-[80px] origin-center scale-110 ${isPlayerOpen ? 'animate-gradient-move' : ''}`}
         />
         {/* Totalmente transparente a petición del usuario */}
         <div className="absolute inset-0 bg-transparent" />

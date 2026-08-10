@@ -217,7 +217,7 @@ const VinylPlayer = ({
     return unsub;
   }, [isPlaying, isDragging, subscribeToProgress]);
 
-  const minAngle = 5;
+  const minAngle = 0;
   const maxAngle = 35;
 
   let currentSongIndex = album.songs.findIndex((s: any) => s.path === currentSong?.path);
@@ -540,7 +540,6 @@ export default function AlbumsCoverFlow({ albums, onExpand }: any) {
   const [expandedIndex, setExpandedIndex] = useState<number | null>(null);
   const [isPaperOpen, setIsPaperOpen] = useState(false);
   const [showLyrics, setShowLyrics] = useState(false);
-  const [modeAnimation, setModeAnimation] = useState<'on' | 'off' | null>(null);
   const [albumInfo, setAlbumInfo] = useState<string>('');
   const [isDiscOnPlatter, setIsDiscOnPlatter] = useState(false);
   const [isDraggingDisc, setIsDraggingDisc] = useState(false);
@@ -569,8 +568,6 @@ export default function AlbumsCoverFlow({ albums, onExpand }: any) {
   useEffect(() => {
     onExpand?.(expandedIndex !== null);
     if (expandedIndex !== null) {
-      setModeAnimation('on');
-      setTimeout(() => setModeAnimation(null), 1500);
       setIsPaperOpen(false);
       const currentAlbum = albums[expandedIndex];
       if (currentAlbum) {
@@ -725,13 +722,9 @@ export default function AlbumsCoverFlow({ albums, onExpand }: any) {
                           }, 500);
                         } else {
                           setTimeout(() => {
-                            setModeAnimation('off');
                             setTimeout(() => {
                               handleCloseAlbum();
                             }, 500);
-                            setTimeout(() => {
-                              setModeAnimation(null);
-                            }, 1500);
                           }, 400);
                         }
                       }}
