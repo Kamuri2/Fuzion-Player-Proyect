@@ -3,7 +3,6 @@ import { useTheme } from '../context/ThemeContext';
 import CoverImage from '../components/CoverImage';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { LayoutGrid, GalleryHorizontal } from 'lucide-react';
 import AlbumsCoverFlow from '../components/AlbumsCoverFlow';
 // @ts-ignore
 import React, { useMemo, useState, useEffect, useRef } from 'react';
@@ -59,7 +58,6 @@ export default function AlbumsScreen() {
   const navigate = useNavigate();
   const { t } = useTranslation();
   const [searchQuery, setSearchQuery] = useState('');
-  const [viewMode, setViewMode] = useState<'grid' | 'coverflow'>('grid');
   const [isCoverFlowExpanded, setIsCoverFlowExpanded] = useState(false);
 
   const sortedAlbums = useMemo(() => {
@@ -101,7 +99,7 @@ export default function AlbumsScreen() {
   };
 
   return (
-    <div className="flex-1 px-8 py-8 max-w-full w-full animate-fade-in relative flex flex-col">
+    <div className="flex-1 px-w-full py-w-full max-w-full w-full animate-fade-in relative flex flex-col">
       {!isCoverFlowExpanded && !albumZenMode && (
         <div className="animate-fade-in">
           <h1 className="text-4xl font-black uppercase tracking-widest mb-8" style={{ color: colors.text }}>{t('albums.title')}</h1>
@@ -115,29 +113,11 @@ export default function AlbumsScreen() {
               className="flex-1 p-4 rounded-xl bg-black/5 dark:bg-white/5 outline-none transition-all focus:ring-2"
               style={{ color: colors.text }}
             />
-            <div className="flex bg-black/5 dark:bg-white/5 rounded-xl p-1">
-              <button
-                className={`p-3 rounded-lg transition-all ${viewMode === 'grid' ? 'bg-black/10 dark:bg-white/10 shadow-sm' : 'opacity-50 hover:opacity-100'}`}
-                onClick={() => setViewMode('grid')}
-                title="Cuadrícula"
-                style={{ color: colors.text }}
-              >
-                <LayoutGrid size={24} />
-              </button>
-              <button
-                className={`p-3 rounded-lg transition-all ${viewMode === 'coverflow' ? 'bg-black/10 dark:bg-white/10 shadow-sm' : 'opacity-50 hover:opacity-100'}`}
-                onClick={() => setViewMode('coverflow')}
-                title="Cover Flow"
-                style={{ color: colors.text }}
-              >
-                <GalleryHorizontal size={24} />
-              </button>
-            </div>
           </div>
         </div>
       )}
 
-      {!albumZenMode && viewMode === 'grid' ? (
+      {!albumZenMode ? (
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 w-full pb-32 pr-12">
           {sortedAlbums.map((album: any) => {
             const firstChar = album.name.charAt(0).toUpperCase();
@@ -161,7 +141,7 @@ export default function AlbumsScreen() {
         <AlbumsCoverFlow albums={sortedAlbums} navigate={navigate} onExpand={setIsCoverFlowExpanded} />
       )}
 
-      {!albumZenMode && viewMode === 'grid' && (
+      {!albumZenMode && (
         <div className="fixed right-6 top-1/2 -translate-y-1/2 flex flex-col items-center gap-[2px] z-50 p-2 rounded-full bg-black/5 dark:bg-white/5 backdrop-blur-md shadow-lg" style={{ maxHeight: '80vh', overflowY: 'auto' }}>
           {alphabet.map(letter => {
             const exists = existingLetters.has(letter);

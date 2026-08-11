@@ -213,6 +213,13 @@
     "vinylTexture": "TEXTURA DEL VINILO",
     "uploadImage": "Subir Imagen...",
     "imageScale": "ESCALA DE IMAGEN",
+    "history": "HISTORIAL",
+    "rpm": "VELOCIDAD (RPM)",
+    "imageOffsetX": "POSICIÓN HORIZONTAL",
+    "imageOffsetY": "POSICIÓN VERTICAL",
+    "imageOpacity": "OPACIDAD",
+    "hideCenterLabel": "Ocultar etiqueta central",
+    "hideGrooves": "Ocultar surcos",
     "reset": "Restablecer",
     "infoTracks": "INFO & TRACKS"
   },

@@ -213,6 +213,13 @@
     "vinylTexture": "VINYL TEXTURE",
     "uploadImage": "Upload Image...",
     "imageScale": "IMAGE SCALE",
+    "history": "HISTORY",
+    "rpm": "SPEED (RPM)",
+    "imageOffsetX": "HORIZONTAL POSITION",
+    "imageOffsetY": "VERTICAL POSITION",
+    "imageOpacity": "OPACITY",
+    "hideCenterLabel": "Hide center label",
+    "hideGrooves": "Hide vinyl grooves",
     "reset": "Reset",
     "infoTracks": "INFO & TRACKS"
   },
