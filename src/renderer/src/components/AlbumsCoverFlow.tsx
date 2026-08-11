@@ -423,9 +423,9 @@ const VinylPlayer = ({
       {/* 1. BASE DEL TOCADISCOS (z-10) */}
       <motion.div
         ref={turntableRef}
-        initial={{ opacity: 0, x: 50 }}
+        initial={{ opacity: 0, x: 0 }}
         animate={{ opacity: 1, x: '110%' }}
-        exit={{ opacity: 0, x: 50 }}
+        exit={{ opacity: 0, x: 0 }}
         transition={{ type: 'spring', damping: 20 }}
         className="absolute top-1/2 -translate-y-1/2 w-[100%] aspect-square rounded-t-[2rem] rounded-b-none bg-[#f5f5f5] border-[3px] border-white shadow-[0_30px_100px_rgba(0,0,0,0.9)] flex items-center justify-center pointer-events-auto z-10"
       >
@@ -507,8 +507,8 @@ const VinylPlayer = ({
 
       {/* 2. DISCO GIRANDO (z-20) */}
       <motion.div
-        initial={{ x: 0, scale: 0.9, opacity: 0 }}
-        animate={isVinylOut ? { x: '110%', scale: 1, opacity: 1 } : { x: 0, scale: 0.9, opacity: 0 }}
+        initial={{ x: 0, scale: 0.9, opacity: 1 }}
+        animate={isVinylOut ? { x: '110%', scale: 1, opacity: 1 } : { x: 0, scale: 0.9, opacity: 1 }}
         exit={{ opacity: 0, scale: 0.9, transition: { duration: 0.2 } }}
         transition={isInstantSnap ? { duration: 0 } : { type: 'spring', damping: 15, mass: 1, stiffness: 100 }}
         className="absolute top-1/2 -translate-y-1/2 w-[100%] aspect-square flex items-center justify-center z-20 pointer-events-none"
@@ -583,9 +583,9 @@ const VinylPlayer = ({
 
       {/* 3. BRAZO DE LA AGUJA (z-30) */}
       <motion.div
-        initial={{ opacity: 0, x: 50 }}
+        initial={{ opacity: 0, x: 0 }}
         animate={{ opacity: 1, x: '110%' }}
-        exit={{ opacity: 0, x: 50 }}
+        exit={{ opacity: 0, x: 0 }}
         transition={{ type: 'spring', damping: 20 }}
         className="absolute top-1/2 -translate-y-1/2 w-[100%] aspect-square pointer-events-none z-30"
       >
@@ -737,6 +737,56 @@ const VinylPlayer = ({
         </AnimatePresence>
       </motion.div>
 
+    </div>
+  );
+};
+
+const PeekDiscVisuals = ({ album, isDragging = false }: { album: any; isDragging?: boolean }) => {
+  const savedTexture = localStorage.getItem(`vinyl_texture_${album.name}`);
+  const customTextureOpacity = Number(localStorage.getItem(`vinyl_opacity_${album.name}`) || 100);
+  const customScale = Number(localStorage.getItem(`vinyl_scale_${album.name}`) || 100);
+  const customOffsetX = Number(localStorage.getItem(`vinyl_offset_x_${album.name}`) || 0);
+  const customOffsetY = Number(localStorage.getItem(`vinyl_offset_y_${album.name}`) || 0);
+  const hideCenterLabel = localStorage.getItem(`vinyl_hide_label_${album.name}`) === 'true';
+  const hideGrooves = localStorage.getItem(`vinyl_hide_grooves_${album.name}`) === 'true';
+
+  return (
+    <div className="absolute inset-0 rounded-full flex items-center justify-center overflow-hidden" style={{ backgroundColor: '#111' }}>
+      <div className="absolute inset-0 pointer-events-none" style={{ transform: `scale(${customScale / 100}) translate(${customOffsetX}%, ${customOffsetY}%)`, transformOrigin: 'center' }}>
+        {savedTexture ? (
+          <img src={savedTexture} className="w-full h-full object-cover" style={{ opacity: customTextureOpacity / 100 }} />
+        ) : (
+          <CoverImage coverUrl={album.cover} audioPath={album.songs[0]?.path} hq={true} className="w-full h-full object-cover" />
+        )}
+      </div>
+      <div className="absolute inset-0 rounded-full bg-black/15 pointer-events-none" />
+
+      {!(savedTexture && hideGrooves) && (
+        <svg viewBox="0 0 100 100" className="w-full h-full opacity-60 z-10 pointer-events-none">
+          {Array.from({ length: 8 }).map((_, i) => (
+            <circle key={i} cx="50" cy="50" r={18 + i * 3.8} fill="none" stroke="#222" strokeWidth="0.5" />
+          ))}
+          <circle cx="50" cy="50" r="49" fill="none" stroke="#111" strokeWidth="2" />
+        </svg>
+      )}
+
+      <div className={`absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[35%] h-[35%] rounded-full z-10 flex items-center justify-center pointer-events-none ${savedTexture && hideCenterLabel ? '' : 'bg-[#111] border-[4px] border-[#222] shadow-[inset_0_0_20px_rgba(0,0,0,0.8)]'}`}>
+        {!(savedTexture && hideCenterLabel) && (
+          <>
+            {!isDragging && (
+              <svg viewBox="0 0 100 100" className="absolute inset-0 w-full h-full opacity-70">
+                <path id={`peekCurve_${album.name.replace(/[^a-zA-Z0-9]/g, '')}`} d="M 50, 50 m -38, 0 a 38,38 0 1,1 76,0 a 38,38 0 1,1 -76,0" fill="none" />
+                <text className="text-[8px] fill-zinc-300 font-bold uppercase tracking-[0.2em]" dy="0">
+                  <textPath href={`#peekCurve_${album.name.replace(/[^a-zA-Z0-9]/g, '')}`} startOffset="50%" textAnchor="middle">
+                    {album.name.substring(0, 20)} • {album.year || '2024'} •
+                  </textPath>
+                </text>
+              </svg>
+            )}
+            <div className="w-[15%] aspect-square rounded-full border border-[#333] bg-[#050505] shadow-[inset_0_2px_4px_rgba(0,0,0,0.5)]" />
+          </>
+        )}
+      </div>
     </div>
   );
 };
@@ -974,31 +1024,7 @@ export default function AlbumsCoverFlow({ albums, onExpand }: any) {
                       }}
                     >
                       <div className="w-full h-full rounded-full bg-[#0a0a0a] border border-[#222] shadow-[0_10px_30px_rgba(0,0,0,0.5)] overflow-hidden">
-                        <div className="absolute inset-0 rounded-full flex items-center justify-center overflow-hidden" style={{ backgroundColor: '#111' }}>
-                          <div className="absolute inset-0 pointer-events-none">
-                            <CoverImage coverUrl={album.cover} audioPath={album.songs[0]?.path} hq={true} className="w-full h-full object-cover" />
-                          </div>
-                          <div className="absolute inset-0 rounded-full bg-black/15 pointer-events-none" />
-
-                          <svg viewBox="0 0 100 100" className="w-full h-full opacity-60 z-10 pointer-events-none">
-                            {Array.from({ length: 8 }).map((_, i) => (
-                              <circle key={i} cx="50" cy="50" r={18 + i * 3.8} fill="none" stroke="#222" strokeWidth="0.5" />
-                            ))}
-                            <circle cx="50" cy="50" r="49" fill="none" stroke="#111" strokeWidth="2" />
-                          </svg>
-
-                          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[35%] h-[35%] rounded-full bg-[#111] border-[4px] border-[#222] shadow-[inset_0_0_20px_rgba(0,0,0,0.8)] z-10 flex items-center justify-center pointer-events-none">
-                            <svg viewBox="0 0 100 100" className="absolute inset-0 w-full h-full opacity-70">
-                              <path id="peekCurve" d="M 50, 50 m -38, 0 a 38,38 0 1,1 76,0 a 38,38 0 1,1 -76,0" fill="none" />
-                              <text className="text-[8px] fill-zinc-300 font-bold uppercase tracking-[0.2em]" dy="0">
-                                <textPath href="#peekCurve" startOffset="50%" textAnchor="middle">
-                                  {album.name.substring(0, 20)} • {album.year || '2024'} •
-                                </textPath>
-                              </text>
-                            </svg>
-                            <div className="w-[15%] aspect-square rounded-full border border-[#333] bg-[#050505]" />
-                          </div>
-                        </div>
+                        <PeekDiscVisuals album={album} />
                       </div>
                     </div>
                   )}
@@ -1316,23 +1342,7 @@ export default function AlbumsCoverFlow({ albums, onExpand }: any) {
             }}
           >
             <div className="w-full h-full rounded-full bg-[#0a0a0a] border border-[#222] shadow-[0_20px_60px_rgba(0,0,0,0.8)] overflow-hidden opacity-90">
-              <div className="absolute inset-0 rounded-full flex items-center justify-center overflow-hidden" style={{ backgroundColor: '#111' }}>
-                <div className="absolute inset-0 pointer-events-none">
-                  <CoverImage coverUrl={albums[expandedIndex]?.cover} audioPath={albums[expandedIndex]?.songs[0]?.path} hq={true} className="w-full h-full object-cover" />
-                </div>
-                <div className="absolute inset-0 rounded-full bg-black/15 pointer-events-none" />
-
-                <svg viewBox="0 0 100 100" className="w-full h-full opacity-60 z-10 pointer-events-none">
-                  {Array.from({ length: 8 }).map((_, i) => (
-                    <circle key={i} cx="50" cy="50" r={18 + i * 3.8} fill="none" stroke="#222" strokeWidth="0.5" />
-                  ))}
-                  <circle cx="50" cy="50" r="49" fill="none" stroke="#111" strokeWidth="2" />
-                </svg>
-
-                <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[35%] h-[35%] rounded-full bg-[#111] border-[4px] border-[#222] shadow-[inset_0_0_20px_rgba(0,0,0,0.8)] z-10 flex items-center justify-center pointer-events-none">
-                  <div className="w-[15%] aspect-square rounded-full border border-[#333] bg-[#050505]" />
-                </div>
-              </div>
+              <PeekDiscVisuals album={albums[expandedIndex]} isDragging={true} />
             </div>
           </div>
         )}
