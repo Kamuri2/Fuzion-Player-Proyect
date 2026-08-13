@@ -39,7 +39,7 @@ const ArtistCard = ({ artist, isFirst, letter, colors, navigate }: any) => {
           <CoverImage 
             type="artist"
             coverUrl={artist.cover} 
-            hq={true}
+            hq={false}
             className="w-full h-full object-cover"
             iconSize={80}
           />
