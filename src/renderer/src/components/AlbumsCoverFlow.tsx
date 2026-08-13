@@ -532,7 +532,7 @@ const VinylPlayer = ({
               {customTexture ? (
                 <img src={customTexture} className="w-full h-full object-cover" style={{ opacity: customTextureOpacity / 100 }} />
               ) : (
-                <CoverImage coverUrl={album.cover} audioPath={album.songs[0]?.path} hq={true} className="w-full h-full object-cover" />
+                <CoverImage coverUrl={album.cover} audioPath={album.songs[0]?.path} hq={false} className="w-full h-full object-cover" />
               )}
             </div>
 
@@ -756,7 +756,7 @@ const PeekDiscVisuals = ({ album, isDragging = false }: { album: any; isDragging
         {savedTexture ? (
           <img src={savedTexture} className="w-full h-full object-cover" style={{ opacity: customTextureOpacity / 100 }} />
         ) : (
-          <CoverImage coverUrl={album.cover} audioPath={album.songs[0]?.path} hq={true} className="w-full h-full object-cover" />
+          <CoverImage coverUrl={album.cover} audioPath={album.songs[0]?.path} hq={false} className="w-full h-full object-cover" />
         )}
       </div>
       <div className="absolute inset-0 rounded-full bg-black/15 pointer-events-none" />
@@ -1062,7 +1062,7 @@ export default function AlbumsCoverFlow({ albums, onExpand }: any) {
                   </AnimatePresence>
 
                   <div className="absolute inset-0 overflow-hidden rounded-lg z-20 bg-black">
-                    <CoverImage coverUrl={album.cover} audioPath={album.songs[0]?.path} hq={true} className="w-full h-full object-cover" />
+                    <CoverImage coverUrl={album.cover} audioPath={album.songs[0]?.path} hq={false} className="w-full h-full object-cover" />
                     <div className="absolute inset-0 pointer-events-none rounded-lg shadow-[inset_0_0_15px_rgba(255,255,255,0.1),inset_1px_1px_2px_rgba(255,255,255,0.3)] border border-white/10 z-20" />
                     <div className="absolute inset-0 pointer-events-none mix-blend-screen z-20 overflow-hidden rounded-lg">
                       <div className="absolute inset-[-100%] animate-shine pointer-events-none" style={{
@@ -1362,7 +1362,7 @@ export default function AlbumsCoverFlow({ albums, onExpand }: any) {
             }}
           >
             <div className="relative w-18 h-18 rounded-2xl overflow-hidden shadow-lg border border-white/5 flex-shrink-0">
-              <CoverImage coverUrl={currentSong?.cover || playingAlbum.cover} audioPath={currentSong?.path || playingAlbum.songs[0]?.path} hq={true} className="w-full h-full object-cover" />
+              <CoverImage coverUrl={currentSong?.cover || playingAlbum.cover} audioPath={currentSong?.path || playingAlbum.songs[0]?.path} hq={false} className="w-full h-full object-cover" />
             </div>
             <div className="flex flex-col justify-center flex-1 min-w-0">
               <p className="text-[10px] text-white/50 mb-0.5 uppercase font-bold tracking-widest">{t('player.nowPlaying', 'Reproduciendo')}</p>

@@ -12,7 +12,7 @@ import * as mm from 'music-metadata';
 import ffmpeg from 'fluent-ffmpeg';
 import ffmpegStatic from 'ffmpeg-static';
 import ffprobeStatic from 'ffprobe-static';
-import { app } from 'electron';
+import { app, nativeImage } from 'electron';
 import { translate } from '@vitalets/google-translate-api';
 
 let isTranslationBlocked = false;
@@ -207,39 +207,42 @@ export function setupIpc() {
     }
   });
 
-  ipcMain.handle('fs:getCover', async (_, filePath: string) => {
-    const cached = coverCache.get(filePath);
+  ipcMain.handle('fs:getCover', async (_, filePath: string, hq: boolean = true) => {
+    const cacheKey = `${filePath}_${hq}`;
+    const cached = coverCache.get(cacheKey);
     if (cached !== undefined) return cached;
     
     const hash = crypto.createHash('md5').update(filePath).digest('hex');
-    const cachedFilePath = path.join(coversDir, `${hash}.jpg`);
+    const cachedFilePath = path.join(coversDir, `${hash}${hq ? '' : '_thumb'}.jpg`);
 
     if (existsSync(cachedFilePath)) {
       const fileUrl = pathToFileURL(cachedFilePath).href;
-      coverCache.set(filePath, fileUrl);
+      coverCache.set(cacheKey, fileUrl);
       return fileUrl;
     }
 
-    if (pendingCovers.has(filePath)) {
-      return pendingCovers.get(filePath);
+    if (pendingCovers.has(cacheKey)) {
+      return pendingCovers.get(cacheKey);
     }
     
     const promise = (async () => {
       try {
+        let rawBuffer: Buffer | null = null;
         let coverBase64: string | null = null;
+        
         try {
           const metadata = await mm.parseFile(filePath, { duration: false });
           if (metadata.common.picture && metadata.common.picture.length > 0) {
             const picture = metadata.common.picture[0];
-            coverBase64 = `data:${picture.format};base64,${Buffer.from(picture.data).toString('base64')}`;
+            rawBuffer = Buffer.from(picture.data);
           }
         } catch(e) {}
         
-        if (!coverBase64 && filePath.toLowerCase().endsWith('.opus')) {
+        if (!rawBuffer && filePath.toLowerCase().endsWith('.opus')) {
            coverBase64 = await extractFfmpegCover(filePath);
         }
         
-        if (!coverBase64) {
+        if (!rawBuffer && !coverBase64) {
           const dir = path.dirname(filePath);
           const coverNames = ['cover.jpg', 'cover.png', 'folder.jpg', 'folder.png', 'front.jpg'];
           for (const c of coverNames) {
@@ -247,27 +250,44 @@ export function setupIpc() {
             try {
               const stat = await fs.stat(cPath);
               if (stat.isFile()) {
-                const data = await fs.readFile(cPath);
-                const ext = path.extname(c).slice(1).toLowerCase();
-                coverBase64 = `data:image/${ext === 'jpg' ? 'jpeg' : ext};base64,${data.toString('base64')}`;
+                rawBuffer = await fs.readFile(cPath);
                 break;
               }
             } catch(e) {}
           }
         }
         
-
-        
-        if (coverBase64) {
+        if (rawBuffer && !coverBase64) {
+          try {
+             if (!hq) {
+                const image = nativeImage.createFromBuffer(rawBuffer);
+                rawBuffer = image.resize({ width: 400, height: 400, quality: 'good' }).toJPEG(85);
+             }
+             await fs.writeFile(cachedFilePath, rawBuffer);
+             coverBase64 = pathToFileURL(cachedFilePath).href;
+          } catch(e) {
+             console.error("Failed to write persistent cover cache", e);
+             coverBase64 = null;
+          }
+        } else if (coverBase64) {
           try {
             if (coverBase64.startsWith('data:')) {
               const base64Data = coverBase64.replace(/^data:image\/\w+;base64,/, "");
-              const buffer = Buffer.from(base64Data, 'base64');
+              let buffer = Buffer.from(base64Data, 'base64');
+              if (!hq) {
+                 const image = nativeImage.createFromBuffer(buffer);
+                 buffer = image.resize({ width: 400, height: 400, quality: 'good' }).toJPEG(85);
+              }
               await fs.writeFile(cachedFilePath, buffer);
             } else if (coverBase64.startsWith('http')) {
               const response = await fetch(coverBase64);
               const arrayBuffer = await response.arrayBuffer();
-              await fs.writeFile(cachedFilePath, Buffer.from(arrayBuffer));
+              let buffer = Buffer.from(arrayBuffer);
+              if (!hq) {
+                 const image = nativeImage.createFromBuffer(buffer);
+                 buffer = image.resize({ width: 400, height: 400, quality: 'good' }).toJPEG(85);
+              }
+              await fs.writeFile(cachedFilePath, buffer);
             }
             coverBase64 = pathToFileURL(cachedFilePath).href;
           } catch (e) {
@@ -275,17 +295,16 @@ export function setupIpc() {
           }
         }
 
-        coverCache.set(filePath, coverBase64);
-        pendingCovers.delete(filePath);
+        coverCache.set(cacheKey, coverBase64);
+        pendingCovers.delete(cacheKey);
         return coverBase64;
       } catch (e) {
-        coverCache.set(filePath, null);
-        pendingCovers.delete(filePath);
+        coverCache.set(cacheKey, null);
+        pendingCovers.delete(cacheKey);
         return null;
       }
     })();
-    
-    pendingCovers.set(filePath, promise);
+    pendingCovers.set(cacheKey, promise);
     return promise;
   });
 

@@ -26,9 +26,11 @@ function setCache(key: string, value: string | null) {
 export default function CoverImage({ coverUrl, className = '', placeholderClassName = '', iconSize = 24, audioPath, hq = true, type }: CoverImageProps) {
   const [, forceUpdate] = useState({});
 
+  const cacheKey = audioPath ? `${audioPath}_${hq}` : '';
   let displayCover = coverUrl;
-  if (hq && audioPath && coverCache.has(audioPath)) {
-    const cached = coverCache.get(audioPath);
+  
+  if (audioPath && coverCache.has(cacheKey)) {
+    const cached = coverCache.get(cacheKey);
     if (cached) displayCover = cached;
   }
 
@@ -36,24 +38,24 @@ export default function CoverImage({ coverUrl, className = '', placeholderClassN
     let mounted = true;
     let timer: NodeJS.Timeout;
 
-    if (hq && audioPath && !coverCache.has(audioPath)) {
+    if (audioPath && !coverCache.has(cacheKey)) {
       timer = setTimeout(() => {
         if (!mounted) return;
         
-        if (!pendingFetches.has(audioPath)) {
-          const promise = window.api.getCover(audioPath).then(cover => {
-            setCache(audioPath, cover || null);
-            pendingFetches.delete(audioPath);
+        if (!pendingFetches.has(cacheKey)) {
+          const promise = window.api.getCover(audioPath, hq).then(cover => {
+            setCache(cacheKey, cover || null);
+            pendingFetches.delete(cacheKey);
             return cover || null;
           }).catch(() => {
-            setCache(audioPath, null);
-            pendingFetches.delete(audioPath);
+            setCache(cacheKey, null);
+            pendingFetches.delete(cacheKey);
             return null;
           });
-          pendingFetches.set(audioPath, promise);
+          pendingFetches.set(cacheKey, promise);
         }
         
-        pendingFetches.get(audioPath)?.then(() => {
+        pendingFetches.get(cacheKey)?.then(() => {
           if (mounted) forceUpdate({});
         });
       }, 150);
@@ -63,7 +65,7 @@ export default function CoverImage({ coverUrl, className = '', placeholderClassN
       mounted = false; 
       if (timer) clearTimeout(timer);
     };
-  }, [audioPath, hq]);
+  }, [audioPath, hq, cacheKey]);
 
   if (displayCover) {
     return (

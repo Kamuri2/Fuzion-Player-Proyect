@@ -27,7 +27,7 @@ export default function FoldersScreen() {
               <CoverImage 
                 coverUrl={folder.cover} 
                 audioPath={folder.songs[0]?.path}
-                hq={true}
+                hq={false}
                 className="w-full h-full object-cover"
               />
             </div>
