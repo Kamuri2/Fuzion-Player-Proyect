@@ -439,6 +439,24 @@ export default function PlayerScreen() {
         />
         {/* Totalmente transparente a petición del usuario */}
         <div className="absolute inset-0 bg-transparent" />
+
+        {/* Hidden preloading covers */}
+        {queuePosition < queue.length - 1 && (
+          <CoverImage
+            coverUrl={queue[queuePosition + 1]?.cover}
+            audioPath={queue[queuePosition + 1]?.path}
+            hq={true}
+            className="hidden"
+          />
+        )}
+        {queuePosition > 0 && (
+          <CoverImage
+            coverUrl={queue[queuePosition - 1]?.cover}
+            audioPath={queue[queuePosition - 1]?.path}
+            hq={true}
+            className="hidden"
+          />
+        )}
       </div>
 
       <div className="flex-1 flex flex-row relative z-10 min-h-0 w-full">
@@ -645,7 +663,7 @@ export default function PlayerScreen() {
             <div className={`flex flex-col transition-all duration-700 ease-[cubic-bezier(0.32,0.72,0,1)] ${showLyrics && !isFullMode ? (isLargeScreen ? 'w-[49.8%] pl-4 lg:pl-12' : 'w-[52.1%] pl-4 lg:pl-8') : 'w-full'}`}>
               {/* Track Info */}
               <div className="w-full flex flex-row items-center justify-between mb-6">
-                <div className="flex flex-col flex-1 overflow-hidden pr-4">
+                <div className="flex flex-col flex-1 overflow-hidden pr-4 relative">
                   <AnimatePresence mode="popLayout" initial={false}>
                     <motion.div
                       key={currentSong?.id || 'empty'}

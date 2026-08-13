@@ -23,16 +23,12 @@ function setCache(key: string, value: string | null) {
   coverCache.set(key, value);
 }
 
-export default function CoverImage({ coverUrl, className = '', placeholderClassName = '', iconSize = 24, audioPath, hq = true, type }: CoverImageProps) {
+export default function CoverImage({ coverUrl, className = '', placeholderClassName = '', iconSize = 24, audioPath, hq = false, type }: CoverImageProps) {
   const [, forceUpdate] = useState({});
 
-  // Regla solicitada: Si la pantalla es menor a 1920x1200, cargar siempre como HQ (normalmente)
-  const isLargeScreen = window.innerWidth > 1920 || window.innerHeight > 1200;
-  const effectiveHq = isLargeScreen ? hq : true;
-
-  const cacheKey = audioPath ? `${audioPath}_${effectiveHq}` : '';
+  const cacheKey = audioPath ? `${audioPath}_${hq}` : '';
   let displayCover = coverUrl;
-  
+
   if (audioPath && coverCache.has(cacheKey)) {
     const cached = coverCache.get(cacheKey);
     if (cached) displayCover = cached;
@@ -45,9 +41,9 @@ export default function CoverImage({ coverUrl, className = '', placeholderClassN
     if (audioPath && !coverCache.has(cacheKey)) {
       timer = setTimeout(() => {
         if (!mounted) return;
-        
+
         if (!pendingFetches.has(cacheKey)) {
-          const promise = window.api.getCover(audioPath, effectiveHq).then(cover => {
+          const promise = window.api.getCover(audioPath, hq).then(cover => {
             setCache(cacheKey, cover || null);
             pendingFetches.delete(cacheKey);
             return cover || null;
@@ -58,31 +54,31 @@ export default function CoverImage({ coverUrl, className = '', placeholderClassN
           });
           pendingFetches.set(cacheKey, promise);
         }
-        
+
         pendingFetches.get(cacheKey)?.then(() => {
           if (mounted) forceUpdate({});
         });
       }, 150);
     }
-    
-    return () => { 
-      mounted = false; 
+
+    return () => {
+      mounted = false;
       if (timer) clearTimeout(timer);
     };
-  }, [audioPath, effectiveHq, cacheKey]);
+  }, [audioPath, hq, cacheKey]);
 
   if (displayCover) {
     return (
-      <div 
+      <div
         className={`overflow-hidden bg-cover bg-center ${className}`}
         style={{ backgroundImage: `url("${displayCover}")` }}
       >
-        <img 
-          src={displayCover} 
+        <img
+          src={displayCover}
           alt="Cover"
           decoding="async"
           loading="lazy"
-          className="w-full h-full object-cover opacity-0" 
+          className="w-full h-full object-cover opacity-0"
         />
       </div>
     );
@@ -93,10 +89,10 @@ export default function CoverImage({ coverUrl, className = '', placeholderClassN
       {type === 'artist' ? (
         <div className="relative flex items-center justify-center">
           <Cat size={iconSize ? iconSize * 1.5 : 36} color="#000000" />
-          <CircleHelp 
-            size={iconSize ? iconSize * 0.6 : 16} 
-            color="#000000" 
-            className="absolute -top-2 -right-2 bg-white rounded-full shadow-sm" 
+          <CircleHelp
+            size={iconSize ? iconSize * 0.6 : 16}
+            color="#000000"
+            className="absolute -top-2 -right-2 bg-white rounded-full shadow-sm"
           />
         </div>
       ) : (
