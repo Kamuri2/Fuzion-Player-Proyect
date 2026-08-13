@@ -6,7 +6,7 @@ interface Window {
     openImageFile: () => Promise<string | null>;
     readMusicFiles: (folderPath: string) => Promise<any[]>;
     getMetadata: (filePath: string) => Promise<any>;
-    getCover: (filePath: string) => Promise<string | null>;
+    getCover: (filePath: string, hq?: boolean) => Promise<string | null>;
     getArtistImage: (artistName: string, sampleSongPath?: string) => Promise<string | null>;
     getArtistCache: () => Promise<Record<string, string | null>>;
     translateLyrics: (songId: string, lines: string[], targetLang?: string) => Promise<string[]>;

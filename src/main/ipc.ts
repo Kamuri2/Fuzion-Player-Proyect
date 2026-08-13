@@ -261,9 +261,9 @@ export function setupIpc() {
           try {
              if (!hq) {
                 const image = nativeImage.createFromBuffer(rawBuffer);
-                rawBuffer = image.resize({ width: 400, height: 400, quality: 'good' }).toJPEG(85);
+                rawBuffer = image.resize({ width: 400, height: 400, quality: 'good' }).toJPEG(85) as any;
              }
-             await fs.writeFile(cachedFilePath, rawBuffer);
+             await fs.writeFile(cachedFilePath, rawBuffer as Buffer);
              coverBase64 = pathToFileURL(cachedFilePath).href;
           } catch(e) {
              console.error("Failed to write persistent cover cache", e);
@@ -276,16 +276,16 @@ export function setupIpc() {
               let buffer = Buffer.from(base64Data, 'base64');
               if (!hq) {
                  const image = nativeImage.createFromBuffer(buffer);
-                 buffer = image.resize({ width: 400, height: 400, quality: 'good' }).toJPEG(85);
+                 buffer = image.resize({ width: 400, height: 400, quality: 'good' }).toJPEG(85) as any;
               }
               await fs.writeFile(cachedFilePath, buffer);
             } else if (coverBase64.startsWith('http')) {
               const response = await fetch(coverBase64);
               const arrayBuffer = await response.arrayBuffer();
-              let buffer = Buffer.from(arrayBuffer);
+              let buffer = Buffer.from(arrayBuffer as any);
               if (!hq) {
                  const image = nativeImage.createFromBuffer(buffer);
-                 buffer = image.resize({ width: 400, height: 400, quality: 'good' }).toJPEG(85);
+                 buffer = image.resize({ width: 400, height: 400, quality: 'good' }).toJPEG(85) as any;
               }
               await fs.writeFile(cachedFilePath, buffer);
             }
