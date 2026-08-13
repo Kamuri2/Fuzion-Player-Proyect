@@ -262,7 +262,7 @@ export default function QueuePanel({ onClose }: QueuePanelProps) {
                     <CoverImage
                       coverUrl={song.cover}
                       audioPath={song.path}
-                      hq={false}
+                      hq={true}
                       className="w-full h-full object-cover"
                       placeholderClassName="w-full h-full bg-white/10"
                       iconSize={16}

@@ -39,7 +39,7 @@ const AlbumCard = ({ album, isFirst, letter, colors, t, navigate }: any) => {
           <CoverImage
             coverUrl={album.cover}
             audioPath={album.songs[0]?.path}
-            hq={false}
+            hq={true}
             className="w-full h-full object-cover rounded-xl"
           />
         )}

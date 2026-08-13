@@ -27,7 +27,7 @@ const SongListItem = React.memo(({ item, isPlaying, onPress, index, hideCover, o
         <CoverImage
           coverUrl={item.cover || null}
           audioPath={item.path}
-          hq={false}
+          hq={true}
           className="w-12 h-12 rounded-lg ml-2 shadow-sm"
           placeholderClassName="w-12 h-12 rounded-lg bg-black/10 dark:bg-white/10 ml-2 shadow-sm"
         />
@@ -334,7 +334,7 @@ export default function ListDetailScreen() {
           type={type as any}
           coverUrl={cover}
           audioPath={audioPath}
-          hq={false}
+          hq={true}
           className="w-full h-full object-cover opacity-50 blur-[60px] scale-125 transition-all duration-1000"
           placeholderClassName="w-full h-full bg-transparent"
           iconSize={200}
@@ -362,7 +362,7 @@ export default function ListDetailScreen() {
             type={type as any}
             coverUrl={cover}
             audioPath={audioPath}
-            hq={false}
+            hq={true}
             className="w-full h-full object-cover"
             placeholderClassName="w-full h-full bg-black/10 dark:bg-white/10"
             iconSize={80}
@@ -505,7 +505,7 @@ export default function ListDetailScreen() {
                   <CoverImage
                     coverUrl={album.cover}
                     audioPath={album.songs[0]?.path}
-                    hq={false}
+                    hq={true}
                     className="w-full h-full object-cover"
                     placeholderClassName="w-full h-full"
                   />

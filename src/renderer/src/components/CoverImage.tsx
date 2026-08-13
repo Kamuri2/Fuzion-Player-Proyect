@@ -34,25 +34,35 @@ export default function CoverImage({ coverUrl, className = '', placeholderClassN
 
   useEffect(() => {
     let mounted = true;
+    let timer: NodeJS.Timeout;
+
     if (hq && audioPath && !coverCache.has(audioPath)) {
-      if (!pendingFetches.has(audioPath)) {
-        const promise = window.api.getCover(audioPath).then(cover => {
-          setCache(audioPath, cover || null);
-          pendingFetches.delete(audioPath);
-          return cover || null;
-        }).catch(() => {
-          setCache(audioPath, null);
-          pendingFetches.delete(audioPath);
-          return null;
+      timer = setTimeout(() => {
+        if (!mounted) return;
+        
+        if (!pendingFetches.has(audioPath)) {
+          const promise = window.api.getCover(audioPath).then(cover => {
+            setCache(audioPath, cover || null);
+            pendingFetches.delete(audioPath);
+            return cover || null;
+          }).catch(() => {
+            setCache(audioPath, null);
+            pendingFetches.delete(audioPath);
+            return null;
+          });
+          pendingFetches.set(audioPath, promise);
+        }
+        
+        pendingFetches.get(audioPath)?.then(() => {
+          if (mounted) forceUpdate({});
         });
-        pendingFetches.set(audioPath, promise);
-      }
-      
-      pendingFetches.get(audioPath)?.then(() => {
-        if (mounted) forceUpdate({});
-      });
+      }, 150);
     }
-    return () => { mounted = false; };
+    
+    return () => { 
+      mounted = false; 
+      if (timer) clearTimeout(timer);
+    };
   }, [audioPath, hq]);
 
   if (displayCover) {

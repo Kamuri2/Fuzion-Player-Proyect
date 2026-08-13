@@ -21,7 +21,7 @@ const SongListItem = React.memo(({ item, isPlaying, onPress, index }: any) => {
       <CoverImage
         coverUrl={item.cover || null}
         audioPath={item.path}
-        hq={false}
+        hq={true}
         className="w-[70px] h-[70px] rounded-lg"
         placeholderClassName="w-[70px] h-[70px] rounded-lg bg-black/10"
       />
@@ -178,7 +178,7 @@ export default function HomeScreen() {
               if (item.type === 'artist') {
                 return (
                   <div className="flex flex-row items-center p-3 rounded-xl mb-3 cursor-pointer hover:bg-black/5 dark:hover:bg-white/5 transition-all" onClick={() => navigate(`/detail/artist/${encodeURIComponent(item.data.name)}`)}>
-                    <CoverImage coverUrl={item.data.cover} audioPath={item.data.songs[0]?.path} hq={false} className="w-16 h-16 rounded-full" placeholderClassName="w-16 h-16 rounded-full bg-black/10 dark:bg-white/10" />
+                    <CoverImage coverUrl={item.data.cover} audioPath={item.data.songs[0]?.path} hq={true} className="w-16 h-16 rounded-full" placeholderClassName="w-16 h-16 rounded-full bg-black/10 dark:bg-white/10" />
                     <div className="ml-4 flex flex-col justify-center">
                       <span className="text-xl font-black" style={{ color: colors.text }}>{item.data.name}</span>
                       <span className="text-sm font-bold opacity-70" style={{ color: colors.text }}>{t('detail.artist')}</span>
@@ -189,7 +189,7 @@ export default function HomeScreen() {
               if (item.type === 'album') {
                 return (
                   <div className="flex flex-row items-center p-3 rounded-xl mb-3 cursor-pointer hover:bg-black/5 dark:hover:bg-white/5 transition-all" onClick={() => navigate(`/detail/album/${encodeURIComponent(item.data.name)}`)}>
-                    <CoverImage coverUrl={item.data.cover} audioPath={item.data.songs[0]?.path} hq={false} className="w-16 h-16 rounded-lg" placeholderClassName="w-16 h-16 rounded-lg bg-black/10 dark:bg-white/10" />
+                    <CoverImage coverUrl={item.data.cover} audioPath={item.data.songs[0]?.path} hq={true} className="w-16 h-16 rounded-lg" placeholderClassName="w-16 h-16 rounded-lg bg-black/10 dark:bg-white/10" />
                     <div className="ml-4 flex flex-col justify-center">
                       <span className="text-xl font-black" style={{ color: colors.text }}>{item.data.name}</span>
                       <span className="text-sm font-bold opacity-70" style={{ color: colors.text }}>{t('detail.album')} • {item.data.artist}</span>
