@@ -22,6 +22,8 @@ export default function SplashScreen({ onComplete }: SplashScreenProps) {
   // Download states: 'idle' | 'downloading' | 'almostThere' | 'done'
   const [downloadPhase, setDownloadPhase] = useState<'idle' | 'downloading' | 'almostThere' | 'done'>('idle');
   const [languageMode, setLanguageMode] = useState(localStorage.getItem('app_language_mode') || 'system');
+  const [isCalculating, setIsCalculating] = useState(false);
+  const [screenDimensions, setScreenDimensions] = useState({ width: 0, height: 0 });
 
   const displayName = savedUsername ? `${t('splash.welcome')} ${savedUsername}` : t('splash.welcome');
   // Instead, we use a global variable on the window object to prevent React StrictMode double-play,
@@ -48,8 +50,16 @@ export default function SplashScreen({ onComplete }: SplashScreenProps) {
       }
 
       const timer = setTimeout(() => {
-        onComplete();
-      }, 1200); // 1 second total display time
+        setIsCalculating(true);
+        // Simulate calculation duration
+        setTimeout(() => {
+          setScreenDimensions({ width: window.innerWidth, height: window.innerHeight });
+          // Show dimensions briefly before completing
+          setTimeout(() => {
+            onComplete();
+          }, 1500);
+        }, 2000);
+      }, 1200); // Wait after logo appears before calculating
 
       return () => clearTimeout(timer);
     }
@@ -231,14 +241,38 @@ export default function SplashScreen({ onComplete }: SplashScreenProps) {
               Fuzion Player
             </motion.h1>
 
-            <motion.p
+            <motion.div
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.5, delay: 0.6 }}
               className="text-lg md:text-xl font-medium text-white/60 tracking-widest uppercase"
             >
               {displayName}
-            </motion.p>
+            </motion.div>
+
+            <AnimatePresence>
+              {isCalculating && (
+                <motion.div
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -20 }}
+                  className="absolute -bottom-24 w-full text-center flex flex-col items-center justify-center gap-2"
+                >
+                  <p className="text-sm md:text-base text-white/70 font-medium">
+                    {t('setup.calculatingDimensions', 'Espere un momento mientras se calculan las dimensiones de pantalla...')}
+                  </p>
+                  {screenDimensions.width > 0 && (
+                    <motion.p
+                      initial={{ opacity: 0, scale: 0.8 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      className="text-xl font-bold text-green-400 mt-2 tracking-widest"
+                    >
+                      {screenDimensions.width}x{screenDimensions.height}
+                    </motion.p>
+                  )}
+                </motion.div>
+              )}
+            </AnimatePresence>
           </motion.div>
         )}
       </AnimatePresence>

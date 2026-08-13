@@ -110,6 +110,15 @@ export default function PlayerScreen() {
   const { t } = useTranslation();
   const [isQueueOpen, setIsQueueOpen] = useState(false);
   const [isLeftPanelOpen, setIsLeftPanelOpen] = useState(savedLeftPanelState);
+  const [isLargeScreen, setIsLargeScreen] = useState(window.innerWidth > 1920 || window.innerHeight > 1080);
+
+  useEffect(() => {
+    const handleResize = () => {
+      setIsLargeScreen(window.innerWidth > 1920 || window.innerHeight > 1080);
+    };
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   // Guardar estado cada vez que cambie
   useEffect(() => {
@@ -507,21 +516,21 @@ export default function PlayerScreen() {
             <div
               className={`flex flex-col items-center justify-center transition-all duration-700 ease-[cubic-bezier(0.32,0.72,0,1)] h-full overflow-visible ${isFullMode
                 ? `absolute inset-0 z-0 ${showLyrics ? 'opacity-0 scale-75 pointer-events-none' : 'opacity-100 scale-100'}` // Fade to background in Full Mode overlay
-                : (showLyrics && isQueueOpen ? 'w-0 opacity-0 scale-90 hidden' : showLyrics || isQueueOpen ? 'relative w-[48%] pl-4 lg:pl-12 opacity-100 scale-100 flex-none' : 'relative w-full opacity-100 scale-100')
+                : (showLyrics && isQueueOpen ? 'w-0 opacity-0 scale-90 hidden' : showLyrics || isQueueOpen ? 'relative w-[48%] pl-4 lg:pl-12 2xl:pl-24 opacity-100 scale-100 flex-none' : 'relative w-full opacity-100 scale-100')
                 }`}
               style={{ perspective: 1200 }}
             >
               <div className="relative w-full h-full flex items-center justify-center perspective-[1200px]">
                 <AnimatePresence mode="popLayout" initial={false}>
                   {(() => {
-                    if (isFullMode) {
-                      // In Full Mode, NO CAROUSEL. Just show current cover in the center.
+                    if (isFullMode || isLargeScreen) {
+                      // In Full Mode or Large Screens, NO CAROUSEL. Just show current cover in the center to save memory.
                       return (
                         <motion.div
                           key={currentSong.id}
-                          className="absolute max-w-full max-h-full h-[100%] md:h-[100%] max-h-[900px] aspect-square rounded-2xl"
+                          className={`absolute max-h-full h-[100%] md:h-[100%] ${isLargeScreen ? 'max-h-[1200px]' : 'max-h-[900px]'} aspect-square rounded-2xl`}
                           initial={{ opacity: 0, scale: 0.9 }}
-                          animate={{ opacity: 1, scale: isIdle ? 1.05 : 1 }}
+                          animate={{ opacity: 1, scale: isIdle && !isLargeScreen ? 1.15 : 1 }}
                           exit={{ opacity: 0, scale: 0.9 }}
                           transition={{ duration: 0.7, ease: [0.32, 0.72, 0, 1] }}
                         >
@@ -559,7 +568,7 @@ export default function PlayerScreen() {
                       const zIndex = 10 - absOffset;
 
                       // Escala visual y desplazamiento (aquí ajustas la separación)
-                      const scale = isCenter ? (isIdle ? 1.15 : 1) : 1 - (absOffset * 0.15);
+                      const scale = isCenter ? (isIdle && !isLargeScreen ? 1.15 : 1) : 1 - (absOffset * 0.15);
                       const translateX = offset * 40; // Menor separación para centrar más las portadas
                       const rotateY = offset === 0 ? 0 : offset < 0 ? 55 : -55; // Ángulo de inclinación 3D suavizado
                       const opacity = isCenter ? 1 : 1 - (absOffset * 0.3);
@@ -568,7 +577,7 @@ export default function PlayerScreen() {
                         <motion.div
                           key={song.id}
                           // Forzamos el tamaño máximo basado en la altura disponible para evitar recortes verticales
-                          className={`absolute max-w-full max-h-full ${isFullMode ? 'h-[75%] md:h-[95%] max-h-[900px]' : 'h-[80%] md:h-[94%] max-h-[900px]'} aspect-square rounded-2xl cursor-pointer ${isCenter ? '' : 'pointer-events-auto'}`}
+                          className={`absolute max-h-full ${isFullMode ? 'h-[75%] md:h-[95%]' : 'h-[80%] md:h-[94%]'} ${isLargeScreen ? 'max-h-[1200px]' : 'max-h-[900px]'} aspect-square rounded-2xl cursor-pointer ${isCenter ? '' : 'pointer-events-auto'}`}
                           initial={{ opacity: 0, x: `${translateX + (offset > 0 ? 20 : -20)}%`, scale: isCenter ? 1 : scale * 0.9, rotateY: rotateY * 1.5 }}
                           animate={{
                             opacity,

@@ -4,6 +4,13 @@ import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import icon from '../../resources/icon.png?asset'
 import { setupIpc } from './ipc'
 
+// Aumentar significativamente los límites de memoria de video (VRAM) para texturas/tiles
+// Esto soluciona el "tile memory limits exceeded" en monitores 2K/4K
+app.commandLine.appendSwitch('force-gpu-mem-available-mb', '4096')
+app.commandLine.appendSwitch('ignore-gpu-blocklist')
+app.commandLine.appendSwitch('enable-gpu-rasterization')
+app.commandLine.appendSwitch('enable-zero-copy')
+
 function createWindow(): void {
   // Create the browser window.
   const mainWindow = new BrowserWindow({
@@ -27,6 +34,7 @@ function createWindow(): void {
   })
 
   mainWindow.on('ready-to-show', () => {
+    mainWindow.maximize()
     mainWindow.show()
   })
 

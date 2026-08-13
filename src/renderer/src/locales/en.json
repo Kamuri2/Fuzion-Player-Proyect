@@ -236,6 +236,7 @@
     "placeholder": "Your name...",
     "downloading": "Please wait while the language is being downloaded...",
     "almostThere": "Almost there, thanks for waiting...",
-    "done": "Language ready!"
+    "done": "Language ready!",
+    "calculatingDimensions": "Please wait a moment while screen dimensions are calculated..."
   }
 }

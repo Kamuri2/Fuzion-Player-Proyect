@@ -974,7 +974,7 @@ export default function AlbumsCoverFlow({ albums, onExpand }: any) {
                 initial={false}
                 animate={{ x: `calc(-50% + ${typeof translateX === 'number' ? translateX + 'px' : translateX})`, y: translateY, z: translateZ, scale: scale, opacity: opacity, rotateY: rotateY }}
                 transition={{ type: 'spring', stiffness: 260, damping: 30, mass: 1.2 }}
-                style={{ zIndex, width: 'min(75vh, 40vw)', minWidth: '450px', maxWidth: '850px', height: 'min(75vh, 40vw)', minHeight: '450px', maxHeight: '850px', transformStyle: 'preserve-3d', pointerEvents: (expandedIndex !== null && !isExpanded) ? 'none' : 'auto' }}
+                style={{ zIndex, width: 'min(75vh, 40vw)', minWidth: '450px', maxWidth: '1200px', height: 'min(75vh, 40vw)', minHeight: '450px', maxHeight: '1200px', transformStyle: 'preserve-3d', pointerEvents: (expandedIndex !== null && !isExpanded) ? 'none' : 'auto' }}
                 onClick={(e) => {
                   e.stopPropagation();
                   if (expandedIndex === null) {
@@ -1335,10 +1335,10 @@ export default function AlbumsCoverFlow({ albums, onExpand }: any) {
           <div
             className="fixed z-[9999] pointer-events-none"
             style={{
-              left: discDragPos.x - (containerRef.current ? Math.max(450, Math.min(850, Math.min(window.innerHeight * 0.75, window.innerWidth * 0.40))) * 0.92 / 2 : 150),
-              top: discDragPos.y - (containerRef.current ? Math.max(450, Math.min(850, Math.min(window.innerHeight * 0.75, window.innerWidth * 0.40))) * 0.92 / 2 : 150),
-              width: containerRef.current ? Math.max(450, Math.min(850, Math.min(window.innerHeight * 0.75, window.innerWidth * 0.40))) * 0.92 : 300,
-              height: containerRef.current ? Math.max(450, Math.min(850, Math.min(window.innerHeight * 0.75, window.innerWidth * 0.40))) * 0.92 : 300,
+              left: discDragPos.x - (containerRef.current ? Math.max(450, Math.min(1200, Math.min(window.innerHeight * 0.75, window.innerWidth * 0.40))) * 0.92 / 2 : 150),
+              top: discDragPos.y - (containerRef.current ? Math.max(450, Math.min(1200, Math.min(window.innerHeight * 0.75, window.innerWidth * 0.40))) * 0.92 / 2 : 150),
+              width: containerRef.current ? Math.max(450, Math.min(1200, Math.min(window.innerHeight * 0.75, window.innerWidth * 0.40))) * 0.92 : 300,
+              height: containerRef.current ? Math.max(450, Math.min(1200, Math.min(window.innerHeight * 0.75, window.innerWidth * 0.40))) * 0.92 : 300,
             }}
           >
             <div className="w-full h-full rounded-full bg-[#0a0a0a] border border-[#222] shadow-[0_20px_60px_rgba(0,0,0,0.8)] overflow-hidden opacity-90">

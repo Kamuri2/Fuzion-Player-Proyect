@@ -14,9 +14,7 @@ const AlbumCard = ({ album, isFirst, letter, colors, t, navigate }: any) => {
   useEffect(() => {
     const observer = new IntersectionObserver(
       (entries) => {
-        if (entries[0].isIntersecting) {
-          setInView(true);
-        }
+        setInView(entries[0].isIntersecting);
       },
       { rootMargin: '500px' } // ~5 items buffer margin
     );

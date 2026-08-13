@@ -236,6 +236,7 @@
     "placeholder": "Tu nombre...",
     "downloading": "Por favor espere mientras se descarga el idioma...",
     "almostThere": "Ya casi está, gracias por esperar...",
-    "done": "¡Idioma listo!"
+    "done": "¡Idioma listo!",
+    "calculatingDimensions": "Espere un momento mientras se calculan las dimensiones de pantalla..."
   }
 }

@@ -14,9 +14,7 @@ const ArtistCard = ({ artist, isFirst, letter, colors, navigate }: any) => {
   useEffect(() => {
     const observer = new IntersectionObserver(
       (entries) => {
-        if (entries[0].isIntersecting) {
-          setInView(true);
-        }
+        setInView(entries[0].isIntersecting);
       },
       { rootMargin: '500px' } // ~5 items buffer margin
     );

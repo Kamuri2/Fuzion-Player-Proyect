@@ -64,7 +64,8 @@ export default function CoverImage({ coverUrl, className = '', placeholderClassN
         <img 
           src={displayCover} 
           alt="Cover"
-          decoding="sync"
+          decoding="async"
+          loading="lazy"
           className="w-full h-full object-cover opacity-0" 
         />
       </div>
