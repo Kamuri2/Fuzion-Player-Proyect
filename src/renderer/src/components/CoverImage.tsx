@@ -38,7 +38,7 @@ export default function CoverImage({ coverUrl, className = '', placeholderClassN
     let mounted = true;
     let timer: NodeJS.Timeout;
 
-    if (audioPath && !coverCache.has(cacheKey)) {
+    if (audioPath && !coverCache.has(cacheKey) && (!coverUrl || hq)) {
       timer = setTimeout(() => {
         if (!mounted) return;
 

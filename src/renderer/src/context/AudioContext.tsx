@@ -42,7 +42,7 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const secondaryAudioRef = useRef<HTMLAudioElement | null>(null);
-  
+
   const progressListeners = useRef<Set<(p: number, d: number) => void>>(new Set());
   const subscribeToProgress = (cb: (p: number, d: number) => void) => {
     progressListeners.current.add(cb);
@@ -51,7 +51,7 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     }
     return () => progressListeners.current.delete(cb);
   };
-  
+
   const queueRef = useRef<Song[]>([]);
   const currentQueueIndex = useRef(-1);
   const originalQueueRef = useRef<Song[]>([]);
@@ -109,7 +109,7 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       const currentProgress = audio.currentTime;
       const currentDuration = audio.duration || 0;
       progressListeners.current.forEach(cb => cb(currentProgress, currentDuration));
-      
+
       // We only update duration state if it genuinely changed to avoid re-renders
       setDuration(prev => {
         if (prev !== currentDuration && currentDuration > 0) return currentDuration;
@@ -170,7 +170,7 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       if (cf !== null) setIsCrossfadeEnabledState(cf === 'true');
 
       const cdOld = localStorage.getItem('@crossfade_duration');
-      
+
       const cdIn = localStorage.getItem('@crossfade_duration_in');
       if (cdIn !== null) setCrossfadeDurationInState(Number(cdIn));
       else if (cdOld !== null) setCrossfadeDurationInState(Number(cdOld));
@@ -181,7 +181,6 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     };
     loadPlaylists();
 
-    const storedFolder = localStorage.getItem('@music_folder');
     const cached = localStorage.getItem('@cached_songs');
     if (cached) {
       try {
@@ -191,10 +190,8 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       } catch (e) { }
     }
 
-    if (storedFolder) {
-      loadSongsFromUri(storedFolder, true);
-    }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // No automatic scan on startup per user request
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const buildLists = async (formattedSongs: Song[]) => {
@@ -256,7 +253,7 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
           }
           artistsObj[indvName] = { name: indvName, cover: coverUrl, songs: [] };
         }
-        
+
         // Prevent duplicate songs if split wasn't perfect
         if (!artistsObj[indvName].songs.find(s => s.id === song.id)) {
           artistsObj[indvName].songs.push(song);
@@ -366,7 +363,7 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       crossfadeTimerRef.current = setInterval(() => {
         elapsed += intervalTime;
         const elapsedSecs = elapsed / 1000;
-        
+
         const fractionOut = CROSSFADE_DURATION_OUT > 0 ? Math.min(1, elapsedSecs / CROSSFADE_DURATION_OUT) : 1;
         const fractionIn = CROSSFADE_DURATION_IN > 0 ? Math.min(1, elapsedSecs / CROSSFADE_DURATION_IN) : 1;
 
@@ -473,7 +470,7 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
             }
           }
         }
-      } catch {}
+      } catch { }
 
       // Migrate playlists: translate old songIds to new songIds via path matching
       const needsMigration = Object.keys(oldIdToPath).length > 0;
@@ -832,12 +829,12 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
   const addSongToNext = (song: Song) => {
     const manualSong: Song = { ...song, isManualQueue: true, queueId: Math.random().toString(36).substring(7) };
-    
+
     // Add directly after the current song
     const insertIndex = currentQueueIndex.current + 1;
     const result = Array.from(queueRef.current);
     result.splice(insertIndex, 0, manualSong);
-    
+
     queueRef.current = result;
     setQueue(result);
     setQueueLength(result.length);
@@ -848,14 +845,14 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     // Determine the actual index in the full queue
     // Note: The UI usually passes the offset index, so we need to ensure the caller passes the absolute index.
     const result = Array.from(queueRef.current);
-    
+
     if (indexToRemove < 0 || indexToRemove >= result.length) return;
-    
+
     // Don't remove currently playing song via this method
     if (indexToRemove === currentQueueIndex.current) return;
 
     result.splice(indexToRemove, 1);
-    
+
     queueRef.current = result;
     setQueue(result);
     setQueueLength(result.length);
@@ -865,7 +862,7 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       currentQueueIndex.current -= 1;
       setQueuePosition(currentQueueIndex.current + 1);
     }
-    
+
     showToast(t('player.removedFromQueue', 'Eliminada de la cola'), 'success');
   };
 
@@ -893,20 +890,20 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       // Re-fetch missing artist covers automatically when internet returns
       setArtists(prevArtists => {
         const fetchMissing = async (currentArtists: Record<string, Artist>) => {
-           const artistNames = Object.keys(currentArtists).filter(n => n !== 'Desconocido');
-           for (const name of artistNames) {
-             if (!currentArtists[name].cover) {
-               const firstSong = currentArtists[name].songs[0];
-               // Try to fetch again now that we are online
-               const url = await window.api.getArtistImage(name, firstSong?.path);
-               if (url) {
-                 setArtists(a => ({
-                   ...a,
-                   [name]: { ...a[name], cover: url }
-                 }));
-               }
-             }
-           }
+          const artistNames = Object.keys(currentArtists).filter(n => n !== 'Desconocido');
+          for (const name of artistNames) {
+            if (!currentArtists[name].cover) {
+              const firstSong = currentArtists[name].songs[0];
+              // Try to fetch again now that we are online
+              const url = await window.api.getArtistImage(name, firstSong?.path);
+              if (url) {
+                setArtists(a => ({
+                  ...a,
+                  [name]: { ...a[name], cover: url }
+                }));
+              }
+            }
+          }
         };
         fetchMissing(prevArtists);
         return prevArtists;
@@ -923,7 +920,7 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     next: playNext,
     prev: playPrevious
   });
-  
+
   useEffect(() => {
     mediaSessionHandlers.current = {
       playPause: pauseOrResumeSound,

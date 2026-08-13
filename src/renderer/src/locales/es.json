@@ -17,6 +17,7 @@
     "fonts": "Tipografía (Google Fonts)",
     "systemFont": "Fuente del Sistema (Predeterminada)",
     "customFont": "Personalizada",
+    "processingFolder": "Procesando la carpeta, por favor espere unos segundos...",
     "reset": "Restablecer",
     "apply": "Aplicar",
     "fontPlaceholder": "O escribe otra (ej. Roboto Mono)...",

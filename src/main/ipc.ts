@@ -893,6 +893,71 @@ export function setupIpc() {
   });
 }
 
+async function generateAndCacheCover(filePath: string): Promise<string | null> {
+  try {
+    let rawBuffer: Buffer | null = null;
+    let coverBase64: string | null = null;
+    
+    try {
+      const metadata = await mm.parseFile(filePath, { duration: false });
+      if (metadata.common.picture && metadata.common.picture.length > 0) {
+        rawBuffer = Buffer.from(metadata.common.picture[0].data);
+      }
+    } catch(e) {}
+    
+    if (!rawBuffer && filePath.toLowerCase().endsWith('.opus')) {
+       coverBase64 = await extractFfmpegCover(filePath);
+    }
+    
+    if (!rawBuffer && !coverBase64) {
+      const dir = path.dirname(filePath);
+      const coverNames = ['cover.jpg', 'cover.png', 'folder.jpg', 'folder.png', 'front.jpg'];
+      for (const c of coverNames) {
+        const cPath = path.join(dir, c);
+        try {
+          const stat = await fs.stat(cPath);
+          if (stat.isFile()) {
+            rawBuffer = await fs.readFile(cPath);
+            break;
+          }
+        } catch(e) {}
+      }
+    }
+    
+    if (!rawBuffer && coverBase64) {
+      if (coverBase64.startsWith('data:')) {
+        const base64Data = coverBase64.replace(/^data:image\/\w+;base64,/, "");
+        rawBuffer = Buffer.from(base64Data, 'base64');
+      } else if (coverBase64.startsWith('http')) {
+        const response = await fetch(coverBase64);
+        const arrayBuffer = await response.arrayBuffer();
+        rawBuffer = Buffer.from(arrayBuffer as any);
+      }
+    }
+    
+    if (!rawBuffer) return null;
+    
+    const hash = crypto.createHash('md5').update(rawBuffer).digest('hex');
+    const cachedFilePath = path.join(coversDir, `${hash}_thumb.jpg`);
+    
+    if (existsSync(cachedFilePath)) {
+      return pathToFileURL(cachedFilePath).href;
+    }
+    
+    try {
+      const image = nativeImage.createFromBuffer(rawBuffer);
+      const resizedBuffer = image.resize({ width: 400, height: 400, quality: 'good' }).toJPEG(85);
+      await fs.writeFile(cachedFilePath, resizedBuffer as any);
+      return pathToFileURL(cachedFilePath).href;
+    } catch (e) {
+      console.error("Failed to write persistent cover cache", e);
+      return null;
+    }
+  } catch (e) {
+    return null;
+  }
+}
+
 async function getAudioFilesRecursive(dir: string): Promise<any[]> {
   let results: any[] = [];
   try {
@@ -987,6 +1052,11 @@ async function getAudioFilesRecursive(dir: string): Promise<any[]> {
             } catch (e) {}
           }
           
+          let thumbUrl: string | null = null;
+          try {
+            thumbUrl = await generateAndCacheCover(fullPath);
+          } catch(e) {}
+          
           results.push({
             id: generateId(fullPath),
             uri: 'file:///' + encodeURI(fullPath.replace(/\\/g, '/')).replace(/#/g, '%23').replace(/\?/g, '%3F'),
@@ -999,7 +1069,7 @@ async function getAudioFilesRecursive(dir: string): Promise<any[]> {
             folder: folderName,
             path: fullPath,
             hasLyrics,
-            cover: null
+            cover: thumbUrl
           });
         }
       }

@@ -25,7 +25,7 @@ import { useTheme } from './context/ThemeContext';
 import { Music } from 'lucide-react';
 
 function AppContent() {
-  const { isPlayerOpen, currentSong, toastMessage } = useAudio();
+  const { isPlayerOpen, currentSong, toastMessage, isScanning } = useAudio();
   const { albumZenMode, isZenLoading } = useTheme();
   const { i18n, t } = useTranslation();
   const [showSplash, setShowSplash] = useState(true);
@@ -60,6 +60,23 @@ function AppContent() {
     <div className="flex flex-col md:flex-row h-screen overflow-hidden bg-transparent relative">
       <AnimatePresence>
         {showSplash && <SplashScreen onComplete={() => setShowSplash(false)} />}
+        
+        {isScanning && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0, transition: { duration: 0.5 } }}
+            className="fixed inset-0 z-[9999] flex flex-col items-center justify-center bg-black/90 backdrop-blur-2xl"
+          >
+            <div className="relative w-24 h-24 mb-8 flex items-center justify-center">
+              <div className="absolute inset-0 rounded-full border-4 border-white/20 border-t-green-500 animate-spin"></div>
+              <Music size={32} className="text-white/50 animate-pulse" />
+            </div>
+            <h2 className="text-xl md:text-2xl font-bold text-white tracking-wider text-center px-6">
+              {t('settings.processingFolder', 'Procesando la carpeta por favor espere unos segundos...')}
+            </h2>
+          </motion.div>
+        )}
         
         {isZenLoading && (
           <motion.div

@@ -17,6 +17,7 @@
     "fonts": "Typography (Google Fonts)",
     "systemFont": "System Font (Default)",
     "customFont": "Custom",
+    "processingFolder": "Processing folder, please wait a few seconds...",
     "reset": "Reset",
     "apply": "Apply",
     "fontPlaceholder": "Or type another (e.g. Roboto Mono)...",
