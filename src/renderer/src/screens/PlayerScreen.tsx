@@ -110,11 +110,11 @@ export default function PlayerScreen() {
   const { t } = useTranslation();
   const [isQueueOpen, setIsQueueOpen] = useState(false);
   const [isLeftPanelOpen, setIsLeftPanelOpen] = useState(savedLeftPanelState);
-  const [isLargeScreen, setIsLargeScreen] = useState(window.innerWidth > 1920 || window.innerHeight > 1080);
+  const [isLargeScreen, setIsLargeScreen] = useState(window.innerWidth > 1920 || window.innerHeight > 1200);
 
   useEffect(() => {
     const handleResize = () => {
-      setIsLargeScreen(window.innerWidth > 1920 || window.innerHeight > 1080);
+      setIsLargeScreen(window.innerWidth > 1920 || window.innerHeight > 1200);
     };
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
@@ -577,7 +577,7 @@ export default function PlayerScreen() {
                         <motion.div
                           key={song.id}
                           // Forzamos el tamaño máximo basado en la altura disponible para evitar recortes verticales
-                          className={`absolute max-h-full ${isFullMode ? 'h-[75%] md:h-[95%]' : 'h-[80%] md:h-[94%]'} ${isLargeScreen ? 'max-h-[1200px]' : 'max-h-[900px]'} aspect-square rounded-2xl cursor-pointer ${isCenter ? '' : 'pointer-events-auto'}`}
+                          className={`absolute max-h-full ${isFullMode ? 'h-[75%] md:h-[95%]' : 'h-[80%] md:h-[92%]'} ${isLargeScreen ? 'max-h-[1200px]' : 'max-h-[900px]'} aspect-square rounded-2xl cursor-pointer ${isCenter ? '' : 'pointer-events-auto'}`}
                           initial={{ opacity: 0, x: `${translateX + (offset > 0 ? 20 : -20)}%`, scale: isCenter ? 1 : scale * 0.9, rotateY: rotateY * 1.5 }}
                           animate={{
                             opacity,
@@ -641,8 +641,8 @@ export default function PlayerScreen() {
           </div>
 
           {/* Bottom Controls Area */}
-          <div className={`relative z-10 w-full mx-auto px-8 flex flex-col mt-8 transition-all duration-700 ease-[cubic-bezier(0.32,0.72,0,1)] ${showLyrics && !isFullMode ? 'pb-4' : 'max-w-4xl pb-8'}`}>
-            <div className={`flex flex-col transition-all duration-700 ease-[cubic-bezier(0.32,0.72,0,1)] ${showLyrics && !isFullMode ? 'w-[48%] pl-4 lg:pl-12' : 'w-full'}`}>
+          <div className={`relative z-10 w-full mx-auto px-8 flex flex-col mt-8 transition-all duration-700 ease-[cubic-bezier(0.32,0.72,0,1)] ${showLyrics && !isFullMode ? 'pb-4' : `${isLargeScreen ? 'max-w-[1300px]' : 'max-w-[900px]'} pb-8`}`}>
+            <div className={`flex flex-col transition-all duration-700 ease-[cubic-bezier(0.32,0.72,0,1)] ${showLyrics && !isFullMode ? (isLargeScreen ? 'w-[49.8%] pl-4 lg:pl-12' : 'w-[52.1%] pl-4 lg:pl-8') : 'w-full'}`}>
               {/* Track Info */}
               <div className="w-full flex flex-row items-center justify-between mb-6">
                 <div className="flex flex-col flex-1 overflow-hidden pr-4">
