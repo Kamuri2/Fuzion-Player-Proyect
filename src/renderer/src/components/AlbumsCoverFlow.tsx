@@ -1062,7 +1062,7 @@ export default function AlbumsCoverFlow({ albums, onExpand }: any) {
                   </AnimatePresence>
 
                   <div className="absolute inset-0 overflow-hidden rounded-lg z-20 bg-black">
-                    <CoverImage coverUrl={album.cover} audioPath={album.songs[0]?.path} hq={false} className="w-full h-full object-cover" />
+                    <CoverImage coverUrl={album.cover} audioPath={album.songs[0]?.path} hq={isThisAlbumActive} className="w-full h-full object-cover" />
                     <div className="absolute inset-0 pointer-events-none rounded-lg shadow-[inset_0_0_15px_rgba(255,255,255,0.1),inset_1px_1px_2px_rgba(255,255,255,0.3)] border border-white/10 z-20" />
                     <div className="absolute inset-0 pointer-events-none mix-blend-screen z-20 overflow-hidden rounded-lg">
                       <div className="absolute inset-[-100%] animate-shine pointer-events-none" style={{
