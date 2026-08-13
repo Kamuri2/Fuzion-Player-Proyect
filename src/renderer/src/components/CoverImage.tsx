@@ -26,7 +26,11 @@ function setCache(key: string, value: string | null) {
 export default function CoverImage({ coverUrl, className = '', placeholderClassName = '', iconSize = 24, audioPath, hq = true, type }: CoverImageProps) {
   const [, forceUpdate] = useState({});
 
-  const cacheKey = audioPath ? `${audioPath}_${hq}` : '';
+  // Regla solicitada: Si la pantalla es menor a 1920x1200, cargar siempre como HQ (normalmente)
+  const isLargeScreen = window.innerWidth > 1920 || window.innerHeight > 1200;
+  const effectiveHq = isLargeScreen ? hq : true;
+
+  const cacheKey = audioPath ? `${audioPath}_${effectiveHq}` : '';
   let displayCover = coverUrl;
   
   if (audioPath && coverCache.has(cacheKey)) {
@@ -43,7 +47,7 @@ export default function CoverImage({ coverUrl, className = '', placeholderClassN
         if (!mounted) return;
         
         if (!pendingFetches.has(cacheKey)) {
-          const promise = window.api.getCover(audioPath, hq).then(cover => {
+          const promise = window.api.getCover(audioPath, effectiveHq).then(cover => {
             setCache(cacheKey, cover || null);
             pendingFetches.delete(cacheKey);
             return cover || null;
@@ -65,7 +69,7 @@ export default function CoverImage({ coverUrl, className = '', placeholderClassN
       mounted = false; 
       if (timer) clearTimeout(timer);
     };
-  }, [audioPath, hq, cacheKey]);
+  }, [audioPath, effectiveHq, cacheKey]);
 
   if (displayCover) {
     return (
