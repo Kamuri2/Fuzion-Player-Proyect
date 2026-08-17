@@ -25,14 +25,27 @@ function setCache(key: string, value: string | null) {
 
 export default function CoverImage({ coverUrl, className = '', placeholderClassName = '', iconSize = 24, audioPath, hq = false, type }: CoverImageProps) {
   const [, forceUpdate] = useState({});
-
   const cacheKey = audioPath ? `${audioPath}_${hq}` : '';
-  let displayCover = coverUrl;
+  const [displayCover, setDisplayCover] = useState<string | null>(coverUrl || null);
 
+  let targetCover = coverUrl || null;
   if (audioPath && coverCache.has(cacheKey)) {
     const cached = coverCache.get(cacheKey);
-    if (cached) displayCover = cached;
+    if (cached) targetCover = cached;
   }
+
+  useEffect(() => {
+    let mounted = true;
+    if (targetCover && targetCover !== displayCover) {
+      const img = new Image();
+      img.onload = () => { if (mounted) setDisplayCover(targetCover); };
+      img.onerror = () => { if (mounted) setDisplayCover(targetCover); };
+      img.src = targetCover;
+    } else if (!targetCover && displayCover) {
+      setDisplayCover(null);
+    }
+    return () => { mounted = false; };
+  }, [targetCover, displayCover]);
 
   useEffect(() => {
     let mounted = true;
@@ -44,6 +57,16 @@ export default function CoverImage({ coverUrl, className = '', placeholderClassN
 
         if (!pendingFetches.has(cacheKey)) {
           const promise = window.api.getCover(audioPath, hq).then(cover => {
+            if (!cover) return null;
+            // Precargar y decodificar la imagen en memoria RAM antes de actualizar React.
+            // Esto evita completamente el "flash" negro porque el navegador ya la tiene lista.
+            return new Promise<string | null>((resolve) => {
+              const img = new Image();
+              img.onload = () => resolve(cover);
+              img.onerror = () => resolve(cover);
+              img.src = cover;
+            });
+          }).then(cover => {
             setCache(cacheKey, cover || null);
             pendingFetches.delete(cacheKey);
             return cover || null;
@@ -70,7 +93,7 @@ export default function CoverImage({ coverUrl, className = '', placeholderClassN
   if (displayCover) {
     return (
       <div
-        className={`overflow-hidden bg-cover bg-center ${className}`}
+        className={`overflow-hidden bg-cover bg-center transition-all duration-500 ease-in-out ${className}`}
         style={{ backgroundImage: `url("${displayCover}")` }}
       >
         <img

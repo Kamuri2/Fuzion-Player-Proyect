@@ -29,7 +29,7 @@ export default function LyricsView() {
 
   useEffect(() => {
     const isLyricsEmpty = !metadata.lyrics || (typeof metadata.lyrics === 'string' && metadata.lyrics.trim() === '');
-    
+
     if (isLyricsEmpty) {
       setLyrics([]);
       setStaticLyrics(null);
@@ -43,8 +43,8 @@ export default function LyricsView() {
     if (lrcRaw && typeof lrcRaw === 'object' && Array.isArray((lrcRaw as any).syncText)) {
       setIsSynced(true);
       const parsed = (lrcRaw as any).syncText.map((item: any) => ({
-          time: item.timestamp / 1000, 
-          text: item.text || ''
+        time: item.timestamp / 1000,
+        text: item.text || ''
       }));
       setLyrics(parsed);
       setStaticLyrics(null);
@@ -56,14 +56,14 @@ export default function LyricsView() {
     const lines = content.split('\n');
     const parsed: LyricLine[] = [];
     const timeRegexGlobal = /\[(?:(\d{1,}):)?(\d{1,}):(\d{2})(?:[\.,](\d{1,3}))?\]/g;
-    
+
     let isLrc = false;
 
     lines.forEach(line => {
       let match;
       const text = line.replace(/\[.*?\]/g, '').trim();
       timeRegexGlobal.lastIndex = 0; // Reset lastIndex for each line!
-      
+
       while ((match = timeRegexGlobal.exec(line)) !== null) {
         isLrc = true;
         let hours = 0, minutes = 0, seconds = 0, milliseconds = 0;
@@ -81,9 +81,9 @@ export default function LyricsView() {
           const msStr = match[4];
           milliseconds = msStr.length === 1 ? parseInt(msStr) * 100 : (msStr.length === 2 ? parseInt(msStr) * 10 : parseInt(msStr));
         }
-        
+
         const time = hours * 3600 + minutes * 60 + seconds + milliseconds / 1000;
-        
+
         // Remove the `if (text)` check so we preserve empty lines (paragraph gaps)
         parsed.push({ time, text });
       }
@@ -183,54 +183,53 @@ export default function LyricsView() {
   }
 
   return (
-    <div 
+    <div
       ref={containerRef}
       className="flex-1 w-full max-w-2xl mx-auto overflow-hidden mb-8 px-4"
-      style={{ 
-        maxHeight: '70vh', 
-        maskImage: isSynced ? 'linear-gradient(to bottom, transparent 0%, black 15%, black 85%, transparent 100%)' : 'none', 
-        WebkitMaskImage: isSynced ? 'linear-gradient(to bottom, transparent 0%, black 15%, black 85%, transparent 100%)' : 'none' 
+      style={{
+        maxHeight: '70vh',
+        maskImage: isSynced ? 'linear-gradient(to bottom, transparent 0%, black 15%, black 85%, transparent 100%)' : 'none',
+        WebkitMaskImage: isSynced ? 'linear-gradient(to bottom, transparent 0%, black 15%, black 85%, transparent 100%)' : 'none'
       }}
     >
-      <motion.div 
+      <motion.div
         className="w-full relative"
         animate={{ y: yOffset }}
         transition={{ type: "tween", duration: 0.7, ease: [0.25, 0.1, 0.25, 1] }}
       >
         <div className="py-[30vh]">
-        {lyrics.map((line, i) => {
-          const isActive = i === activeIndex;
-          const isPassed = i < activeIndex;
-          
-          return (
-            <div 
-              key={i}
-              ref={isActive ? activeLineRef : null}
-              className={`text-center transition-all duration-700 font-bold ${
-                isActive 
-                  ? 'text-white scale-105 py-4 drop-shadow-lg' 
-                  : isPassed 
-                    ? 'text-white/40 py-2' 
-                    : 'text-white/20 py-2'
-              }`}
-              style={{
-                 transformOrigin: 'center center',
-                 fontSize: isActive ? `${36 * (lyricsFontSize / 100)}px` : `${20 * (lyricsFontSize / 100)}px`,
-                 lineHeight: 1.4
-              }}
-            >
-              {line.text || '\u00A0'}
-              {showTranslatedLyrics && line.translatedText && (
-                <div 
-                  className={`mt-1 transition-all duration-700 ${isActive ? 'text-white/60' : 'text-white/20'}`}
-                  style={{ fontSize: isActive ? `${22 * (lyricsFontSize / 100)}px` : `${14 * (lyricsFontSize / 100)}px` }}
-                >
-                  {line.translatedText}
-                </div>
-              )}
-            </div>
-          );
-        })}
+          {lyrics.map((line, i) => {
+            const isActive = i === activeIndex;
+            const isPassed = i < activeIndex;
+
+            return (
+              <div
+                key={i}
+                ref={isActive ? activeLineRef : null}
+                className={`text-center transition-all duration-700 font-bold ${isActive
+                    ? 'text-white scale-105 py-4 drop-shadow-lg'
+                    : isPassed
+                      ? 'text-white/40 py-2'
+                      : 'text-white/20 py-2'
+                  }`}
+                style={{
+                  transformOrigin: 'center center',
+                  fontSize: isActive ? `${36 * (lyricsFontSize / 100)}px` : `${20 * (lyricsFontSize / 100)}px`,
+                  lineHeight: 1.4
+                }}
+              >
+                {line.text || '\u00A0'}
+                {showTranslatedLyrics && line.translatedText && (
+                  <div
+                    className={`mt-1 transition-all duration-700 ${isActive ? 'text-white/60' : 'text-white/20'}`}
+                    style={{ fontSize: isActive ? `${22 * (lyricsFontSize / 100)}px` : `${14 * (lyricsFontSize / 100)}px` }}
+                  >
+                    {line.translatedText}
+                  </div>
+                )}
+              </div>
+            );
+          })}
         </div>
       </motion.div>
     </div>

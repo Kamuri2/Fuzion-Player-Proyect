@@ -633,7 +633,15 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       const meta = await window.api.getMetadata(song.path);
       setLyrics(meta.lyrics);
       setAudioDetails({ bitrate: meta.bitrate, sampleRate: meta.sampleRate, format: meta.format });
-      const updatedSong = { ...song, title: meta.title, artist: meta.artist, album: meta.album, cover: meta.cover, duration: meta.duration };
+      const updatedSong = { ...song, title: meta.title, artist: meta.artist, album: meta.album, duration: meta.duration };
+      
+      // OPTION 2: Only update the cover from getMetadata if the song doesn't have ANY cover.
+      // This prevents overwriting the initial queue cover with a massive Base64 string,
+      // which was exactly what caused the triple-render flash.
+      if (!song.cover && meta.cover) {
+        updatedSong.cover = meta.cover;
+      }
+      
       setCurrentSong(updatedSong);
 
       if ('mediaSession' in navigator) {
@@ -703,8 +711,15 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       audioRef.current.play();
     }
 
-    setCurrentSong(song);
-    loadMetadataForSong(song);
+    // Si la canción ya tiene una portada (ej. miniatura cacheada), actualizamos la UI al instante.
+    // Si NO tiene portada, esperamos a extraer sus metadatos antes de actualizar la UI.
+    // Esto evita que React dibuje el ícono blanco temporal (el "salto feo") mientras lee la canción.
+    if (song.cover) {
+      setCurrentSong(song);
+      loadMetadataForSong(song);
+    } else {
+      loadMetadataForSong(song);
+    }
   };
 
   const playWithShuffle = async (contextId?: string, contextList?: Song[]) => {
