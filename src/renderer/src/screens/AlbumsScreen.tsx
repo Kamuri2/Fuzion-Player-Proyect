@@ -108,7 +108,7 @@ export default function AlbumsScreen() {
               placeholder={t('albums.search')}
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="flex-1 p-4 rounded-xl bg-black/5 dark:bg-white/5 outline-none transition-all focus:ring-2"
+              className="w-full max-w-md p-4 rounded-xl bg-black/5 dark:bg-white/5 outline-none transition-all focus:ring-2"
               style={{ color: colors.text }}
             />
           </div>

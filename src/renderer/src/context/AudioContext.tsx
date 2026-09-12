@@ -129,6 +129,7 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
       const CROSSFADE_DURATION_OUT = crossfadeDurationOutRef.current;
       if (
+        isCrossfadeEnabledRef.current &&
         audio.duration &&
         audio.duration - audio.currentTime <= CROSSFADE_DURATION_OUT &&
         !isCrossfadingRef.current &&
@@ -763,9 +764,12 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         audioRef.current.volume = 1;
 
         const secondary = secondaryAudioRef.current!;
+        const oldPrimary = audioRef.current;
+        
         secondary.volume = 1;
         audioRef.current = secondary;
-        secondaryAudioRef.current = audioRef.current; // old primary
+        secondaryAudioRef.current = oldPrimary;
+        
         attachListeners(audioRef.current);
         clearListeners(secondaryAudioRef.current);
       }

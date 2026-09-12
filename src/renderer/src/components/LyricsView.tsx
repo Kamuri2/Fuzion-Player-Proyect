@@ -142,10 +142,10 @@ export default function LyricsView() {
     if (success) {
       setAvailableTranslations(prev => prev.filter(l => l !== langCode));
       showToast(t('player.retryTranslationSuccess', 'Traducción eliminada. Reintentando...'), 'success');
-      
+
       if ((selectedLang || lyricsLanguage) === langCode) {
-        setLyrics(prev => prev.map(l => ({ ...l, translatedText: undefined }))); 
-        
+        setLyrics(prev => prev.map(l => ({ ...l, translatedText: undefined })));
+
         try {
           let newTranslations;
           if (isSynced) {
@@ -162,7 +162,7 @@ export default function LyricsView() {
             let baseLyrics = staticLyrics || '';
             if (baseLyrics.includes('--- Traducción ---')) baseLyrics = baseLyrics.split('--- Traducción ---')[0].trim();
             else if (baseLyrics.includes('--- Translation ---')) baseLyrics = baseLyrics.split('--- Translation ---')[0].trim();
-            
+
             const lines = baseLyrics.split('\n');
             newTranslations = await window.api.translateLyrics(currentSong.id, lines, langCode);
             if (newTranslations && newTranslations.length > 0 && newTranslations.some(t => t.trim() !== '')) {
@@ -174,7 +174,7 @@ export default function LyricsView() {
           }
           const langs = await window.api.getAvailableTranslations(currentSong.id);
           setAvailableTranslations(langs || []);
-        } catch(e) {
+        } catch (e) {
           showToast(t('player.translationOfflineError', 'No hay conexión a internet para traducir la letra.'), 'error');
         }
       }
@@ -183,19 +183,20 @@ export default function LyricsView() {
     }
   };
 
-  const openEditor = async (langCode: string, e: React.MouseEvent) => {
+  const openEditor = (langCode: string, e: React.MouseEvent) => {
     e.stopPropagation();
     setEditingLang(langCode);
-    if (!currentSong) return;
-
-    // Fetch the specific offline translation
-    const translationLines = await window.api.translateLyrics(currentSong.id, [], langCode);
-    if (translationLines && translationLines.length > 0) {
-      setEditableLyrics(translationLines.join('\n'));
+    if (isSynced) {
+      setEditableLyrics(lyrics.map(l => l.translatedText || '').join('\n'));
     } else {
-      setEditableLyrics('');
+      if (staticLyrics && staticLyrics.includes('--- Traducción ---')) {
+        setEditableLyrics(staticLyrics.split('--- Traducción ---')[1].trim());
+      } else if (staticLyrics && staticLyrics.includes('--- Translation ---')) {
+        setEditableLyrics(staticLyrics.split('--- Translation ---')[1].trim());
+      } else {
+        setEditableLyrics('');
+      }
     }
-
     setIsEditorOpen(true);
     setIsLangMenuOpen(false);
   };
@@ -334,17 +335,17 @@ export default function LyricsView() {
       {/* Selector de Traducciones Offline/Online */}
       {showTranslatedLyrics && (
         <div className="absolute top-4 right-4 z-50">
-          <button 
+          <button
             onClick={() => setIsLangMenuOpen(!isLangMenuOpen)}
             className="p-3 bg-black/40 hover:bg-black/60 backdrop-blur-md rounded-full shadow-lg border border-white/10 text-white/80 hover:text-white transition-all flex items-center gap-2"
           >
             <Globe size={20} />
             <span className="text-sm font-bold uppercase">{selectedLang || lyricsLanguage}</span>
           </button>
-          
+
           <AnimatePresence>
             {isLangMenuOpen && (
-              <motion.div 
+              <motion.div
                 initial={{ opacity: 0, y: -10, scale: 0.95 }}
                 animate={{ opacity: 1, y: 0, scale: 1 }}
                 exit={{ opacity: 0, y: -10, scale: 0.95 }}
@@ -352,7 +353,7 @@ export default function LyricsView() {
               >
                 <div className="p-2 border-b border-white/10 flex justify-between items-center">
                   <span className="text-xs text-white/50 font-bold px-2 uppercase tracking-wider">{t('settings.translationLanguage', 'Traducción')}</span>
-                  <button onClick={() => setIsLangMenuOpen(false)} className="text-white/50 hover:text-white"><X size={14}/></button>
+                  <button onClick={() => setIsLangMenuOpen(false)} className="text-white/50 hover:text-white"><X size={14} /></button>
                 </div>
                 <div className="max-h-64 overflow-y-auto customized-scrollbar-light p-1 flex flex-col gap-1">
                   {ALL_LANGUAGES.map(lang => {
@@ -403,10 +404,10 @@ export default function LyricsView() {
             >
               <div className="flex justify-between items-center mb-4">
                 <h3 className="text-xl font-bold text-white uppercase tracking-wider">{t('player.editTranslation', 'Editar Traducción')} - {editingLang?.toUpperCase()}</h3>
-                <button onClick={() => setIsEditorOpen(false)} className="text-white/50 hover:text-white"><X size={20}/></button>
+                <button onClick={() => setIsEditorOpen(false)} className="text-white/50 hover:text-white"><X size={20} /></button>
               </div>
               <p className="text-xs text-white/50 mb-4">{t('player.editTranslationDesc', 'Modifica las líneas de la traducción. Cada línea corresponde a una línea original de la canción.')}</p>
-              
+
               <textarea
                 value={editableLyrics}
                 onChange={e => setEditableLyrics(e.target.value)}
@@ -436,47 +437,47 @@ export default function LyricsView() {
           WebkitMaskImage: isSynced ? 'linear-gradient(to bottom, transparent 0%, black 15%, black 85%, transparent 100%)' : 'none'
         }}
       >
-      <motion.div
-        className="w-full relative"
-        animate={{ y: yOffset }}
-        transition={{ type: "tween", duration: 0.7, ease: [0.25, 0.1, 0.25, 1] }}
-      >
-        <div className="py-[30vh]">
-          {lyrics.map((line, i) => {
-            const isActive = i === activeIndex;
-            const isPassed = i < activeIndex;
+        <motion.div
+          className="w-full relative"
+          animate={{ y: yOffset }}
+          transition={{ type: "tween", duration: 0.7, ease: [0.25, 0.1, 0.25, 1] }}
+        >
+          <div className="py-[30vh]">
+            {lyrics.map((line, i) => {
+              const isActive = i === activeIndex;
+              const isPassed = i < activeIndex;
 
-            return (
-              <div
-                key={i}
-                ref={isActive ? activeLineRef : null}
-                className={`text-center transition-all duration-700 font-bold ${isActive
+              return (
+                <div
+                  key={i}
+                  ref={isActive ? activeLineRef : null}
+                  className={`text-center transition-all duration-700 font-bold ${isActive
                     ? 'text-white scale-105 py-4 drop-shadow-lg'
                     : isPassed
                       ? 'text-white/40 py-2'
                       : 'text-white/20 py-2'
-                  }`}
-                style={{
-                  transformOrigin: 'center center',
-                  fontSize: isActive ? `${36 * (lyricsFontSize / 100)}px` : `${20 * (lyricsFontSize / 100)}px`,
-                  lineHeight: 1.4
-                }}
-              >
-                {line.text || '\u00A0'}
-                {showTranslatedLyrics && line.translatedText && (
-                  <div
-                    className={`mt-1 transition-all duration-700 ${isActive ? 'text-white/60' : 'text-white/20'}`}
-                    style={{ fontSize: isActive ? `${22 * (lyricsFontSize / 100)}px` : `${14 * (lyricsFontSize / 100)}px` }}
-                  >
-                    {line.translatedText}
-                  </div>
-                )}
-              </div>
-            );
-          })}
-        </div>
-      </motion.div>
-    </div>
+                    }`}
+                  style={{
+                    transformOrigin: 'center center',
+                    fontSize: isActive ? `${36 * (lyricsFontSize / 100)}px` : `${20 * (lyricsFontSize / 100)}px`,
+                    lineHeight: 1.4
+                  }}
+                >
+                  {line.text || '\u00A0'}
+                  {showTranslatedLyrics && line.translatedText && (
+                    <div
+                      className={`mt-1 transition-all duration-700 ${isActive ? 'text-white/60' : 'text-white/20'}`}
+                      style={{ fontSize: isActive ? `${22 * (lyricsFontSize / 100)}px` : `${14 * (lyricsFontSize / 100)}px` }}
+                    >
+                      {line.translatedText}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </motion.div>
+      </div>
     </div>
   );
 }
