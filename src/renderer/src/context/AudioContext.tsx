@@ -40,6 +40,17 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     if (audioRef.current && !isCrossfadingRef.current) audioRef.current.volume = val;
   };
 
+  const setPlaybackRate = (rate: number) => {
+    if (audioRef.current) {
+      audioRef.current.playbackRate = rate;
+      audioRef.current.preservesPitch = false;
+    }
+    if (secondaryAudioRef.current) {
+      secondaryAudioRef.current.playbackRate = rate;
+      secondaryAudioRef.current.preservesPitch = false;
+    }
+  };
+
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const secondaryAudioRef = useRef<HTMLAudioElement | null>(null);
 
@@ -410,13 +421,7 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       audioRef.current!.play();
     } else {
       if (!isCrossfadingRef.current) {
-        // Play vinyl dust sound before advancing to next track
-        const dust = new Audio(vinylDustSound);
-        dust.volume = 0.5;
-        dust.play();
-        setTimeout(() => {
-          playNext();
-        }, 1200);
+        playNext();
       }
     }
   };
@@ -972,7 +977,7 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       isShuffle, toggleShuffle, changeMusicFolder, isPlayerOpen, setIsPlayerOpen,
       showLyrics, setShowLyrics, isCrossfadeEnabled, setIsCrossfadeEnabled, crossfadeDurationIn, setCrossfadeDurationIn,
       crossfadeDurationOut, setCrossfadeDurationOut,
-      toastMessage, showToast, volume, setVolume
+      toastMessage, showToast, volume, setVolume, setPlaybackRate
     }}>
       {children}
     </AudioContext.Provider>

@@ -29,7 +29,8 @@ function createWindow(): void {
     webPreferences: {
       preload: join(__dirname, '../preload/index.js'),
       sandbox: false,
-      webSecurity: false
+      webSecurity: false,
+      backgroundThrottling: false
     }
   })
 
@@ -67,6 +68,11 @@ if (!gotTheLock) {
   // Disable OS DPI Scaling
   app.commandLine.appendSwitch('high-dpi-support', '1')
   app.commandLine.appendSwitch('force-device-scale-factor', '1')
+
+  // Prevent background throttling of JS/Audio
+  app.commandLine.appendSwitch('disable-background-timer-throttling')
+  app.commandLine.appendSwitch('disable-backgrounding-occluded-windows')
+  app.commandLine.appendSwitch('disable-renderer-backgrounding')
 
 
   app.on('second-instance', () => {

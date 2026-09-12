@@ -105,7 +105,7 @@ let savedActiveMiniTab: 'playlists' | 'folders' | 'albums' | 'artists' = 'playli
 let savedMiniDetail: { type: 'playlist' | 'folder' | 'album' | 'artist', id: string, name: string } | null = null;
 
 export default function PlayerScreen() {
-  const { colors, isFullMode } = useTheme();
+  const { colors, isFullMode, reduceAnimations, hideRouletteMode } = useTheme();
   const navigate = useNavigate();
   const { t } = useTranslation();
   const [isQueueOpen, setIsQueueOpen] = useState(false);
@@ -539,7 +539,7 @@ export default function PlayerScreen() {
               style={{ perspective: 1200 }}
             >
               <div className="relative w-full h-full flex items-center justify-center perspective-[1200px]">
-                <AnimatePresence mode="popLayout" initial={false}>
+                <AnimatePresence mode="popLayout" initial={!reduceAnimations}>
                   {(() => {
                     if (isFullMode || isLargeScreen) {
                       // In Full Mode or Large Screens, NO CAROUSEL. Just show current cover in the center to save memory.
@@ -547,10 +547,10 @@ export default function PlayerScreen() {
                         <motion.div
                           key={currentSong.id}
                           className={`absolute max-h-full h-[100%] md:h-[100%] ${isLargeScreen ? 'max-h-[1200px]' : 'max-h-[900px]'} aspect-square rounded-2xl`}
-                          initial={{ opacity: 0, scale: 0.9 }}
+                          initial={{ opacity: reduceAnimations ? 1 : 0, scale: reduceAnimations ? (isIdle && !isLargeScreen ? 1.15 : 1) : 0.9 }}
                           animate={{ opacity: 1, scale: isIdle && !isLargeScreen ? 1.15 : 1 }}
-                          exit={{ opacity: 0, scale: 0.9 }}
-                          transition={{ duration: 0.7, ease: [0.32, 0.72, 0, 1] }}
+                          exit={{ opacity: reduceAnimations ? 0 : 0, scale: reduceAnimations ? (isIdle && !isLargeScreen ? 1.15 : 1) : 0.9 }}
+                          transition={{ duration: reduceAnimations ? 0 : 0.7, ease: [0.32, 0.72, 0, 1] }}
                         >
                           <CoverImage
                             coverUrl={currentSong.cover}
@@ -566,7 +566,7 @@ export default function PlayerScreen() {
                     // Normal Mode (Carousel)
                     const currentIndex = queuePosition - 1;
                     const items: { song: any; offset: number }[] = [];
-                    const showOnlyCenter = showLyrics || isQueueOpen;
+                    const showOnlyCenter = showLyrics || isQueueOpen || hideRouletteMode;
                     const minOffset = showOnlyCenter ? 0 : -2;
                     const maxOffset = showOnlyCenter ? 0 : 2;
 
@@ -596,7 +596,7 @@ export default function PlayerScreen() {
                           key={song.id}
                           // Forzamos el tamaño máximo basado en la altura disponible para evitar recortes verticales
                           className={`absolute max-h-full ${isFullMode ? 'h-[75%] md:h-[95%]' : 'h-[80%] md:h-[92%]'} ${isLargeScreen ? 'max-h-[1200px]' : 'max-h-[900px]'} aspect-square rounded-2xl cursor-pointer ${isCenter ? '' : 'pointer-events-auto'}`}
-                          initial={{ opacity: 0, x: `${translateX + (offset > 0 ? 20 : -20)}%`, scale: isCenter ? 1 : scale * 0.9, rotateY: rotateY * 1.5 }}
+                          initial={{ opacity: reduceAnimations ? opacity : 0, x: reduceAnimations ? `${translateX}%` : `${translateX + (offset > 0 ? 20 : -20)}%`, scale: reduceAnimations ? scale : (isCenter ? 1 : scale * 0.9), rotateY: reduceAnimations ? rotateY : rotateY * 1.5 }}
                           animate={{
                             opacity,
                             x: `${translateX}%`,
@@ -604,8 +604,8 @@ export default function PlayerScreen() {
                             rotateY,
                             zIndex
                           }}
-                          exit={{ opacity: 0, scale: scale * 0.9 }}
-                          transition={{ duration: 0.7, ease: [0.32, 0.72, 0, 1] }}
+                          exit={{ opacity: 0, scale: reduceAnimations ? scale : scale * 0.9 }}
+                          transition={{ duration: reduceAnimations ? 0 : 0.7, ease: [0.32, 0.72, 0, 1] }}
                           style={{
                             zIndex,
                             transformStyle: 'preserve-3d'

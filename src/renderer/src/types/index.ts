@@ -114,4 +114,5 @@ export interface AudioContextType {
   showToast: (msg: string, type?: 'success' | 'error') => void;
   volume: number;
   setVolume: (volume: number) => void;
+  setPlaybackRate: (rate: number) => void;
 }

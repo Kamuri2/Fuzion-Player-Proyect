@@ -117,6 +117,10 @@ type ThemeContextType = {
   albumZenMode: boolean;
   setAlbumZenMode: (val: boolean, isTurningOff?: boolean) => void;
   isZenLoading: 'on' | 'off' | null;
+  reduceAnimations: boolean;
+  setReduceAnimations: (val: boolean) => void;
+  hideRouletteMode: boolean;
+  setHideRouletteMode: (val: boolean) => void;
 };
 
 const ThemeContext = createContext<ThemeContextType>({
@@ -150,6 +154,10 @@ const ThemeContext = createContext<ThemeContextType>({
   albumZenMode: false,
   setAlbumZenMode: () => { },
   isZenLoading: null,
+  reduceAnimations: false,
+  setReduceAnimations: () => { },
+  hideRouletteMode: false,
+  setHideRouletteMode: () => { },
 });
 
 export const useTheme = (): ThemeContextType => useContext(ThemeContext);
@@ -168,6 +176,8 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const [isNavHidden, setIsNavHiddenState] = useState<boolean>(false);
   const [albumZenMode, setAlbumZenModeState] = useState<boolean>(false);
   const [isZenLoading, setIsZenLoading] = useState<'on' | 'off' | null>(null);
+  const [reduceAnimations, setReduceAnimationsState] = useState<boolean>(false);
+  const [hideRouletteMode, setHideRouletteModeState] = useState<boolean>(false);
 
   useEffect(() => {
     const fam = localStorage.getItem('@theme_family');
@@ -222,6 +232,12 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     if (savedNavHidden !== null) {
       setIsNavHiddenState(savedNavHidden === 'true');
     }
+
+    const savedReduceAnims = localStorage.getItem('@reduce_animations');
+    if (savedReduceAnims !== null) setReduceAnimationsState(savedReduceAnims === 'true');
+
+    const savedHideRoulette = localStorage.getItem('@hide_roulette');
+    if (savedHideRoulette !== null) setHideRouletteModeState(savedHideRoulette === 'true');
   }, []);
 
   useEffect(() => {
@@ -371,6 +387,16 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     }
   };
 
+  const setReduceAnimations = (val: boolean) => {
+    setReduceAnimationsState(val);
+    localStorage.setItem('@reduce_animations', String(val));
+  };
+
+  const setHideRouletteMode = (val: boolean) => {
+    setHideRouletteModeState(val);
+    localStorage.setItem('@hide_roulette', String(val));
+  };
+
   const toggleTheme = (): void => {
     setIsDarkMode(!isDarkMode);
   };
@@ -415,7 +441,8 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       customFont, setCustomFont, mascots, addMascot, removeMascot,
       lyricsFontSize, setLyricsFontSize, showTranslatedLyrics, setShowTranslatedLyrics,
       lyricsLanguage, setLyricsLanguage, isFullMode, setIsFullMode, isNavHidden, setIsNavHidden,
-      albumZenMode, setAlbumZenMode, isZenLoading
+      albumZenMode, setAlbumZenMode, isZenLoading, reduceAnimations, setReduceAnimations,
+      hideRouletteMode, setHideRouletteMode
     }}>
       <div style={{
         flex: 1,

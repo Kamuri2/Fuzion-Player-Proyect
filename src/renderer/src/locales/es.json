@@ -65,7 +65,11 @@
     "scanCompleteNoNew": "Escaneo completo. No se encontraron canciones nuevas.",
     "albumMode": "Album Mode",
     "classicMode": "Modo de Reproducción Clásica",
-    "classicModeDesc": "Activa un modo inmersivo donde el reproductor y la barra lateral se ocultan y el tocadiscos toma el control completo."
+    "classicModeDesc": "Activa un modo inmersivo donde el reproductor y la barra lateral se ocultan y el tocadiscos toma el control completo.",
+    "reduceAnimations": "Reducir Animaciones",
+    "reduceAnimationsDesc": "Desactiva los efectos de entrada y salida, brillo de discos y otras animaciones pesadas.",
+    "hideRouletteMode": "Ocultar Modo Ruleta",
+    "hideRouletteModeDesc": "Desactiva el visualizador tipo ruleta por completo."
   },
   "home": {
     "welcome": "Bienvenido de nuevo",

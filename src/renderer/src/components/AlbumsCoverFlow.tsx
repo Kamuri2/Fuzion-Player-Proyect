@@ -15,6 +15,7 @@ const VinylPlayer = ({
   playPrevious, isDiscOnPlatter, turntableRef, onDiscDragStart, isInstantSnap, onPowerOff
 }: any) => {
   const { t } = useTranslation();
+  const { setPlaybackRate } = useAudio();
   const [progress, setProgress] = useState(0);
   const [isDragging, setIsDragging] = useState(false);
   const [dragAngle, setDragAngle] = useState(0);
@@ -30,10 +31,31 @@ const VinylPlayer = ({
   const [customOffsetY, setCustomOffsetY] = useState<number>(0);
   const [vinylRpm, setVinylRpm] = useState<number>(33);
   const vinylRpmRef = useRef(33);
+  const currentPlaybackRateRef = useRef(1);
+  const targetPlaybackRateRef = useRef(1);
+  const transitionRafRef = useRef<number>(0);
 
   useEffect(() => {
     vinylRpmRef.current = vinylRpm;
-  }, [vinylRpm]);
+    targetPlaybackRateRef.current = vinylRpm / 33;
+    
+    const transitionRate = () => {
+      const diff = targetPlaybackRateRef.current - currentPlaybackRateRef.current;
+      if (Math.abs(diff) < 0.005) {
+        currentPlaybackRateRef.current = targetPlaybackRateRef.current;
+        setPlaybackRate(targetPlaybackRateRef.current);
+        return;
+      }
+      currentPlaybackRateRef.current += diff * 0.03;
+      setPlaybackRate(currentPlaybackRateRef.current);
+      transitionRafRef.current = requestAnimationFrame(transitionRate);
+    };
+
+    cancelAnimationFrame(transitionRafRef.current);
+    transitionRafRef.current = requestAnimationFrame(transitionRate);
+
+    return () => cancelAnimationFrame(transitionRafRef.current);
+  }, [vinylRpm, setPlaybackRate]);
 
   const [isPendingPause, setIsPendingPause] = useState(false);
   const [isPendingResume, setIsPendingResume] = useState(false);
@@ -65,6 +87,7 @@ const VinylPlayer = ({
   }, []);
 
   const getSpinSpeed = () => {
+    if (vinylRpmRef.current === 23) return 0.14;
     if (vinylRpmRef.current === 45) return 0.27;
     if (vinylRpmRef.current === 78) return 0.47;
     return 0.2;
@@ -230,9 +253,6 @@ const VinylPlayer = ({
       setIsPendingTrackChange(true);
       pauseOrResumeSound();
     }
-    const dust = new Audio(vinylDustSound);
-    dust.volume = 0.5;
-    dust.play();
     setTimeout(() => {
       playNext();
       setIsPendingTrackChange(false);
@@ -245,9 +265,6 @@ const VinylPlayer = ({
       setIsPendingTrackChange(true);
       pauseOrResumeSound();
     }
-    const dust = new Audio(vinylDustSound);
-    dust.volume = 0.5;
-    dust.play();
     setTimeout(() => {
       playPrevious();
       setIsPendingTrackChange(false);
@@ -664,7 +681,7 @@ const VinylPlayer = ({
                 <div className="flex flex-col gap-1">
                   <span className="text-xs font-semibold text-zinc-600">{t('player.rpm', 'VELOCIDAD (RPM)')}</span>
                   <div className="flex bg-zinc-100 rounded p-1">
-                    {[33, 45, 78].map(rpm => (
+                    {[23, 33, 45, 78].map(rpm => (
                       <button
                         key={rpm}
                         onClick={() => {
@@ -792,7 +809,7 @@ const PeekDiscVisuals = ({ album, isDragging = false }: { album: any; isDragging
 };
 
 export default function AlbumsCoverFlow({ albums, onExpand }: any) {
-  const { colors, albumZenMode, setAlbumZenMode } = useTheme();
+  const { colors, albumZenMode, setAlbumZenMode, reduceAnimations } = useTheme();
   const { playSound, pauseOrResumeSound, playNext, playPrevious, currentSong, subscribeToProgress, isPlaying: globalIsPlaying, volume, setVolume } = useAudio();
   const { t } = useTranslation();
 
@@ -1064,17 +1081,21 @@ export default function AlbumsCoverFlow({ albums, onExpand }: any) {
                   <div className="absolute inset-0 overflow-hidden rounded-lg z-20 bg-black">
                     <CoverImage coverUrl={album.cover} audioPath={album.songs[0]?.path} hq={isActive} className="w-full h-full object-cover" />
                     <div className="absolute inset-0 pointer-events-none rounded-lg shadow-[inset_0_0_15px_rgba(255,255,255,0.1),inset_1px_1px_2px_rgba(255,255,255,0.3)] border border-white/10 z-20" />
-                    <div className="absolute inset-0 pointer-events-none mix-blend-screen z-20 overflow-hidden rounded-lg">
-                      <div className="absolute inset-[-100%] animate-shine pointer-events-none" style={{
-                        background: 'linear-gradient(90deg, transparent 20%, rgba(255,255,255,0.1) 35%, rgba(255,255,255,0.2) 50%, rgba(255,255,255,0.1) 65%, transparent 80%)'
-                      }} />
-                    </div>
-                    <div className="absolute inset-0 pointer-events-none mix-blend-screen z-20" style={{
-                      background: `
-                      radial-gradient(circle at 0% 0%, rgba(255,255,255,0.1) 0%, transparent 30%),
-                      radial-gradient(circle at 100% 100%, rgba(255,255,255,0.05) 0%, transparent 40%)
-                    `
-                    }} />
+                    {!reduceAnimations && (
+                      <>
+                        <div className="absolute inset-0 pointer-events-none mix-blend-screen z-20 overflow-hidden rounded-lg">
+                          <div className="absolute inset-[-100%] animate-shine pointer-events-none" style={{
+                            background: 'linear-gradient(90deg, transparent 20%, rgba(255,255,255,0.1) 35%, rgba(255,255,255,0.2) 50%, rgba(255,255,255,0.1) 65%, transparent 80%)'
+                          }} />
+                        </div>
+                        <div className="absolute inset-0 pointer-events-none mix-blend-screen z-20" style={{
+                          background: `
+                          radial-gradient(circle at 0% 0%, rgba(255,255,255,0.1) 0%, transparent 30%),
+                          radial-gradient(circle at 100% 100%, rgba(255,255,255,0.05) 0%, transparent 40%)
+                        `
+                        }} />
+                      </>
+                    )}
 
                     {isExpanded && (
                       <button
