@@ -12,6 +12,7 @@ export interface Song {
   cover?: string | null;
   lyrics?: string;
   hasLyrics?: boolean;
+  genre?: string;
   trackNumber?: number;
   year?: string;
   isManualQueue?: boolean;
@@ -24,6 +25,8 @@ export interface Metadata {
   album: string | null;
   cover: string | null;
   lyrics: string | null;
+  genre: string | null;
+  hasLyrics: boolean;
 }
 
 export interface Playlist {

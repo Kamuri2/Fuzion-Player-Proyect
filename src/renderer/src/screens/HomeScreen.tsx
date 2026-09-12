@@ -57,6 +57,89 @@ export default function HomeScreen() {
   const navigate = useNavigate();
   const { t } = useTranslation();
   const [searchQuery, setSearchQuery] = useState('');
+  const [recommendedAlbums, setRecommendedAlbums] = useState<any[]>([]);
+  const [mostListenedArtists, setMostListenedArtists] = useState<any[]>([]);
+
+  useEffect(() => {
+    if (songs.length === 0 || Object.keys(albums).length === 0 || Object.keys(artists).length === 0) return;
+    
+    const now = new Date();
+    const lastUpdateStr = localStorage.getItem('lastRecommendationsUpdate');
+    let shouldUpdate = false;
+    
+    if (lastUpdateStr) {
+      const lastUpdate = new Date(lastUpdateStr);
+      const next3am = new Date(lastUpdate);
+      if (next3am.getHours() >= 3) {
+        next3am.setDate(next3am.getDate() + 1);
+      }
+      next3am.setHours(3, 0, 0, 0);
+      
+      if (now >= next3am) {
+        shouldUpdate = true;
+      }
+    } else {
+      shouldUpdate = true;
+    }
+
+    const currentSavedAlbums = JSON.parse(localStorage.getItem('dailyRecommendedAlbums') || '[]');
+    if (currentSavedAlbums.length === 0) {
+      shouldUpdate = true; // Force update if it was saved empty due to a race condition
+    }
+
+    if (shouldUpdate) {
+      const albumValues = Object.values(albums);
+      const artistValues = Object.values(artists);
+      let selectedAlbums: string[] = [];
+      let selectedArtists: string[] = [];
+      
+      let history = {};
+      try { history = JSON.parse(localStorage.getItem('genreHistory') || '{}'); } catch(e) {}
+      
+      const sortedGenres = Object.entries(history)
+        .sort((a, b) => (b[1] as number) - (a[1] as number))
+        .slice(0, 3)
+        .map(x => x[0]);
+        
+      if (sortedGenres.length > 0) {
+        const genreAlbums = albumValues.filter(a => a.songs && a.songs.some(s => s.genre && sortedGenres.includes(s.genre.toLowerCase().trim())));
+        const genreArtists = artistValues.filter(a => a.songs && a.songs.some(s => s.genre && sortedGenres.includes(s.genre.toLowerCase().trim())));
+        
+        const shuffledGenreAlbums = [...genreAlbums].sort(() => 0.5 - Math.random());
+        const shuffledAllAlbums = [...albumValues].filter(a => !genreAlbums.includes(a)).sort(() => 0.5 - Math.random());
+        selectedAlbums = [
+          ...shuffledGenreAlbums.slice(0, 7).map(a => a.name),
+          ...shuffledAllAlbums.slice(0, 10 - Math.min(7, genreAlbums.length)).map(a => a.name)
+        ].slice(0, 10);
+        
+        const shuffledGenreArtists = [...genreArtists].sort(() => 0.5 - Math.random());
+        const shuffledAllArtists = [...artistValues].filter(a => !genreArtists.includes(a)).sort(() => 0.5 - Math.random());
+        selectedArtists = [
+          ...shuffledGenreArtists.slice(0, 7).map(a => a.name),
+          ...shuffledAllArtists.slice(0, 10 - Math.min(7, genreArtists.length)).map(a => a.name)
+        ].slice(0, 10);
+        
+        // Reset daily history
+        localStorage.setItem('genreHistory', '{}');
+      } else {
+        const shuffledAlbums = [...albumValues].sort(() => 0.5 - Math.random());
+        selectedAlbums = shuffledAlbums.slice(0, 10).map((a: any) => a.name);
+        
+        const shuffledArtists = [...artistValues].sort(() => 0.5 - Math.random());
+        selectedArtists = shuffledArtists.slice(0, 10).map((a: any) => a.name);
+      }
+
+      localStorage.setItem('dailyRecommendedAlbums', JSON.stringify(selectedAlbums));
+      localStorage.setItem('dailyMostListenedArtists', JSON.stringify(selectedArtists));
+      localStorage.setItem('lastRecommendationsUpdate', now.toISOString());
+    }
+
+    const savedAlbums = JSON.parse(localStorage.getItem('dailyRecommendedAlbums') || '[]');
+    const savedArtists = JSON.parse(localStorage.getItem('dailyMostListenedArtists') || '[]');
+    
+    setRecommendedAlbums(savedAlbums.map((name: string) => (albums as any)[name]).filter(Boolean));
+    setMostListenedArtists(savedArtists.map((name: string) => (artists as any)[name]).filter(Boolean));
+  }, [songs.length, albums, artists]);
 
   useEffect(() => {
     // AudioContext is responsible for loading the initial folder on startup.
@@ -77,7 +160,20 @@ export default function HomeScreen() {
   }, [songs]);
 
   const searchResults = React.useMemo(() => {
-    if (!searchQuery) return allSongsData;
+    if (!searchQuery) {
+      const results: any[] = [];
+      if (recommendedAlbums.length > 0) {
+        results.push({ type: 'header', title: t('home.recommendedAlbums', 'Álbumes Recomendados') });
+        results.push({ type: 'album_carousel', data: recommendedAlbums });
+      }
+      if (mostListenedArtists.length > 0) {
+        results.push({ type: 'header', title: t('home.mostListenedArtists', 'Artistas Más Escuchados') });
+        results.push({ type: 'artist_carousel', data: mostListenedArtists });
+      }
+      results.push({ type: 'header', title: t('home.tracksTitle', 'Tracks') });
+      allSongsData.forEach(s => results.push(s));
+      return results;
+    }
 
     const lowerQuery = searchQuery.toLowerCase();
     
@@ -107,7 +203,7 @@ export default function HomeScreen() {
     }
 
     return results;
-  }, [searchQuery, allSongsData, albums, artists, t]);
+  }, [searchQuery, allSongsData, albums, artists, t, recommendedAlbums, mostListenedArtists]);
 
   return (
     <div className="flex-1 min-h-screen px-8 pb-24 max-w-full w-full pt-10 animate-fade-in">
@@ -169,6 +265,38 @@ export default function HomeScreen() {
             customScrollParent={document.getElementById('main-scroll-container') as HTMLElement}
             data={searchResults}
             itemContent={(index, item) => {
+              if (item.type === 'album_carousel') {
+                return (
+                  <div className="flex flex-row overflow-x-auto pb-6 pt-2 gap-4 customized-scrollbar-light px-2 w-full">
+                    {item.data.map((album: any) => (
+                      <div 
+                        key={album.name} 
+                        className="flex-none w-32 cursor-pointer group flex flex-col items-center" 
+                        onClick={() => navigate(`/detail/album/${encodeURIComponent(album.name)}`)}
+                      >
+                        <CoverImage coverUrl={album.cover} audioPath={album.songs[0]?.path} hq={false} className="w-32 h-32 rounded-lg shadow-md group-hover:scale-105 transition-transform" />
+                        <span className="mt-3 text-sm font-bold text-center w-full truncate" style={{ color: colors.text }}>{album.name}</span>
+                      </div>
+                    ))}
+                  </div>
+                );
+              }
+              if (item.type === 'artist_carousel') {
+                return (
+                  <div className="flex flex-row overflow-x-auto pb-6 pt-2 gap-6 customized-scrollbar-light px-2 w-full">
+                    {item.data.map((artist: any) => (
+                      <div 
+                        key={artist.name} 
+                        className="flex-none w-28 cursor-pointer group flex flex-col items-center" 
+                        onClick={() => navigate(`/detail/artist/${encodeURIComponent(artist.name)}`)}
+                      >
+                        <CoverImage coverUrl={artist.cover} audioPath={artist.songs[0]?.path} hq={false} className="w-28 h-28 rounded-full shadow-md group-hover:scale-105 transition-transform" />
+                        <span className="mt-3 text-sm font-bold text-center w-full truncate" style={{ color: colors.text }}>{artist.name}</span>
+                      </div>
+                    ))}
+                  </div>
+                );
+              }
               if (item.type === 'header') {
                 return <h2 className="text-2xl font-black mt-6 mb-4 ml-2 uppercase tracking-wider" style={{ color: colors.text }}>{item.title}</h2>;
               }

@@ -71,6 +71,7 @@ async function extractFfmpegMetadata(filePath: string): Promise<any> {
 
     let finalTitle = getTag('title')
     let finalArtist = getTag('album_artist') || getTag('albumartist') || getTag('artist')
+    let genre = getTag('genre')
 
     if (finalArtist && finalTitle && finalArtist.includes(' - ')) {
       const parts = finalArtist.split(' - ')
@@ -159,6 +160,7 @@ async function extractFfmpegMetadata(filePath: string): Promise<any> {
       track: getTag('track'),
       year: getTag('date') || getTag('year') || getTag('tyer') || getTag('tdat') || getTag('tdrc'),
       lyrics: foundLyrics || getTag('text'),
+      genre: genre || null,
       cover_base64: foundCover
     }
   } catch (err) {
@@ -373,6 +375,7 @@ export function setupIpc() {
       let bitrate = 0
       let sampleRate = 0
       let year = ''
+      let genre: string | null = null
 
       try {
         const metadata = await mm.parseFile(filePath, { duration: true })
@@ -391,6 +394,7 @@ export function setupIpc() {
         coverCache.set(filePath, coverBase64)
 
         lyrics = metadata.common.lyrics?.length ? metadata.common.lyrics[0] : null
+        genre = Array.isArray(metadata.common.genre) ? metadata.common.genre[0] : metadata.common.genre || null
 
         // Attempt to extract SYLT (Synchronized Lyrics) or USLT from native ID3 tags
         if (metadata.native && metadata.native['ID3v2']) {
@@ -472,6 +476,7 @@ export function setupIpc() {
           if (ffMeta.album) album = ffMeta.album
           if (ffMeta.year) year = ffMeta.year
           if (ffMeta.lyrics) lyrics = ffMeta.lyrics
+          if (ffMeta.genre) genre = ffMeta.genre
         }
       }
 
@@ -520,6 +525,7 @@ export function setupIpc() {
         duration,
         cover: coverBase64,
         lyrics,
+        genre,
         format,
         bitrate,
         sampleRate,
@@ -537,6 +543,7 @@ export function setupIpc() {
         duration: 0,
         cover: ffMeta?.cover_base64 || null,
         lyrics: ffMeta?.lyrics || null,
+        genre: ffMeta?.genre || null,
         format: filePath.toLowerCase().endsWith('.opus')
           ? 'Opus'
           : filePath.toLowerCase().endsWith('.ogg')
@@ -722,6 +729,52 @@ export function setupIpc() {
     }
 
     return null
+  })
+
+  ipcMain.handle('api:getAvailableTranslations', async (event, songId: string) => {
+    if (!songId) return []
+    const translationsDir = path.join(app.getPath('userData'), 'lyrics_translations')
+    try {
+      if (!existsSync(translationsDir)) return []
+      const files = await fs.readdir(translationsDir)
+      const prefix = `${songId}_`
+      const availableLangs = files
+        .filter(f => f.startsWith(prefix) && f.endsWith('.json'))
+        .map(f => f.replace(prefix, '').replace('.json', ''))
+      return availableLangs
+    } catch (e) {
+      return []
+    }
+  })
+
+  ipcMain.handle('api:deleteTranslation', async (event, songId: string, targetLang: string) => {
+    if (!songId || !targetLang) return false
+    const cacheFile = path.join(app.getPath('userData'), 'lyrics_translations', `${songId}_${targetLang}.json`)
+    try {
+      if (existsSync(cacheFile)) {
+        await fs.unlink(cacheFile)
+        return true
+      }
+    } catch (e) {
+      console.error('Error deleting translation', e)
+    }
+    return false
+  })
+
+  ipcMain.handle('api:saveTranslation', async (event, songId: string, targetLang: string, lines: string[]) => {
+    if (!songId || !targetLang || !lines) return false
+    const translationsDir = path.join(app.getPath('userData'), 'lyrics_translations')
+    try {
+      if (!existsSync(translationsDir)) {
+        await fs.mkdir(translationsDir, { recursive: true })
+      }
+      const cacheFile = path.join(translationsDir, `${songId}_${targetLang}.json`)
+      await fs.writeFile(cacheFile, JSON.stringify(lines), 'utf8')
+      return true
+    } catch (e) {
+      console.error('Error saving translation manually', e)
+    }
+    return false
   })
 
   ipcMain.handle(

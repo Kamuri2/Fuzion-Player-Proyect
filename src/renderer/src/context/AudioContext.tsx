@@ -719,11 +719,24 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     // Si la canción ya tiene una portada (ej. miniatura cacheada), actualizamos la UI al instante.
     // Si NO tiene portada, esperamos a extraer sus metadatos antes de actualizar la UI.
     // Esto evita que React dibuje el ícono blanco temporal (el "salto feo") mientras lee la canción.
+    const handleGenreTracking = (updatedSong: Song) => {
+      if (updatedSong.genre) {
+        const rawGenre = updatedSong.genre.toLowerCase().trim();
+        if (rawGenre) {
+          try {
+            const history = JSON.parse(localStorage.getItem('genreHistory') || '{}');
+            history[rawGenre] = (history[rawGenre] || 0) + 1;
+            localStorage.setItem('genreHistory', JSON.stringify(history));
+          } catch(e) {}
+        }
+      }
+    };
+
     if (song.cover) {
       setCurrentSong(song);
-      loadMetadataForSong(song);
+      loadMetadataForSong(song).then(handleGenreTracking);
     } else {
-      loadMetadataForSong(song);
+      loadMetadataForSong(song).then(handleGenreTracking);
     }
   };
 

@@ -67,9 +67,9 @@
     "classicMode": "Modo de Reproducción Clásica",
     "classicModeDesc": "Activa un modo inmersivo donde el reproductor y la barra lateral se ocultan y el tocadiscos toma el control completo.",
     "reduceAnimations": "Reducir Animaciones",
-    "reduceAnimationsDesc": "Desactiva los efectos de entrada y salida, brillo de discos y otras animaciones pesadas.",
+    "reduceAnimationsDesc": "Desactiva los efectos de entrada, salida, el brillo de los discos y otras animaciones pesadas.",
     "hideRouletteMode": "Ocultar Modo Ruleta",
-    "hideRouletteModeDesc": "Desactiva el visualizador tipo ruleta por completo."
+    "hideRouletteModeDesc": "Desactiva por completo el visualizador en forma de ruleta."
   },
   "home": {
     "welcome": "Bienvenido de nuevo",
@@ -78,7 +78,10 @@
     "search": "Buscar canciones, artistas, álbumes...",
     "searchResults": "Resultados de Búsqueda",
     "noResults": "No se encontraron resultados.",
-    "shuffle": "Aleatorio"
+    "shuffle": "Aleatorio",
+    "recommendedAlbums": "Álbumes Recomendados",
+    "mostListenedArtists": "Artistas Más Escuchados",
+    "tracksTitle": "Tracks"
   },
   "themes": {
     "mint": "Menta",
@@ -201,6 +204,19 @@
     "playingFrom": "Reproduciendo desde",
     "translationBlocked": "EL SERVICIO DE TRADUCCION NO ESTA DISPONIBLE EN ESTE MOMENTO",
     "translationRestored": "SERVICIO RESTABLECIDO NUEVAMENTE, GRACIAS POR LA ESPERA",
+    "offline": "Offline",
+    "translationOfflineError": "No hay conexión a internet para traducir la letra.",
+    "editTranslation": "Editar Traducción",
+    "editTranslationDesc": "Modifica las líneas de la traducción. Cada línea corresponde a una línea original de la canción.",
+    "retryTranslation": "Reintentar Traducción",
+    "retryTranslationSuccess": "Traducción eliminada. Reintentando...",
+    "retryTranslationError": "Error al eliminar la traducción",
+    "translationRetryCompleted": "¡Traducción completada con éxito!",
+    "translationRetryFailed": "La traducción falló: El servidor no respondió o bloqueó la petición temporalmente.",
+    "saveTranslationSuccess": "Traducción guardada exitosamente",
+    "saveTranslationError": "Error al guardar la traducción",
+    "save": "Guardar",
+    "cancel": "Cancelar",
     "playNext": "Añadir a continuación",
     "removeFromQueue": "Eliminar de la fila",
     "nextInQueue": "A continuación en la cola",
