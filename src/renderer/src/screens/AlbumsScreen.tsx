@@ -97,18 +97,18 @@ export default function AlbumsScreen() {
   };
 
   return (
-    <div className="flex-1 px-w-full py-w-full max-w-full w-full animate-fade-in relative flex flex-col">
+    <div className="flex-1 px-8 pt-10 pb-24 min-h-screen max-w-full w-full animate-fade-in relative flex flex-col">
       {!isCoverFlowExpanded && !albumZenMode && (
         <div className="animate-fade-in">
-          <h1 className="text-4xl font-black uppercase tracking-widest mb-8" style={{ color: colors.text }}>{t('albums.title')}</h1>
+          <h1 className="text-5xl font-black uppercase tracking-[5px] mt-8 mb-6" style={{ color: colors.text }}>{t('albums.title')}</h1>
 
-          <div className="mb-8 flex gap-4 items-center">
+          <div className="relative mb-8 max-w-md">
             <input
               type="text"
               placeholder={t('albums.search')}
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full max-w-md p-4 rounded-xl bg-black/5 dark:bg-white/5 outline-none transition-all focus:ring-2"
+              className="w-full bg-black/5 dark:bg-white/5 rounded-full py-3 px-6 outline-none focus:ring-2 ring-blue-500/50 transition-all"
               style={{ color: colors.text }}
             />
           </div>

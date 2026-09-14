@@ -234,8 +234,13 @@ export default function LyricsView() {
         const texts = lyrics.map(l => l.text);
         window.api.translateLyrics(currentSong.id, texts, activeLang).then(translations => {
           if (translations && translations.length > 0) {
-            setLyrics(prev => prev.map((l, idx) => ({ ...l, translatedText: translations[idx] || '' })));
-            if (!isAlreadyOffline) showToast(t('player.translationRetryCompleted', '¡Traducción completada con éxito!'), 'success');
+            if (translations[0] === '__SAME_LANGUAGE__') {
+              if (!isAlreadyOffline) showToast(t('player.translationSameLanguage', 'Esta canción ya está en el idioma seleccionado.'), 'success');
+              setLyrics(prev => prev.map(l => ({ ...l, translatedText: '' })));
+            } else {
+              setLyrics(prev => prev.map((l, idx) => ({ ...l, translatedText: translations[idx] || '' })));
+              if (!isAlreadyOffline) showToast(t('player.translationRetryCompleted', '¡Traducción completada con éxito!'), 'success');
+            }
           } else {
             setLyrics(prev => prev.map(l => ({ ...l, translatedText: '' })));
             if (!isAlreadyOffline) showToast(t('player.translationRetryFailed', 'La traducción falló: El servidor no respondió o bloqueó la petición temporalmente.'), 'error');
@@ -267,8 +272,15 @@ export default function LyricsView() {
         const lines = baseLyrics.split('\n');
         window.api.translateLyrics(currentSong.id, lines, activeLang).then(translations => {
           if (translations && translations.length > 0 && translations.some(t => t.trim() !== '')) {
-            setStaticLyrics(baseLyrics + '\n\n--- Traducción ---\n\n' + translations.join('\n'));
-            if (!isAlreadyOffline) showToast(t('player.translationRetryCompleted', '¡Traducción completada con éxito!'), 'success');
+            if (translations[0] === '__SAME_LANGUAGE__') {
+              if (!isAlreadyOffline) showToast(t('player.translationSameLanguage', 'Esta canción ya está en el idioma seleccionado.'), 'success');
+              if (selectedLang === null) {
+                setStaticLyrics(baseLyrics + '\n\n<!-- --- Translation --- -->');
+              }
+            } else {
+              setStaticLyrics(baseLyrics + '\n\n--- Traducción ---\n\n' + translations.join('\n'));
+              if (!isAlreadyOffline) showToast(t('player.translationRetryCompleted', '¡Traducción completada con éxito!'), 'success');
+            }
           } else {
             if (selectedLang === null) {
               setStaticLyrics(baseLyrics + '\n\n<!-- --- Translation --- -->');

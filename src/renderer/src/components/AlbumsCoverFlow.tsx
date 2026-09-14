@@ -6,7 +6,6 @@ import CoverImage from './CoverImage';
 import { Pause, Play, SkipBack, SkipForward, ListMusic, X, Settings, Mic2, Power } from 'lucide-react';
 import LyricsView from './LyricsView';
 import { useTranslation } from 'react-i18next';
-import vinylDustSound from '../assets/vinyl dust.mp3';
 
 // --- Vinyl Player Component ---
 const VinylPlayer = ({
@@ -531,7 +530,7 @@ const VinylPlayer = ({
         className="absolute top-1/2 -translate-y-1/2 w-[100%] aspect-square flex items-center justify-center z-20 pointer-events-none"
       >
         <div
-          className={`w-[92%] aspect-square rounded-full relative shadow-[0_10px_30px_rgba(0,0,0,0.5)] bg-[#0a0a0a] border border-[#222] overflow-hidden ${(!isPlaying && spinSpeedRef.current < 0.01) ? 'cursor-grab active:cursor-grabbing pointer-events-auto' : 'pointer-events-none'}`}
+          className={`w-[92%] aspect-square rounded-full relative shadow-[0_10px_30px_rgba(0,0,0,0.5)] bg-[#d4d4d4] border border-[#a3a3a3] overflow-hidden ${(!isPlaying && spinSpeedRef.current < 0.01) ? 'cursor-grab active:cursor-grabbing pointer-events-auto' : 'pointer-events-none'}`}
           onPointerDown={(e) => {
             if (!isPlaying && spinSpeedRef.current < 0.01) {
               e.stopPropagation();
@@ -542,8 +541,8 @@ const VinylPlayer = ({
         >
           <div
             ref={vinylRef}
-            className="absolute inset-0 rounded-full flex items-center justify-center overflow-hidden pointer-events-none"
-            style={{ backgroundColor: '#111', willChange: 'transform' }}
+            className="absolute inset-0 rounded-full flex items-center justify-center overflow-hidden pointer-events-none bg-[#e5e5e5]"
+            style={{ willChange: 'transform' }}
           >
             <div className="absolute inset-0 pointer-events-none" style={{ transform: `scale(${customScale / 100}) translate(${customOffsetX}%, ${customOffsetY}%)`, transformOrigin: 'center' }}>
               {customTexture ? (
@@ -553,80 +552,37 @@ const VinylPlayer = ({
               )}
             </div>
 
-            <div className="absolute inset-0 rounded-full bg-black/15 pointer-events-none" />
+
             <div className="absolute top-1 left-1/2 w-1.5 h-1.5 bg-white/20 rounded-full z-10" />
 
-            {!(customTexture && hideGrooves) && (
-              <svg viewBox="0 0 100 100" className="w-full h-full opacity-60 z-10 pointer-events-none">
-                {album.songs.map((_: any, i: number) => {
-                  const startRadius = 18;
-                  const maxPlayableWidth = 30;
-                  const grooveWidth = (songDurations[i] / (totalDuration || 1)) * maxPlayableWidth;
-                  const prevWidths = cumulativeDurations[i] / (totalDuration || 1) * maxPlayableWidth;
-                  const r = startRadius + prevWidths + (grooveWidth / 2);
-                  return (
-                    <circle
-                      key={i}
-                      cx="50" cy="50"
-                      r={r}
-                      fill="none"
-                      stroke="#222"
-                      strokeWidth={Math.max(0.1, grooveWidth - 0.2)}
-                    />
-                  );
-                })}
-                <circle cx="50" cy="50" r="49" fill="none" stroke="#111" strokeWidth="2" />
+            {/* Holographic effect for CD */}
+            <div className="absolute inset-0 pointer-events-none rounded-full mix-blend-screen opacity-[0.03] blur-3xl"
+                 style={{ background: 'conic-gradient(from 0deg, #ff0000, #ffff00, #00ff00, #00ffff, #0000ff, #ff00ff, #ff0000)' }} />
+
+            {/* Centro transparente / agujero del CD */}
+            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[15%] h-[15%] rounded-full z-10 flex items-center justify-center pointer-events-none shadow-[0_0_10px_rgba(0,0,0,0.3)] border border-[#a3a3a3] bg-[#f5f5f5]">
+               <div className="w-[30%] aspect-square rounded-full border border-[#ccc] bg-transparent shadow-[inset_0_1px_3px_rgba(0,0,0,0.3)]" />
+            </div>
+            
+            {/* CD inner ring */}
+            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[25%] h-[25%] rounded-full z-[9] pointer-events-none border border-white/20 bg-white/10 backdrop-blur-sm" />
+
+            {/* Album Info Text Ring */}
+            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[35%] h-[35%] rounded-full z-10 flex items-center justify-center pointer-events-none">
+              <svg viewBox="0 0 100 100" className="absolute inset-0 w-full h-full opacity-90" style={{ filter: 'drop-shadow(0px 1px 2px rgba(0,0,0,0.8))' }}>
+                <path id="curve" d="M 50, 50 m -38, 0 a 38,38 0 1,1 76,0 a 38,38 0 1,1 -76,0" fill="none" />
+                <text className="text-[8px] fill-white font-bold uppercase tracking-[0.2em]" dy="0">
+                  <textPath href="#curve" startOffset="50%" textAnchor="middle">
+                    {album.name.substring(0, 20)} • {album.year || '2024'} • {album.artist?.substring(0, 15) || 'UNKNOWN'} •
+                  </textPath>
+                </text>
               </svg>
-            )}
-
-            <div className={`absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[35%] h-[35%] rounded-full z-10 flex items-center justify-center pointer-events-none ${customTexture && hideCenterLabel ? '' : 'bg-[#111] border-[4px] border-[#222] shadow-[inset_0_0_20px_rgba(0,0,0,0.8)]'}`}>
-              {!(customTexture && hideCenterLabel) && (
-                <>
-                  <svg viewBox="0 0 100 100" className="absolute inset-0 w-full h-full opacity-70">
-                    <path id="curve" d="M 50, 50 m -38, 0 a 38,38 0 1,1 76,0 a 38,38 0 1,1 -76,0" fill="none" />
-                    <text className="text-[8px] fill-zinc-300 font-bold uppercase tracking-[0.2em]" dy="0">
-                      <textPath href="#curve" startOffset="50%" textAnchor="middle">
-                        {album.name.substring(0, 20)} • {album.year || '2024'} • {album.artist?.substring(0, 15) || 'UNKNOWN'} •
-                      </textPath>
-                    </text>
-                  </svg>
-                  <div className="w-[15%] aspect-square rounded-full border border-[#333] bg-[#050505] shadow-[inset_0_2px_4px_rgba(0,0,0,0.5)]" />
-                </>
-              )}
             </div>
           </div>
         </div>
       </motion.div>
 
-      {/* 3. BRAZO DE LA AGUJA (z-30) */}
-      <motion.div
-        initial={{ opacity: 0, x: 0 }}
-        animate={{ opacity: 1, x: '110%' }}
-        exit={{ opacity: 0, x: 0 }}
-        transition={{ type: 'spring', damping: 20 }}
-        className="absolute top-1/2 -translate-y-1/2 w-[100%] aspect-square pointer-events-none z-30"
-      >
-        <div ref={pivotRef} className="absolute top-[8%] right-[8%] w-8 h-8 pointer-events-none" />
-        <div
-          className={`absolute top-[8%] right-[8%] w-8 h-[65%] pointer-events-none ${isDragging ? '' : 'transition-transform duration-1000 ease-linear'}`}
-          style={{ transformOrigin: '50% 16px', transform: `rotate(${tonearmAngle}deg)`, willChange: 'transform' }}
-        >
-          <div className="w-12 h-12 rounded-full bg-zinc-300 shadow-2xl border-[5px] border-zinc-800 absolute -top-2 -left-2 flex items-center justify-center pointer-events-auto">
-            <div className="w-4 h-4 bg-zinc-900 rounded-full" />
-          </div>
-          <div className="w-2.5 h-[85%] bg-[#c0c0c0] absolute left-1/2 -translate-x-1/2 top-4 shadow-xl rounded-full origin-top pointer-events-auto" />
-          <div
-            className={`w-8 h-20 absolute bottom-[3%] left-1/2 -translate-x-1/2 flex items-start justify-center cursor-grab pointer-events-auto touch-none ${isDragging ? 'cursor-grabbing' : ''}`}
-            style={{ transformOrigin: 'top center', transform: 'rotate(5deg)' }}
-            onPointerDown={(e) => { e.stopPropagation(); e.preventDefault(); setIsDragging(true); }}
-          >
-            <div className="relative w-5 h-12 bg-zinc-800 rounded-sm shadow-2xl border-t-2 border-zinc-500 flex flex-col items-center pointer-events-none">
-              <div className="w-full h-1/2 bg-zinc-700 rounded-t-sm border-b border-zinc-900" />
-              <div className="w-0.5 h-3 bg-zinc-400 absolute -bottom-2 left-1/2 -translate-x-1/2 rounded-b-full" />
-            </div>
-          </div>
-        </div>
-      </motion.div>
+      {/* 3. BRAZO DE LA AGUJA REMOVED PARA ESTILO CD */}
 
       {/* 4. MODAL AJUSTES DEL VINILO (z-50) Componente hermano a la base para evitar el Stacking Context */}
       <motion.div
@@ -768,7 +724,7 @@ const PeekDiscVisuals = ({ album, isDragging = false }: { album: any; isDragging
   const hideGrooves = localStorage.getItem(`vinyl_hide_grooves_${album.name}`) === 'true';
 
   return (
-    <div className="absolute inset-0 rounded-full flex items-center justify-center overflow-hidden" style={{ backgroundColor: '#111' }}>
+    <div className="absolute inset-0 rounded-full flex items-center justify-center overflow-hidden bg-[#e5e5e5]">
       <div className="absolute inset-0 pointer-events-none" style={{ transform: `scale(${customScale / 100}) translate(${customOffsetX}%, ${customOffsetY}%)`, transformOrigin: 'center' }}>
         {savedTexture ? (
           <img src={savedTexture} className="w-full h-full object-cover" style={{ opacity: customTextureOpacity / 100 }} />
@@ -776,32 +732,31 @@ const PeekDiscVisuals = ({ album, isDragging = false }: { album: any; isDragging
           <CoverImage coverUrl={album.cover} audioPath={album.songs[0]?.path} hq={false} className="w-full h-full object-cover" />
         )}
       </div>
-      <div className="absolute inset-0 rounded-full bg-black/15 pointer-events-none" />
 
-      {!(savedTexture && hideGrooves) && (
-        <svg viewBox="0 0 100 100" className="w-full h-full opacity-60 z-10 pointer-events-none">
-          {Array.from({ length: 8 }).map((_, i) => (
-            <circle key={i} cx="50" cy="50" r={18 + i * 3.8} fill="none" stroke="#222" strokeWidth="0.5" />
-          ))}
-          <circle cx="50" cy="50" r="49" fill="none" stroke="#111" strokeWidth="2" />
-        </svg>
-      )}
 
-      <div className={`absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[35%] h-[35%] rounded-full z-10 flex items-center justify-center pointer-events-none ${savedTexture && hideCenterLabel ? '' : 'bg-[#111] border-[4px] border-[#222] shadow-[inset_0_0_20px_rgba(0,0,0,0.8)]'}`}>
-        {!(savedTexture && hideCenterLabel) && (
-          <>
-            {!isDragging && (
-              <svg viewBox="0 0 100 100" className="absolute inset-0 w-full h-full opacity-70">
-                <path id={`peekCurve_${album.name.replace(/[^a-zA-Z0-9]/g, '')}`} d="M 50, 50 m -38, 0 a 38,38 0 1,1 76,0 a 38,38 0 1,1 -76,0" fill="none" />
-                <text className="text-[8px] fill-zinc-300 font-bold uppercase tracking-[0.2em]" dy="0">
-                  <textPath href={`#peekCurve_${album.name.replace(/[^a-zA-Z0-9]/g, '')}`} startOffset="50%" textAnchor="middle">
-                    {album.name.substring(0, 20)} • {album.year || '2024'} •
-                  </textPath>
-                </text>
-              </svg>
-            )}
-            <div className="w-[15%] aspect-square rounded-full border border-[#333] bg-[#050505] shadow-[inset_0_2px_4px_rgba(0,0,0,0.5)]" />
-          </>
+      {/* Holographic effect for CD */}
+      <div className="absolute inset-0 pointer-events-none rounded-full mix-blend-screen opacity-[0.03] blur-3xl"
+           style={{ background: 'conic-gradient(from 0deg, #ff0000, #ffff00, #00ff00, #00ffff, #0000ff, #ff00ff, #ff0000)' }} />
+
+      {/* Centro transparente / agujero del CD */}
+      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[15%] h-[15%] rounded-full z-10 flex items-center justify-center pointer-events-none shadow-[0_0_10px_rgba(0,0,0,0.3)] border border-[#a3a3a3] bg-[#f5f5f5]">
+         <div className="w-[30%] aspect-square rounded-full border border-[#ccc] bg-transparent shadow-[inset_0_1px_3px_rgba(0,0,0,0.3)]" />
+      </div>
+      
+      {/* CD inner ring */}
+      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[25%] h-[25%] rounded-full z-[9] pointer-events-none border border-white/20 bg-white/10 backdrop-blur-sm" />
+
+      {/* Album Info Text Ring */}
+      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[35%] h-[35%] rounded-full z-10 flex items-center justify-center pointer-events-none">
+        {!isDragging && (
+          <svg viewBox="0 0 100 100" className="absolute inset-0 w-full h-full opacity-90" style={{ filter: 'drop-shadow(0px 1px 2px rgba(0,0,0,0.8))' }}>
+            <path id={`peekCurve_${album.name.replace(/[^a-zA-Z0-9]/g, '')}`} d="M 50, 50 m -38, 0 a 38,38 0 1,1 76,0 a 38,38 0 1,1 -76,0" fill="none" />
+            <text className="text-[8px] fill-white font-bold uppercase tracking-[0.2em]" dy="0">
+              <textPath href={`#peekCurve_${album.name.replace(/[^a-zA-Z0-9]/g, '')}`} startOffset="50%" textAnchor="middle">
+                {album.name.substring(0, 20)} • {album.year || '2024'} •
+              </textPath>
+            </text>
+          </svg>
         )}
       </div>
     </div>

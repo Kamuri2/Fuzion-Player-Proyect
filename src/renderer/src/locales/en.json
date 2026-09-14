@@ -214,6 +214,7 @@
     "retryTranslationError": "Error deleting translation",
     "translationRetryCompleted": "Translation completed successfully!",
     "translationRetryFailed": "Translation failed: The server did not respond or temporarily blocked the request.",
+    "translationSameLanguage": "This song is already in the selected language.",
     "saveTranslationSuccess": "Translation saved successfully",
     "saveTranslationError": "Error saving translation",
     "save": "Save",

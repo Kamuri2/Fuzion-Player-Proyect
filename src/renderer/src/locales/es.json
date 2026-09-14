@@ -213,6 +213,7 @@
     "retryTranslationError": "Error al eliminar la traducción",
     "translationRetryCompleted": "¡Traducción completada con éxito!",
     "translationRetryFailed": "La traducción falló: El servidor no respondió o bloqueó la petición temporalmente.",
+    "translationSameLanguage": "Esta canción ya está en el idioma seleccionado.",
     "saveTranslationSuccess": "Traducción guardada exitosamente",
     "saveTranslationError": "Error al guardar la traducción",
     "save": "Guardar",

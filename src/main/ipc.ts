@@ -731,7 +731,7 @@ export function setupIpc() {
     return null
   })
 
-  ipcMain.handle('api:getAvailableTranslations', async (event, songId: string) => {
+  ipcMain.handle('api:getAvailableTranslations', async (_event, songId: string) => {
     if (!songId) return []
     const translationsDir = path.join(app.getPath('userData'), 'lyrics_translations')
     try {
@@ -747,7 +747,7 @@ export function setupIpc() {
     }
   })
 
-  ipcMain.handle('api:deleteTranslation', async (event, songId: string, targetLang: string) => {
+  ipcMain.handle('api:deleteTranslation', async (_event, songId: string, targetLang: string) => {
     if (!songId || !targetLang) return false
     const cacheFile = path.join(app.getPath('userData'), 'lyrics_translations', `${songId}_${targetLang}.json`)
     try {
@@ -761,7 +761,7 @@ export function setupIpc() {
     return false
   })
 
-  ipcMain.handle('api:saveTranslation', async (event, songId: string, targetLang: string, lines: string[]) => {
+  ipcMain.handle('api:saveTranslation', async (_event, songId: string, targetLang: string, lines: string[]) => {
     if (!songId || !targetLang || !lines) return false
     const translationsDir = path.join(app.getPath('userData'), 'lyrics_translations')
     try {
@@ -806,19 +806,18 @@ export function setupIpc() {
 
         let translatedLines = res.text.split('\n')
 
-        // If detected language is the same as the target language OR the translation is exactly the same text
         const isSameLanguage =
           (res as any).from?.language?.iso?.toLowerCase() === targetLang.toLowerCase() ||
           (res as any).raw?.src?.toLowerCase() === targetLang.toLowerCase()
-        const isSameText =
-          fullText.replace(/\s+/g, '').toLowerCase() === res.text.replace(/\s+/g, '').toLowerCase()
 
-        if (isSameLanguage || isSameText) {
-          translatedLines = []
+        if (isSameLanguage) {
+          translatedLines = ['__SAME_LANGUAGE__']
         }
 
-        // Cache it
-        await fs.writeFile(cacheFile, JSON.stringify(translatedLines), 'utf8')
+        // Cache it only if it's a valid translation
+        if (!isSameLanguage) {
+          await fs.writeFile(cacheFile, JSON.stringify(translatedLines), 'utf8')
+        }
         // Success! If it was previously blocked, notify restoration.
         if (isTranslationBlocked) {
           isTranslationBlocked = false

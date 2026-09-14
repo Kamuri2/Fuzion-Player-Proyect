@@ -208,7 +208,7 @@ export default function HomeScreen() {
   return (
     <div className="flex-1 min-h-screen px-8 pb-24 max-w-full w-full pt-10 animate-fade-in">
       <h1 className="text-5xl font-black uppercase tracking-[5px] mt-8 mb-6" style={{ color: colors.text }}>
-        {t('sidebar.home')}
+        FUZION PLAYER
       </h1>
 
       {songs.length > 0 && (
@@ -267,14 +267,21 @@ export default function HomeScreen() {
             itemContent={(index, item) => {
               if (item.type === 'album_carousel') {
                 return (
-                  <div className="flex flex-row overflow-x-auto pb-6 pt-2 gap-4 customized-scrollbar-light px-2 w-full">
+                  <div 
+                    className="flex flex-row overflow-x-auto pb-6 pt-2 gap-4 px-2 w-full [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]"
+                    onWheel={(e) => {
+                      if (e.deltaY !== 0) {
+                        e.currentTarget.scrollLeft += e.deltaY;
+                      }
+                    }}
+                  >
                     {item.data.map((album: any) => (
                       <div 
                         key={album.name} 
-                        className="flex-none w-32 cursor-pointer group flex flex-col items-center" 
+                        className="flex-none w-48 cursor-pointer group flex flex-col items-center" 
                         onClick={() => navigate(`/detail/album/${encodeURIComponent(album.name)}`)}
                       >
-                        <CoverImage coverUrl={album.cover} audioPath={album.songs[0]?.path} hq={false} className="w-32 h-32 rounded-lg shadow-md group-hover:scale-105 transition-transform" />
+                        <CoverImage coverUrl={album.cover} audioPath={album.songs[0]?.path} hq={false} className="w-48 h-48 rounded-lg shadow-md group-hover:scale-105 transition-transform" />
                         <span className="mt-3 text-sm font-bold text-center w-full truncate" style={{ color: colors.text }}>{album.name}</span>
                       </div>
                     ))}
@@ -283,14 +290,21 @@ export default function HomeScreen() {
               }
               if (item.type === 'artist_carousel') {
                 return (
-                  <div className="flex flex-row overflow-x-auto pb-6 pt-2 gap-6 customized-scrollbar-light px-2 w-full">
+                  <div 
+                    className="flex flex-row overflow-x-auto pb-6 pt-2 gap-6 px-2 w-full [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]"
+                    onWheel={(e) => {
+                      if (e.deltaY !== 0) {
+                        e.currentTarget.scrollLeft += e.deltaY;
+                      }
+                    }}
+                  >
                     {item.data.map((artist: any) => (
                       <div 
                         key={artist.name} 
-                        className="flex-none w-28 cursor-pointer group flex flex-col items-center" 
+                        className="flex-none w-44 cursor-pointer group flex flex-col items-center" 
                         onClick={() => navigate(`/detail/artist/${encodeURIComponent(artist.name)}`)}
                       >
-                        <CoverImage coverUrl={artist.cover} audioPath={artist.songs[0]?.path} hq={false} className="w-28 h-28 rounded-full shadow-md group-hover:scale-105 transition-transform" />
+                        <CoverImage coverUrl={artist.cover} audioPath={artist.songs[0]?.path} hq={false} className="w-44 h-44 rounded-full shadow-md group-hover:scale-105 transition-transform" />
                         <span className="mt-3 text-sm font-bold text-center w-full truncate" style={{ color: colors.text }}>{artist.name}</span>
                       </div>
                     ))}
