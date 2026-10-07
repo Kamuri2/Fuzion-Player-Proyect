@@ -4,7 +4,6 @@ import { useAudio } from '../context/AudioContext';
 import { useTheme } from '../context/ThemeContext';
 import CoverImage from './CoverImage';
 import { Pause, Play, SkipBack, SkipForward, ListMusic, X, Settings, Mic2, Power, Maximize2, Minimize2, Volume2 } from 'lucide-react';
-import { DraggableVinyl } from './DraggableVinyl';
 import LyricsView from './LyricsView';
 import { useTranslation } from 'react-i18next';
 
