@@ -49,19 +49,30 @@ export default function SplashScreen({ onComplete }: SplashScreenProps) {
         }
       }
 
-      const timer = setTimeout(() => {
-        setIsCalculating(true);
-        // Simulate calculation duration
-        setTimeout(() => {
-          setScreenDimensions({ width: window.innerWidth, height: window.innerHeight });
-          // Show dimensions briefly before completing
+      const currentResolution = `${window.screen.width}x${window.screen.height}`;
+      const savedResolution = localStorage.getItem('app_screen_calculated_res');
+      
+      if (savedResolution === currentResolution) {
+        const timer = setTimeout(() => {
+          onComplete();
+        }, 1500); // Just wait a bit for the splash screen animation, then complete
+        return () => clearTimeout(timer);
+      } else {
+        const timer = setTimeout(() => {
+          setIsCalculating(true);
+          // Simulate calculation duration
           setTimeout(() => {
-            onComplete();
-          }, 1500);
-        }, 2000);
-      }, 1200); // Wait after logo appears before calculating
+            setScreenDimensions({ width: window.screen.width, height: window.screen.height });
+            localStorage.setItem('app_screen_calculated_res', currentResolution);
+            // Show dimensions briefly before completing
+            setTimeout(() => {
+              onComplete();
+            }, 1500);
+          }, 2000);
+        }, 1200); // Wait after logo appears before calculating
 
-      return () => clearTimeout(timer);
+        return () => clearTimeout(timer);
+      }
     }
     return undefined;
     // eslint-disable-next-line react-hooks/exhaustive-deps
