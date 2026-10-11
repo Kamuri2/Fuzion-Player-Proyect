@@ -244,14 +244,14 @@ export function setupIpc() {
     }
   })
 
-  ipcMain.handle('fs:readMusicFiles', async (_, folderPath: string) => {
-    if (!folderPath) return []
+  ipcMain.handle('fs:readMusicFiles', async (_, folderPath: string, existingSongs?: any[]) => {
+    if (!folderPath) return { songs: [], newCount: 0, modifiedCount: 0 }
     try {
-      const files = await getAudioFilesRecursive(folderPath)
-      return files
+      const result = await scanMusicFiles(folderPath, existingSongs)
+      return result
     } catch (err) {
       console.error('Error reading music files:', err)
-      return []
+      return { songs: [], newCount: 0, modifiedCount: 0 }
     }
   })
 
@@ -1113,155 +1113,221 @@ async function generateAndCacheCover(filePath: string): Promise<string | null> {
   }
 }
 
-async function getAudioFilesRecursive(dir: string): Promise<any[]> {
-  let results: any[] = []
+const AUDIO_EXTENSIONS = new Set([
+  '.mp3',
+  '.m4a',
+  '.wav',
+  '.flac',
+  '.aac',
+  '.ogg',
+  '.wma',
+  '.opus',
+  '.m4b',
+  '.alac',
+  '.aiff',
+  '.ape'
+])
+
+interface AudioFileEntry {
+  fullPath: string
+  name: string
+  dir: string
+}
+
+async function collectAudioFiles(dir: string): Promise<AudioFileEntry[]> {
+  let entries: AudioFileEntry[] = []
   try {
     const list = await fs.readdir(dir, { withFileTypes: true })
+    const subPromises: Promise<AudioFileEntry[]>[] = []
     for (const dirent of list) {
       const fullPath = path.join(dir, dirent.name)
       if (dirent.isDirectory()) {
-        const subFiles = await getAudioFilesRecursive(fullPath)
-        results = results.concat(subFiles)
-      } else {
-        const ext = path.extname(fullPath).toLowerCase()
-        if (
-          [
-            '.mp3',
-            '.m4a',
-            '.wav',
-            '.flac',
-            '.aac',
-            '.ogg',
-            '.wma',
-            '.opus',
-            '.m4b',
-            '.alac',
-            '.aiff',
-            '.ape'
-          ].includes(ext)
-        ) {
-          let title = dirent.name
-          let artist = 'Desconocido'
-          let album = 'Desconocido'
-          let trackNumber = 0
-          let hasLyrics = false
-          let year = ''
-          try {
-            const meta = await mm.parseFile(fullPath, { skipCovers: true, duration: false })
-            if (meta.common.title) title = meta.common.title
-            if (meta.common.albumartist) artist = meta.common.albumartist
-            else if (meta.common.artist) artist = meta.common.artist
-            if (meta.common.album) album = meta.common.album
-            if (meta.common.track.no) trackNumber = meta.common.track.no
-            year = meta.common.year?.toString() || meta.common.date || year
-
-            if (meta.common.lyrics && meta.common.lyrics.length > 0) {
-              hasLyrics = true
-            } else if (meta.native) {
-              for (const tagType in meta.native) {
-                const tags = meta.native[tagType]
-                if (Array.isArray(tags)) {
-                  const lyricsTag = tags.find(
-                    (t: any) =>
-                      t.id &&
-                      typeof t.id === 'string' &&
-                      (t.id.toLowerCase().includes('lyric') ||
-                        t.id.toLowerCase().includes('sylt') ||
-                        t.id.toLowerCase().includes('uslt'))
-                  )
-                  if (lyricsTag && lyricsTag.value) {
-                    hasLyrics = true
-                    break
-                  }
-                }
-              }
-            }
-          } catch (e) {}
-
-          if (
-            (!hasLyrics || album === 'Desconocido' || artist === 'Desconocido') &&
-            (ext === '.opus' || ext === '.ogg')
-          ) {
-            try {
-              const ffMeta = await extractFfmpegMetadata(fullPath)
-              if (ffMeta) {
-                if (ffMeta.title) title = ffMeta.title
-                if (ffMeta.artist) artist = ffMeta.artist
-                if (ffMeta.album) album = ffMeta.album
-                if (ffMeta.track) trackNumber = parseInt(ffMeta.track) || 0
-                if (ffMeta.lyrics) hasLyrics = true
-              }
-            } catch (e) {}
-          }
-
-          if (title === dirent.name) {
-            const nameWithoutExt = path.basename(dirent.name, ext)
-            if (nameWithoutExt.includes(' - ')) {
-              const parts = nameWithoutExt.split(' - ')
-              artist = parts[0].trim()
-              title = parts.slice(1).join(' - ').trim()
-            } else {
-              title = nameWithoutExt
-            }
-          }
-
-          const folderName = path.basename(dir)
-          if (
-            title &&
-            artist &&
-            title.toLowerCase() === folderName.toLowerCase() &&
-            artist.toLowerCase() !== folderName.toLowerCase()
-          ) {
-            const temp = title
-            title = artist
-            artist = temp
-          }
-
-          if (!hasLyrics) {
-            try {
-              const base = path.basename(fullPath, path.extname(fullPath))
-              const extensions = ['.lrc', '.txt', '.srt', '.vtt']
-              for (const ext of extensions) {
-                const extPath = path.join(dir, base + ext)
-                try {
-                  const stat = await fs.stat(extPath)
-                  if (stat.isFile()) {
-                    hasLyrics = true
-                    break
-                  }
-                } catch (e) {}
-              }
-            } catch (e) {}
-          }
-
-          let thumbUrl: string | null = null
-          try {
-            thumbUrl = await generateAndCacheCover(fullPath)
-          } catch (e) {}
-
-          results.push({
-            id: generateId(fullPath),
-            uri:
-              'file:///' +
-              encodeURI(fullPath.replace(/\\/g, '/')).replace(/#/g, '%23').replace(/\?/g, '%3F'),
-            filename: dirent.name,
-            title,
-            artist,
-            album,
-            trackNumber,
-            year,
-            folder: folderName,
-            path: fullPath,
-            hasLyrics,
-            cover: thumbUrl
-          })
+        subPromises.push(collectAudioFiles(fullPath))
+      } else if (dirent.isFile()) {
+        const ext = path.extname(dirent.name).toLowerCase()
+        if (AUDIO_EXTENSIONS.has(ext)) {
+          entries.push({ fullPath, name: dirent.name, dir })
         }
       }
     }
+    if (subPromises.length > 0) {
+      const subResults = await Promise.all(subPromises)
+      for (const sub of subResults) {
+        entries = entries.concat(sub)
+      }
+    }
   } catch (e) {
-    console.error('Error traversing directory', dir, e)
+    console.error('Error scanning dir:', dir, e)
   }
-  return results
+  return entries
+}
+
+async function parseSongFile(
+  fullPath: string,
+  fileName: string,
+  dir: string,
+  stat: any
+): Promise<any> {
+  const ext = path.extname(fullPath).toLowerCase()
+  let title = fileName
+  let artist = 'Desconocido'
+  let album = 'Desconocido'
+  let trackNumber = 0
+  let hasLyrics = false
+  let year = ''
+  try {
+    const meta = await mm.parseFile(fullPath, { skipCovers: true, duration: false })
+    if (meta.common.title) title = meta.common.title
+    if (meta.common.albumartist) artist = meta.common.albumartist
+    else if (meta.common.artist) artist = meta.common.artist
+    if (meta.common.album) album = meta.common.album
+    if (meta.common.track.no) trackNumber = meta.common.track.no
+    year = meta.common.year?.toString() || meta.common.date || year
+
+    if (meta.common.lyrics && meta.common.lyrics.length > 0) {
+      hasLyrics = true
+    } else if (meta.native) {
+      for (const tagType in meta.native) {
+        const tags = meta.native[tagType]
+        if (Array.isArray(tags)) {
+          const lyricsTag = tags.find(
+            (t: any) =>
+              t.id &&
+              typeof t.id === 'string' &&
+              (t.id.toLowerCase().includes('lyric') ||
+                t.id.toLowerCase().includes('sylt') ||
+                t.id.toLowerCase().includes('uslt'))
+          )
+          if (lyricsTag && lyricsTag.value) {
+            hasLyrics = true
+            break
+          }
+        }
+      }
+    }
+  } catch (e) {}
+
+  if (
+    (!hasLyrics || album === 'Desconocido' || artist === 'Desconocido') &&
+    (ext === '.opus' || ext === '.ogg')
+  ) {
+    try {
+      const ffMeta = await extractFfmpegMetadata(fullPath)
+      if (ffMeta) {
+        if (ffMeta.title) title = ffMeta.title
+        if (ffMeta.artist) artist = ffMeta.artist
+        if (ffMeta.album) album = ffMeta.album
+        if (ffMeta.track) trackNumber = parseInt(ffMeta.track) || 0
+        if (ffMeta.lyrics) hasLyrics = true
+      }
+    } catch (e) {}
+  }
+
+  if (title === fileName) {
+    const nameWithoutExt = path.basename(fileName, ext)
+    if (nameWithoutExt.includes(' - ')) {
+      const parts = nameWithoutExt.split(' - ')
+      artist = parts[0].trim()
+      title = parts.slice(1).join(' - ').trim()
+    } else {
+      title = nameWithoutExt
+    }
+  }
+
+  const folderName = path.basename(dir)
+  if (
+    title &&
+    artist &&
+    title.toLowerCase() === folderName.toLowerCase() &&
+    artist.toLowerCase() !== folderName.toLowerCase()
+  ) {
+    const temp = title
+    title = artist
+    artist = temp
+  }
+
+  if (!hasLyrics) {
+    try {
+      const base = path.basename(fullPath, path.extname(fullPath))
+      const extensions = ['.lrc', '.txt', '.srt', '.vtt']
+      for (const e of extensions) {
+        const extPath = path.join(dir, base + e)
+        try {
+          const statLrc = await fs.stat(extPath)
+          if (statLrc.isFile()) {
+            hasLyrics = true
+            break
+          }
+        } catch (e) {}
+      }
+    } catch (e) {}
+  }
+
+  let thumbUrl: string | null = null
+  try {
+    thumbUrl = await generateAndCacheCover(fullPath)
+  } catch (e) {}
+
+  return {
+    id: generateId(fullPath),
+    uri:
+      'file:///' +
+      encodeURI(fullPath.replace(/\\/g, '/')).replace(/#/g, '%23').replace(/\?/g, '%3F'),
+    filename: fileName,
+    title,
+    artist,
+    album,
+    trackNumber,
+    year,
+    folder: folderName,
+    path: fullPath,
+    hasLyrics,
+    cover: thumbUrl,
+    mtime: stat ? stat.mtimeMs : Date.now()
+  }
+}
+
+async function scanMusicFiles(
+  folderPath: string,
+  existingSongs?: any[]
+): Promise<{ songs: any[]; newCount: number; modifiedCount: number }> {
+  const existingMap = new Map<string, any>()
+  if (Array.isArray(existingSongs)) {
+    for (const s of existingSongs) {
+      if (s && s.path) {
+        existingMap.set(path.normalize(s.path).toLowerCase(), s)
+      }
+    }
+  }
+
+  const fileEntries = await collectAudioFiles(folderPath)
+  const results: any[] = []
+  let newCount = 0
+  let modifiedCount = 0
+
+  for (const entry of fileEntries) {
+    const norm = path.normalize(entry.fullPath).toLowerCase()
+    const existing = existingMap.get(norm)
+
+    if (existing) {
+      // Existing song: keep it instantly without any slow re-parsing!
+      results.push(existing)
+    } else {
+      // New file added to the folder!
+      try {
+        const stat = await fs.stat(entry.fullPath).catch(() => null)
+        const parsed = await parseSongFile(entry.fullPath, entry.name, entry.dir, stat)
+        if (parsed) {
+          results.push(parsed)
+          newCount++
+        }
+      } catch (err) {
+        console.error('Error parsing new audio file', entry.fullPath, err)
+      }
+    }
+  }
+
+  return { songs: results, newCount, modifiedCount }
 }
 
 function generateId(filePath: string): string {

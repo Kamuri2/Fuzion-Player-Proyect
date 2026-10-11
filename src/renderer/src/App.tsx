@@ -25,7 +25,7 @@ import { useTheme } from './context/ThemeContext';
 import { Music } from 'lucide-react';
 
 function AppContent() {
-  const { isPlayerOpen, currentSong, toastMessage, isScanning } = useAudio();
+  const { isPlayerOpen, currentSong, toastMessage, isScanning, songs } = useAudio();
   const { albumZenMode, isZenLoading } = useTheme();
   const { i18n, t } = useTranslation();
   const [showSplash, setShowSplash] = useState(true);
@@ -61,7 +61,7 @@ function AppContent() {
       <AnimatePresence>
         {showSplash && <SplashScreen onComplete={() => setShowSplash(false)} />}
         
-        {isScanning && (
+        {isScanning && (!songs || songs.length === 0) && (
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}

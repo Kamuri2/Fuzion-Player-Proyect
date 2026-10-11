@@ -1,10 +1,12 @@
 {
   "sidebar": {
     "home": "Home",
+    "folders": "Folders",
     "playlists": "Playlists",
-    "artists": "Artists",
     "albums": "Albums",
-    "settings": "Settings"
+    "artists": "Artists",
+    "settings": "Settings",
+    "favorites": "Your favorites"
   },
   "settings": {
     "title": "Settings",
@@ -16,6 +18,7 @@
     "particles": "Particle Effects",
     "fonts": "Typography (Google Fonts)",
     "systemFont": "System Font (Default)",
+    "systemDefault": "System default",
     "customFont": "Custom",
     "processingFolder": "Processing folder, please wait a few seconds...",
     "reset": "Reset",
@@ -62,6 +65,7 @@
     "fullMode": "Compact Mode",
     "fullModeDesc": "Enable the compact desktop layout for the player with sidebars.",
     "scanCompleteNew": "Scan complete. {{count}} new songs found.",
+    "scanCompleteOne": "Scan complete. 1 new song found.",
     "scanCompleteNoNew": "Scan complete. No new songs found.",
     "albumMode": "Album Mode",
     "classicMode": "Classic Playback Mode",
@@ -69,8 +73,7 @@
     "reduceAnimations": "Reduce Animations",
     "reduceAnimationsDesc": "Disables entry and exit effects, disc glare, and other heavy animations.",
     "hideRouletteMode": "Hide Roulette Mode",
-    "hideRouletteModeDesc": "Completely disables the roulette-style visualizer.",
-    "translationLanguage": "Translation"
+    "hideRouletteModeDesc": "Completely disables the roulette-style visualizer."
   },
   "home": {
     "welcome": "Welcome back",
@@ -105,17 +108,6 @@
     "neon": "Neon",
     "mono": "Monochrome"
   },
-  "player": {
-    "lyricsNotAvailable": "Lyrics not available",
-    "queue": "Next in queue",
-    "addToPlaylist": "Add to Playlist",
-    "createPlaylist": "Create Playlist",
-    "playlistName": "Playlist Name",
-    "cancel": "Cancel",
-    "create": "Create",
-    "like": "Like",
-    "dislike": "Dislike (Skip)"
-  },
   "playlists": {
     "title": "Your Playlists",
     "create": "Create Playlist",
@@ -129,6 +121,7 @@
     "search": "Search playlists...",
     "edit": "Edit Playlist",
     "delete": "Delete Playlist",
+    "removeFromPlaylist": "Remove from playlist",
     "name": "Name",
     "description": "Description (Optional)",
     "preview": "Preview",
@@ -153,6 +146,11 @@
     "search": "Search artists...",
     "unknown": "Unknown Artist"
   },
+  "artist": {
+    "about": "About the artist",
+    "loading": "Searching information…",
+    "noInfo": "No information found for this artist."
+  },
   "albums": {
     "title": "Albums",
     "search": "Search albums...",
@@ -160,13 +158,6 @@
   },
   "folders": {
     "title": "Folder"
-  },
-  "sidebar": {
-    "home": "Home",
-    "folders": "Folders",
-    "playlists": "Playlists",
-    "albums": "Albums",
-    "artists": "Artists"
   },
   "detail": {
     "unknown": "Unknown",
@@ -190,9 +181,26 @@
     "origin": "Origin",
     "release": "Release",
     "totalDuration": "Total duration",
-    "tracklist": "Tracklist"
+    "tracklist": "Tracklist",
+    "sides": "Sides",
+    "linerNotes": "Liner Notes",
+    "closeBooklet": "Close booklet and reveal turntable",
+    "translateBio": "Translate biography",
+    "viewOriginal": "View original",
+    "translating": "Translating...",
+    "bioAlreadySameLang": "The biography is already in your language",
+    "bioTranslateError": "Could not translate biography",
+    "isInfoCorrect": "Is the information correct?",
+    "retry": "Retry",
+    "retryBioTitle": "Is the information correct?",
+    "retryBioDesc": "If the biography doesn't match this artist or is inaccurate, you can retry searching or enter an alternative name:",
+    "retryBioPlaceholder": "Artist name or search term...",
+    "searchingBio": "Searching biography...",
+    "bioNotFound": "No information found for this artist",
+    "bioUpdated": "Artist information updated"
   },
   "player": {
+    "nowPlaying": "Now Playing",
     "queueRemaining": "songs remaining",
     "lyricsNotAvailable": "Lyrics not available",
     "queue": "Next in queue",
@@ -202,6 +210,8 @@
     "cancel": "Cancel",
     "create": "Create",
     "back": "Back",
+    "like": "Like",
+    "dislike": "Dislike (Skip)",
     "playingFrom": "Playing from",
     "translationBlocked": "TRANSLATION SERVICE IS CURRENTLY UNAVAILABLE",
     "translationRestored": "SERVICE RESTORED, THANK YOU FOR YOUR PATIENCE",
@@ -218,7 +228,6 @@
     "saveTranslationSuccess": "Translation saved successfully",
     "saveTranslationError": "Error saving translation",
     "save": "Save",
-    "cancel": "Cancel",
     "playNext": "Play next",
     "removeFromQueue": "Remove from queue",
     "nextInQueue": "Next in queue",

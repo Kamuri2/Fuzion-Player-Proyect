@@ -482,9 +482,17 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
   const loadSongsFromUri = async (folderPath?: string, _isBackgroundLoad?: boolean) => {
     let targetFolder: string | null | undefined = folderPath;
+    const currentFolder = localStorage.getItem('@music_folder');
+    let isFolderChange = false;
+
     if (!targetFolder) {
       targetFolder = await window.api.openDirectory();
       if (targetFolder) {
+        const normTarget = targetFolder.replace(/[/\\]+/g, '/').toLowerCase().replace(/\/$/, '');
+        const normCurrent = currentFolder ? currentFolder.replace(/[/\\]+/g, '/').toLowerCase().replace(/\/$/, '') : '';
+        if (normCurrent && normTarget !== normCurrent) {
+          isFolderChange = true;
+        }
         localStorage.setItem('@music_folder', targetFolder);
       } else {
         return;
@@ -493,11 +501,29 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
     setIsScanning(true);
     try {
-      const nativeSongs = await window.api.readMusicFiles(targetFolder);
+      let existingList: Song[] = [];
+      if (!isFolderChange) {
+        existingList = songs && songs.length > 0 ? songs : [];
+        if (existingList.length === 0) {
+          try {
+            const oldCached = localStorage.getItem('@cached_songs');
+            if (oldCached) {
+              const parsed = JSON.parse(oldCached);
+              if (Array.isArray(parsed)) existingList = parsed;
+            }
+          } catch { }
+        }
+      }
+
+      const scanResult = await window.api.readMusicFiles(targetFolder, existingList);
+      const nativeSongs: any[] = Array.isArray(scanResult) ? scanResult : (scanResult?.songs || []);
+      const newCount: number = Array.isArray(scanResult)
+        ? Math.max(0, nativeSongs.length - existingList.length)
+        : (typeof scanResult?.newCount === 'number' ? scanResult.newCount : Math.max(0, nativeSongs.length - existingList.length));
 
       const formattedSongs: Song[] = nativeSongs.map((asset: any) => ({
         ...asset,
-        duration: 0,
+        duration: asset.duration || 0,
       }));
 
       formattedSongs.sort((a, b) => {
@@ -515,13 +541,11 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
       // Build an oldId→path map from the previously cached songs
       const oldIdToPath: Record<string, string> = {};
-      let previousCount = 0;
       try {
         const oldCached = localStorage.getItem('@cached_songs');
         if (oldCached) {
           const oldSongs = JSON.parse(oldCached);
           if (Array.isArray(oldSongs)) {
-            previousCount = oldSongs.length;
             for (const os of oldSongs) {
               if (os.id && os.path) {
                 oldIdToPath[os.id] = os.path;
@@ -561,9 +585,10 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         localStorage.setItem('@cached_songs', JSON.stringify(formattedSongs));
       } catch (e) { }
 
-      const newCount = Math.max(0, formattedSongs.length - previousCount);
-      if (!_isBackgroundLoad || newCount > 0) {
-        if (newCount > 0) {
+      if (!_isBackgroundLoad) {
+        if (newCount === 1) {
+          showToast(t('settings.scanCompleteOne', 'Escaneo completo. 1 canción nueva encontrada.'));
+        } else if (newCount > 1) {
           showToast(t('settings.scanCompleteNew', 'Escaneo completo. {{count}} canciones nuevas encontradas.', { count: newCount }));
         } else {
           showToast(t('settings.scanCompleteNoNew', 'Escaneo completo. No se encontraron canciones nuevas.'));
@@ -761,7 +786,14 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       setQueueLength(tracks.length);
       setQueuePosition(currentQueueIndex.current + 1);
     } else {
-      currentQueueIndex.current = queueRef.current.findIndex(s => s.id === song.id);
+      let idx = queueRef.current.findIndex(s => s === song);
+      if (idx === -1 && song.queueId) {
+        idx = queueRef.current.findIndex(s => s.queueId === song.queueId);
+      }
+      if (idx === -1) {
+        idx = queueRef.current.findIndex(s => s.id === song.id);
+      }
+      currentQueueIndex.current = Math.max(0, idx);
       setQueuePosition(currentQueueIndex.current + 1);
     }
 

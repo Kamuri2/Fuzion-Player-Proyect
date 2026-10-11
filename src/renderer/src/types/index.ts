@@ -17,6 +17,7 @@ export interface Song {
   year?: string;
   isManualQueue?: boolean;
   queueId?: string;
+  mtime?: number;
 }
 
 export interface Metadata {

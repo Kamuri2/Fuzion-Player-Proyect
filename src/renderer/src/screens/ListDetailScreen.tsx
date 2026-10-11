@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAudio } from '../context/AudioContext';
 import { useTheme } from '../context/ThemeContext';
-import { ArrowLeft, Play, Shuffle, Activity, Clock, ExternalLink, Music, Trash2, X } from 'lucide-react';
+import { ArrowLeft, Play, Shuffle, Activity, Clock, ExternalLink, Music, Trash2, X, Languages, RotateCcw } from 'lucide-react';
 import CoverImage from '../components/CoverImage';
 import { Virtuoso } from 'react-virtuoso';
 import { motion } from 'framer-motion';
@@ -72,7 +72,7 @@ const SongListItem = React.memo(({ item, isPlaying, onPress, index, hideCover, o
 export default function ListDetailScreen() {
   const { type, id } = useParams();
   const navigate = useNavigate();
-  const { albums, folders, artists, playlists, songs, playSound, playWithShuffle, currentSong, removeSongFromPlaylist } = useAudio();
+  const { albums, folders, artists, playlists, songs, playSound, playWithShuffle, currentSong, removeSongFromPlaylist, showToast } = useAudio();
   const { colors } = useTheme();
   const { t, i18n } = useTranslation();
 
@@ -85,27 +85,155 @@ export default function ListDetailScreen() {
   const [artistDetails, setArtistDetails] = useState<{ bio: string | null, followers: number | null, origin: string | null, fanart: string | null, isDeceased?: boolean | null } | null>(null);
   const [isAboutArtistOpen, setIsAboutArtistOpen] = useState(false);
   const [translatedBio, setTranslatedBio] = useState<string | null>(null);
+  const [isTranslatingBio, setIsTranslatingBio] = useState(false);
+  const [isBioTranslated, setIsBioTranslated] = useState(false);
+  const [isRetryModalOpen, setIsRetryModalOpen] = useState(false);
+  const [retrySearchTerm, setRetrySearchTerm] = useState('');
+  const [isFetchingBio, setIsFetchingBio] = useState(false);
 
   useEffect(() => {
-    let isMounted = true;
-    if (isAboutArtistOpen && artistDetails?.bio) {
-      const translateBio = async () => {
-        try {
-          const lines = artistDetails.bio!.split('\n');
-          const translatedLines = await (window as any).api.translateLyrics(`bio_${id}_${i18n.language}`, lines, i18n.language);
-          if (isMounted) {
-            setTranslatedBio(translatedLines && translatedLines.length > 0 ? translatedLines.join('\n') : artistDetails.bio);
-          }
-        } catch (e) {
-          if (isMounted) setTranslatedBio(artistDetails.bio);
-        }
-      };
-      translateBio();
-    } else {
-      setTranslatedBio(null);
+    setTranslatedBio(null);
+    setIsBioTranslated(false);
+    setIsTranslatingBio(false);
+  }, [id, i18n.language]);
+
+  const handleToggleTranslateBio = async () => {
+    if (!artistDetails?.bio) return;
+
+    if (isBioTranslated) {
+      setIsBioTranslated(false);
+      return;
     }
-    return () => { isMounted = false; };
-  }, [isAboutArtistOpen, artistDetails?.bio, i18n.language, id]);
+
+    if (translatedBio && !translatedBio.includes('SAME_LANGUAGE')) {
+      setIsBioTranslated(true);
+      return;
+    }
+
+    setIsTranslatingBio(true);
+    try {
+      const lines = artistDetails.bio.split('\n');
+      const translatedLines = await (window as any).api.translateLyrics(`bio_${id}_${i18n.language}`, lines, i18n.language);
+
+      const isSame =
+        !translatedLines ||
+        translatedLines.length === 0 ||
+        translatedLines.some((l: string) => typeof l === 'string' && l.includes('SAME_LANGUAGE'));
+
+      if (isSame) {
+        showToast(t('detail.bioAlreadySameLang', 'La biografía ya está en tu idioma'));
+        setIsBioTranslated(false);
+      } else {
+        const joined = translatedLines.join('\n');
+        setTranslatedBio(joined);
+        setIsBioTranslated(true);
+      }
+    } catch (e) {
+      showToast(t('detail.bioTranslateError', 'No se pudo traducir la biografía'), 'error');
+    } finally {
+      setIsTranslatingBio(false);
+    }
+  };
+
+  const displayedBio =
+    isBioTranslated && translatedBio && !translatedBio.includes('SAME_LANGUAGE')
+      ? translatedBio
+      : artistDetails?.bio;
+
+  const fetchBioForQuery = async (queryName: string, baseArtistName: string, force: boolean = false) => {
+    setIsFetchingBio(true);
+    setTranslatedBio(null);
+    setIsBioTranslated(false);
+
+    const cacheKey = `artist_details_cache_${baseArtistName.toLowerCase()}`;
+    if (force) {
+      localStorage.removeItem(cacheKey);
+      showToast(t('detail.searchingBio', 'Buscando biografía...'));
+    }
+
+    try {
+      const adbRes = await fetch(`https://www.theaudiodb.com/api/v1/json/2/search.php?s=${encodeURIComponent(queryName)}`);
+      const adbData = await adbRes.json();
+      let details: any = null;
+      if (adbData.artists && adbData.artists.length > 0) {
+        const exactArtist = adbData.artists.find((a: any) => a.strArtist.toLowerCase() === queryName.toLowerCase());
+        const artist = exactArtist || adbData.artists[0];
+        details = {
+          bio: artist.strBiographyES || artist.strBiography || null,
+          followers: parseInt(artist.intFollowers) || null,
+          origin: artist.strCountry || null,
+          fanart: artist.strArtistFanart || artist.strArtistThumb || null,
+          isDeceased: artist.intDiedYear !== null && artist.intDiedYear !== "0" && artist.intDiedYear !== ""
+        };
+      }
+
+      if (!details?.bio) {
+        let wikiBio = null;
+        let wikiIsDeceased = false;
+        
+        const hosts = Array.from(new Set([(i18n.language || 'en').slice(0, 2), 'en']));
+        const capQuery = queryName.split(' ').map((w: string) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(' ');
+        const rawNames = [
+          queryName, `${queryName} (band)`, `${queryName} (banda)`, `${queryName} (singer)`, `${queryName} (cantante)`, `${queryName} (musician)`, `${queryName} (músico)`, `${queryName} (DJ)`,
+          capQuery, `${capQuery} (band)`, `${capQuery} (banda)`, `${capQuery} (singer)`, `${capQuery} (cantante)`, `${capQuery} (musician)`, `${capQuery} (músico)`, `${capQuery} (DJ)`
+        ];
+        const names = Array.from(new Set(rawNames));
+        
+        outerLoop:
+        for (const host of hosts) {
+          for (const name of names) {
+            try {
+              const r = await fetch(`https://${host}.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(name.replace(/ /g, '_'))}`);
+              if (!r.ok) continue;
+              const d = await r.json();
+              const text = `${d.description || ''} ${(d.extract || '').slice(0, 240)}`;
+              if (d.type !== 'standard' || !d.extract || !/band|banda|singer|cantante|musician|músic|rapper|rapero|composer|compositor|producer|productor|group|grupo|duo|dúo|songwriter|\bDJ\b|artist|artista/i.test(text)) continue;
+              
+              wikiBio = d.extract;
+              const fullTextToTest = (wikiBio || '') + ' ' + (d.description || '');
+              if (fullTextToTest) {
+                const isBand = /\b(banda|grupo|band|group|duo|trio)\b/i.test(fullTextToTest);
+                const deathRegex = /\b(falleció|murió|fallecido|fallecida|asesinado|asesinada|suicidó|found dead|passed away|died on|cause of death)\b/i;
+                const dateRegex = /\b(?:18|19|20)\d{2}\s*[-–]\s*(?:18|19|20)\d{2}\b/;
+                if (deathRegex.test(fullTextToTest) || (!isBand && dateRegex.test(fullTextToTest))) {
+                  wikiIsDeceased = true;
+                }
+              }
+              break outerLoop;
+            } catch (e) { }
+          }
+        }
+
+        if (wikiBio) {
+          const finalDetails = {
+            bio: wikiBio,
+            followers: details?.followers ?? null,
+            origin: details?.origin ?? null,
+            fanart: details?.fanart ?? null,
+            isDeceased: details?.isDeceased ?? wikiIsDeceased
+          };
+          setArtistDetails(finalDetails);
+          localStorage.setItem(cacheKey, JSON.stringify(finalDetails));
+          if (force) showToast(t('detail.bioUpdated', 'Información del artista actualizada'));
+        } else if (details) {
+          setArtistDetails(details);
+          localStorage.setItem(cacheKey, JSON.stringify(details));
+          if (force) showToast(t('detail.bioUpdated', 'Información del artista actualizada'));
+        } else {
+          setArtistDetails(null);
+          if (force) showToast(t('detail.bioNotFound', 'No se encontró información para este artista'), 'error');
+        }
+      } else {
+        setArtistDetails(details);
+        localStorage.setItem(cacheKey, JSON.stringify(details));
+        if (force) showToast(t('detail.bioUpdated', 'Información del artista actualizada'));
+      }
+    } catch (e) {
+      if (force) showToast(t('detail.bioNotFound', 'No se encontró información para este artista'), 'error');
+    } finally {
+      setIsFetchingBio(false);
+    }
+  };
 
   useEffect(() => {
     if (type === 'artist' && id) {
@@ -118,86 +246,21 @@ export default function ListDetailScreen() {
 
       if (artistData && artistData.name !== 'Desconocido') {
         const artistName = artistData.name;
+        setRetrySearchTerm(artistName);
         
-        const fetchBio = async () => {
+        const cacheKey = `artist_details_cache_${artistName.toLowerCase()}`;
+        const cached = localStorage.getItem(cacheKey);
+        if (cached && cached !== 'null') {
           try {
-            const adbRes = await fetch(`https://www.theaudiodb.com/api/v1/json/2/search.php?s=${encodeURIComponent(artistName)}`);
-            const adbData = await adbRes.json();
-            let details: any = null;
-            if (adbData.artists && adbData.artists.length > 0) {
-              const exactArtist = adbData.artists.find((a: any) => a.strArtist.toLowerCase() === artistName.toLowerCase());
-              const artist = exactArtist || adbData.artists[0];
-              details = {
-                bio: artist.strBiographyES || artist.strBiography || null,
-                followers: parseInt(artist.intFollowers) || null,
-                origin: artist.strCountry || null,
-                fanart: artist.strArtistFanart || artist.strArtistThumb || null,
-                isDeceased: artist.intDiedYear !== null && artist.intDiedYear !== "0" && artist.intDiedYear !== ""
-              };
+            const parsed = JSON.parse(cached);
+            if (parsed && Object.keys(parsed).length > 0 && parsed.bio) {
+              setArtistDetails(parsed);
+              return;
             }
-
-            if (!details?.bio) {
-              // Intento directo en español
-              let res = await fetch(`https://es.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(artistName)}`);
-              let data = await res.json();
-              
-              if (data.type === 'disambiguation' || data.title === 'Not found' || data.type === 'https://mediawiki.org/wiki/HyperSwitch/errors/not_found') {
-                const searchRes = await fetch(`https://es.wikipedia.org/w/api.php?action=query&list=search&srsearch=${encodeURIComponent(artistName + ' cantante')}&utf8=&format=json&origin=*`);
-                const searchData = await searchRes.json();
-                if (searchData.query && searchData.query.search.length > 0) {
-                  const bestTitle = searchData.query.search[0].title;
-                  res = await fetch(`https://es.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(bestTitle)}`);
-                  data = await res.json();
-                }
-              }
-
-              let wikiBio = null;
-              if (data && data.extract && data.type !== 'disambiguation' && data.type !== 'https://mediawiki.org/wiki/HyperSwitch/errors/not_found') {
-                wikiBio = data.extract;
-              } else {
-                // Intento en inglés como respaldo
-                const enRes = await fetch(`https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(artistName)}`);
-                const enData = await enRes.json();
-                if (enData && enData.extract && enData.type !== 'disambiguation' && enData.type !== 'https://mediawiki.org/wiki/HyperSwitch/errors/not_found') {
-                  wikiBio = enData.extract;
-                  data = enData;
-                }
-              }
-
-              let wikiIsDeceased = false;
-              let fullTextToTest = (wikiBio || '') + ' ' + (data?.description || '');
-              if (fullTextToTest) {
-                const isBand = /\b(banda|grupo|band|group|duo|trio)\b/i.test(fullTextToTest);
-                const deathRegex = /\b(falleció|murió|fallecido|fallecida|asesinado|asesinada|suicidó|found dead|passed away|died on|cause of death)\b/i;
-                const dateRegex = /\b(?:18|19|20)\d{2}\s*[-–]\s*(?:18|19|20)\d{2}\b/;
-                
-                if (deathRegex.test(fullTextToTest) || (!isBand && dateRegex.test(fullTextToTest))) {
-                  wikiIsDeceased = true;
-                }
-              }
-
-              if (wikiBio) {
-                setArtistDetails(prev => ({
-                  bio: wikiBio,
-                  followers: prev?.followers ?? details?.followers ?? null,
-                  origin: prev?.origin ?? details?.origin ?? null,
-                  fanart: prev?.fanart ?? details?.fanart ?? null,
-                  isDeceased: prev?.isDeceased ?? details?.isDeceased ?? wikiIsDeceased
-                }));
-              } else if (details) {
-                setArtistDetails(details);
-              } else {
-                setArtistDetails(null);
-              }
-            } else {
-              setArtistDetails(details);
-            }
-          } catch (e) {
-            setArtistDetails(null);
-          }
-        };
-
-        fetchBio();
+          } catch(e) {}
+        }
+        
+        fetchBioForQuery(artistName, artistName, false);
       } else {
         setTimeout(() => setArtistDetails(null), 0);
       }
@@ -328,7 +391,7 @@ export default function ListDetailScreen() {
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         transition={{ delay: 0.1, duration: 0.5 }}
-        className="absolute top-0 left-0 right-0 h-[600px] -z-10 overflow-hidden select-none pointer-events-none"
+        className="absolute top-0 left-0 right-0 h-[70vh] min-h-[500px] -z-10 overflow-hidden select-none pointer-events-none"
       >
         <CoverImage
           type={type as any}
@@ -341,7 +404,7 @@ export default function ListDetailScreen() {
         />
         <div 
           className="absolute inset-0"
-          style={{ background: `linear-gradient(to bottom, transparent 0%, ${colors.background} 100%)` }}
+          style={{ background: `linear-gradient(to bottom, transparent 0%, transparent 40%, ${colors.background} 95%, ${colors.background} 100%)` }}
         />
       </motion.div>
 
@@ -418,10 +481,36 @@ export default function ListDetailScreen() {
             <div className="mt-8 flex flex-col gap-4">
               {/* Mobile bio (hidden on large screens) */}
               {artistDetails?.bio && (
-                <div className="lg:hidden bg-black/10 dark:bg-white/5 p-4 rounded-xl border border-black/5 dark:border-white/5 mb-4 cursor-pointer" onClick={() => setIsAboutArtistOpen(true)}>
-                  <h3 className="font-bold text-sm uppercase tracking-wider mb-2 opacity-70" style={{ color: colors.text }}>{t('detail.about')}</h3>
-                  <p className="text-sm opacity-90 leading-relaxed line-clamp-3" style={{ color: colors.text }}>
-                    {translatedBio || artistDetails.bio}
+                <div className="lg:hidden bg-black/10 dark:bg-white/5 p-4 rounded-xl border border-black/5 dark:border-white/5 mb-4">
+                  <div className="flex items-center justify-between mb-2 flex-wrap gap-2">
+                    <h3 className="font-bold text-sm uppercase tracking-wider opacity-70" style={{ color: colors.text }}>{t('detail.about')}</h3>
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setRetrySearchTerm(title || (id ? artists[id]?.name : '') || '');
+                          setIsRetryModalOpen(true);
+                        }}
+                        disabled={isFetchingBio}
+                        className="flex items-center gap-1 px-2.5 py-1 rounded-full border border-white/20 text-xs font-medium hover:bg-white/10 transition-colors cursor-pointer"
+                        style={{ color: colors.text }}
+                      >
+                        <RotateCcw size={12} className={isFetchingBio ? 'animate-spin' : ''} />
+                        {t('detail.retry', 'Reintentar')}
+                      </button>
+                      <button
+                        onClick={(e) => { e.stopPropagation(); handleToggleTranslateBio(); }}
+                        disabled={isTranslatingBio || isFetchingBio}
+                        className="flex items-center gap-1.5 px-3 py-1 rounded-full border border-white/20 text-xs font-bold hover:bg-white/10 transition-colors cursor-pointer"
+                        style={{ color: colors.text }}
+                      >
+                        <Languages size={14} className={isTranslatingBio ? 'animate-spin' : ''} />
+                        {isTranslatingBio ? t('detail.translating', 'Traduciendo...') : isBioTranslated ? t('detail.viewOriginal', 'Ver original') : t('detail.translateBio', 'Traducir')}
+                      </button>
+                    </div>
+                  </div>
+                  <p className="text-sm opacity-90 leading-relaxed line-clamp-3 cursor-pointer" onClick={() => setIsAboutArtistOpen(true)} style={{ color: colors.text }}>
+                    {displayedBio}
                   </p>
                 </div>
               )}
@@ -574,11 +663,11 @@ export default function ListDetailScreen() {
             <X size={24} />
           </button>
           
-          <div className="w-full h-[60vh] relative">
+          <div className="w-full h-[90vh] lg:h-[100vh] relative">
             <img src={artistDetails?.fanart || cover || ''} alt={title} className="w-full h-full object-cover object-top" />
             <div 
               className="absolute inset-0 opacity-100" 
-              style={{ background: `linear-gradient(to top, ${colors.background} -5%, transparent 100%)` }} 
+              style={{ background: `linear-gradient(to bottom, transparent 0%, transparent 65%, ${colors.background} 98%, ${colors.background} 100%)` }} 
             />
             
             {artistDetails?.isDeceased && (
@@ -626,12 +715,108 @@ export default function ListDetailScreen() {
             </div>
             
             <div className="lg:w-2/3">
+              {artistDetails?.bio && (
+                <div className="flex items-center justify-between flex-wrap gap-4 mb-6">
+                  <div className="flex items-center gap-3">
+                    <span className="text-xs sm:text-sm font-medium opacity-70" style={{ color: colors.text }}>
+                      {t('detail.isInfoCorrect', '¿Es correcta la información?')}
+                    </span>
+                    <button
+                      onClick={() => {
+                        setRetrySearchTerm(title || (id ? artists[id]?.name : '') || '');
+                        setIsRetryModalOpen(true);
+                      }}
+                      disabled={isFetchingBio}
+                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-white/20 hover:bg-white/10 transition-colors text-xs font-bold cursor-pointer"
+                      style={{ color: colors.text }}
+                    >
+                      <RotateCcw size={13} className={isFetchingBio ? 'animate-spin' : ''} />
+                      {t('detail.retry', 'Reintentar')}
+                    </button>
+                  </div>
+
+                  <button
+                    onClick={handleToggleTranslateBio}
+                    disabled={isTranslatingBio || isFetchingBio}
+                    className="flex items-center gap-2 px-5 py-2.5 rounded-full border border-white/20 hover:bg-white/10 transition-colors text-sm font-bold backdrop-blur-md cursor-pointer ml-auto"
+                    style={{ color: colors.text }}
+                  >
+                    <Languages size={18} className={isTranslatingBio ? 'animate-spin' : ''} />
+                    {isTranslatingBio 
+                      ? t('detail.translating', 'Traduciendo...') 
+                      : isBioTranslated 
+                        ? t('detail.viewOriginal', 'Ver original') 
+                        : t('detail.translateBio', 'Traducir biografía')}
+                  </button>
+                </div>
+              )}
               <p className="text-lg leading-relaxed whitespace-pre-wrap font-medium opacity-90" style={{ color: colors.text }}>
-                {translatedBio || artistDetails?.bio}
+                {displayedBio}
               </p>
             </div>
           </div>
         </motion.div>
+      )}
+
+      {isRetryModalOpen && (
+        <div className="fixed inset-0 z-[120] flex items-center justify-center bg-black/70 backdrop-blur-md p-4 animate-in fade-in duration-200">
+          <div className="bg-[#18181b] border border-white/10 rounded-2xl w-full max-w-md p-6 shadow-2xl relative text-left">
+            <button
+              onClick={() => setIsRetryModalOpen(false)}
+              className="absolute top-4 right-4 p-2 bg-black/20 hover:bg-black/40 rounded-full text-white/70 hover:text-white transition-all cursor-pointer"
+            >
+              <X size={18} />
+            </button>
+
+            <h3 className="text-xl font-bold mb-2 text-white pr-8">
+              {t('detail.retryBioTitle', '¿Es correcta la información?')}
+            </h3>
+            <p className="text-zinc-400 mb-5 text-sm leading-relaxed">
+              {t('detail.retryBioDesc', 'Si la biografía no corresponde a este artista o tiene datos erróneos, puedes reintentar la búsqueda o escribir un nombre alternativo:')}
+            </p>
+
+            <div className="mb-6">
+              <label className="block text-xs uppercase tracking-wider font-bold text-zinc-400 mb-2">
+                {t('detail.artist', 'Artista')}
+              </label>
+              <input
+                type="text"
+                value={retrySearchTerm}
+                onChange={(e) => setRetrySearchTerm(e.target.value)}
+                placeholder={t('detail.retryBioPlaceholder', 'Nombre o término de búsqueda...')}
+                className="w-full bg-zinc-900 border border-white/10 rounded-xl px-4 py-2.5 text-white placeholder-zinc-500 focus:outline-none focus:border-white/30 text-sm"
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    setIsRetryModalOpen(false);
+                    const base = (id && artists[id]?.name) || title;
+                    fetchBioForQuery(retrySearchTerm, base, true);
+                  }
+                }}
+                autoFocus
+              />
+            </div>
+
+            <div className="flex justify-end gap-3">
+              <button
+                onClick={() => setIsRetryModalOpen(false)}
+                className="px-4 py-2 rounded-xl text-white/70 font-semibold hover:text-white hover:bg-white/10 transition-colors text-sm cursor-pointer"
+              >
+                {t('common.cancel', 'Cancelar')}
+              </button>
+              <button
+                onClick={() => {
+                  setIsRetryModalOpen(false);
+                  const base = (id && artists[id]?.name) || title;
+                  fetchBioForQuery(retrySearchTerm, base, true);
+                }}
+                className="flex items-center gap-2 px-5 py-2 rounded-xl bg-white text-black font-bold hover:bg-zinc-200 transition-all text-sm cursor-pointer shadow-lg"
+              >
+                <RotateCcw size={15} />
+                {t('detail.retry', 'Reintentar')}
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </motion.div>
   );

@@ -4,7 +4,7 @@ interface Window {
   api: {
     openDirectory: () => Promise<string | null>;
     openImageFile: () => Promise<string | null>;
-    readMusicFiles: (folderPath: string) => Promise<any[]>;
+    readMusicFiles: (folderPath: string, existingSongs?: any[]) => Promise<any>;
     getMetadata: (filePath: string) => Promise<any>;
     getCover: (filePath: string, hq?: boolean) => Promise<string | null>;
     getArtistImage: (artistName: string, sampleSongPath?: string) => Promise<string | null>;

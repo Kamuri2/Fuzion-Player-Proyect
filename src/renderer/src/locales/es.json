@@ -1,10 +1,12 @@
 {
   "sidebar": {
     "home": "Inicio",
-    "playlists": "Listas",
-    "artists": "Artistas",
+    "folders": "Carpetas",
+    "playlists": "Playlists",
     "albums": "Álbumes",
-    "settings": "Configuración"
+    "artists": "Artistas",
+    "settings": "Configuración",
+    "favorites": "Tus favoritos"
   },
   "settings": {
     "title": "Configuración",
@@ -16,6 +18,7 @@
     "particles": "Efectos de Partículas",
     "fonts": "Tipografía (Google Fonts)",
     "systemFont": "Fuente del Sistema (Predeterminada)",
+    "systemDefault": "Predeterminado del sistema",
     "customFont": "Personalizada",
     "processingFolder": "Procesando la carpeta, por favor espere unos segundos...",
     "reset": "Restablecer",
@@ -62,6 +65,7 @@
     "fullMode": "Modo Compacto",
     "fullModeDesc": "Habilitar el diseño de escritorio compacto para el reproductor con barras laterales.",
     "scanCompleteNew": "Escaneo completo. {{count}} canciones nuevas encontradas.",
+    "scanCompleteOne": "Escaneo completo. 1 canción nueva encontrada.",
     "scanCompleteNoNew": "Escaneo completo. No se encontraron canciones nuevas.",
     "albumMode": "Album Mode",
     "classicMode": "Modo de Reproducción Clásica",
@@ -104,17 +108,6 @@
     "neon": "Neón",
     "mono": "Monocromático"
   },
-  "player": {
-    "lyricsNotAvailable": "Letras no disponibles",
-    "queue": "Siguiente en la cola",
-    "addToPlaylist": "Añadir a la lista",
-    "createPlaylist": "Crear Lista",
-    "playlistName": "Nombre de la lista",
-    "cancel": "Cancelar",
-    "create": "Crear",
-    "like": "Me gusta",
-    "dislike": "No me gusta (Saltar)"
-  },
   "playlists": {
     "title": "Tus Listas",
     "create": "Crear Lista",
@@ -128,6 +121,7 @@
     "search": "Buscar listas...",
     "edit": "Editar Playlist",
     "delete": "Eliminar Playlist",
+    "removeFromPlaylist": "Eliminar de playlist",
     "name": "Nombre",
     "description": "Descripción (Opcional)",
     "preview": "Vista previa",
@@ -152,6 +146,11 @@
     "search": "Buscar artistas...",
     "unknown": "Artista Desconocido"
   },
+  "artist": {
+    "about": "Sobre el artista",
+    "loading": "Buscando información…",
+    "noInfo": "No se encontró información para este artista."
+  },
   "albums": {
     "title": "Álbumes",
     "search": "Buscar álbumes...",
@@ -159,13 +158,6 @@
   },
   "folders": {
     "title": "Carpeta"
-  },
-  "sidebar": {
-    "home": "Inicio",
-    "folders": "Carpetas",
-    "playlists": "Playlists",
-    "albums": "Albums",
-    "artists": "Artistas"
   },
   "detail": {
     "unknown": "Desconocido",
@@ -189,9 +181,26 @@
     "origin": "Origen",
     "release": "Lanzamiento",
     "totalDuration": "Duración total",
-    "tracklist": "Tracklist"
+    "tracklist": "Tracklist",
+    "sides": "Lados",
+    "linerNotes": "Liner Notes",
+    "closeBooklet": "Cerrar libreto y mostrar tocadiscos",
+    "translateBio": "Traducir biografía",
+    "viewOriginal": "Ver original",
+    "translating": "Traduciendo...",
+    "bioAlreadySameLang": "La biografía ya está en tu idioma",
+    "bioTranslateError": "No se pudo traducir la biografía",
+    "isInfoCorrect": "¿Es correcta la información?",
+    "retry": "Reintentar",
+    "retryBioTitle": "¿Es correcta la información?",
+    "retryBioDesc": "Si la biografía no corresponde a este artista o tiene datos erróneos, puedes reintentar la búsqueda o escribir un nombre alternativo:",
+    "retryBioPlaceholder": "Nombre o término de búsqueda...",
+    "searchingBio": "Buscando biografía...",
+    "bioNotFound": "No se encontró información para este artista",
+    "bioUpdated": "Información del artista actualizada"
   },
   "player": {
+    "nowPlaying": "Reproduciendo",
     "queueRemaining": "canciones restantes",
     "lyricsNotAvailable": "Letra no disponible",
     "queue": "Siguiente en la cola",
@@ -201,6 +210,8 @@
     "cancel": "Cancelar",
     "create": "Crear",
     "back": "Volver",
+    "like": "Me gusta",
+    "dislike": "No me gusta (Saltar)",
     "playingFrom": "Reproduciendo desde",
     "translationBlocked": "EL SERVICIO DE TRADUCCION NO ESTA DISPONIBLE EN ESTE MOMENTO",
     "translationRestored": "SERVICIO RESTABLECIDO NUEVAMENTE, GRACIAS POR LA ESPERA",
@@ -217,7 +228,6 @@
     "saveTranslationSuccess": "Traducción guardada exitosamente",
     "saveTranslationError": "Error al guardar la traducción",
     "save": "Guardar",
-    "cancel": "Cancelar",
     "playNext": "Añadir a continuación",
     "removeFromQueue": "Eliminar de la fila",
     "nextInQueue": "A continuación en la cola",

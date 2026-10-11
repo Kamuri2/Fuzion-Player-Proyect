@@ -7,7 +7,7 @@ import { ipcRenderer } from 'electron'
 const api = {
   openDirectory: () => ipcRenderer.invoke('dialog:openDirectory'),
   openImageFile: () => ipcRenderer.invoke('dialog:openImageFile'),
-  readMusicFiles: (folderPath: string) => ipcRenderer.invoke('fs:readMusicFiles', folderPath),
+  readMusicFiles: (folderPath: string, existingSongs?: any[]) => ipcRenderer.invoke('fs:readMusicFiles', folderPath, existingSongs),
   getMetadata: (filePath: string) => ipcRenderer.invoke('fs:getMetadata', filePath),
   getCover: (filePath: string, hq: boolean = true) => ipcRenderer.invoke('fs:getCover', filePath, hq),
   getArtistImage: (artistName: string, sampleSongPath?: string) => ipcRenderer.invoke('api:getArtistImage', artistName, sampleSongPath),
