@@ -8,6 +8,7 @@ import CoverImage from '../components/CoverImage';
 import { Virtuoso } from 'react-virtuoso';
 import SongContextMenu from '../components/SongContextMenu';
 import ArtistLinks from '../components/ArtistLinks';
+import SongTitleLinks from '../components/SongTitleLinks';
 
 const SongListItem = React.memo(({ item, isPlaying, onPress, index }: any) => {
   const { colors } = useTheme();
@@ -30,7 +31,11 @@ const SongListItem = React.memo(({ item, isPlaying, onPress, index }: any) => {
           className="text-lg font-black mb-1 truncate flex items-center gap-2" 
           style={{ color: isPlaying ? colors.primary : colors.text }}
         >
-          {item.title || item.filename.replace(/\.[^/.]+$/, "")}
+          <SongTitleLinks
+            title={item.title}
+            fallbackFilename={item.filename}
+            artistLinkClassName="hover:underline hover:opacity-100 transition-opacity cursor-pointer"
+          />
           {item.hasLyrics && <Mic2 size={16} className="opacity-50" />}
         </span>
         <div className="text-sm font-bold truncate" style={{ color: colors.subText }}>

@@ -6,6 +6,7 @@ import { Play, Pause, SkipForward, SkipBack, Shuffle, Repeat } from 'lucide-reac
 import { motion } from 'framer-motion';
 import CoverImage from './CoverImage';
 import ArtistLinks from './ArtistLinks';
+import SongTitleLinks from './SongTitleLinks';
 export default function MiniPlayer() {
   const {
     currentSong, pauseOrResumeSound, playNext, playPrevious, metadata,
@@ -75,7 +76,14 @@ export default function MiniPlayer() {
           />
           <div className="flex flex-col justify-center ml-4 overflow-hidden pr-4">
             <span className="font-bold text-sm text-white truncate hover:underline cursor-pointer">
-              {currentSong.title || currentSong.filename.replace(/\.[^/.]+$/, "")}
+              <SongTitleLinks
+                title={currentSong.title}
+                fallbackFilename={currentSong.filename}
+                artistLinkClassName="hover:underline hover:text-white cursor-pointer transition-colors"
+                onArtistClick={(artistName) => {
+                  navigate(`/detail/artist/${encodeURIComponent(artistName)}`);
+                }}
+              />
             </span>
             <div className="text-xs text-white/60 truncate font-medium mt-0.5">
               <ArtistLinks

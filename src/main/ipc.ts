@@ -14,6 +14,7 @@ import ffmpegStatic from 'ffmpeg-static'
 import ffprobeStatic from 'ffprobe-static'
 import { app, nativeImage } from 'electron'
 import { translate } from '@vitalets/google-translate-api'
+import AudioLyricsExtractor from './AudioLyricsExtractor'
 
 let isTranslationBlocked = false
 
@@ -377,95 +378,36 @@ export function setupIpc() {
       let year = ''
       let genre: string | null = null
 
+      let parsedMeta: mm.IAudioMetadata | null = null
       try {
-        const metadata = await mm.parseFile(filePath, { duration: true })
-        duration = metadata.format.duration || 0
-        format = metadata.format.container || 'unknown'
+        parsedMeta = await mm.parseFile(filePath, { duration: true })
+        duration = parsedMeta.format.duration || 0
+        format = parsedMeta.format.container || 'unknown'
         if (filePath.toLowerCase().endsWith('.opus')) format = 'Opus'
         else if (filePath.toLowerCase().endsWith('.ogg')) format = 'Ogg'
 
-        bitrate = metadata.format.bitrate || 0
-        sampleRate = metadata.format.sampleRate || 0
+        bitrate = parsedMeta.format.bitrate || 0
+        sampleRate = parsedMeta.format.sampleRate || 0
 
-        if (metadata.common.picture && metadata.common.picture.length > 0) {
-          const picture = metadata.common.picture[0]
+        if (parsedMeta.common.picture && parsedMeta.common.picture.length > 0) {
+          const picture = parsedMeta.common.picture[0]
           coverBase64 = `data:${picture.format};base64,${Buffer.from(picture.data).toString('base64')}`
         }
         coverCache.set(filePath, coverBase64)
 
-        lyrics = metadata.common.lyrics?.length ? metadata.common.lyrics[0] : null
-        genre = Array.isArray(metadata.common.genre) ? metadata.common.genre[0] : metadata.common.genre || null
+        genre = Array.isArray(parsedMeta.common.genre) ? parsedMeta.common.genre[0] : parsedMeta.common.genre || null
+        title = parsedMeta.common.title || title
+        artist = parsedMeta.common.albumartist || parsedMeta.common.artist || artist
+        album = parsedMeta.common.album || album
+        year = parsedMeta.common.year?.toString() || parsedMeta.common.date || year
+      } catch (e) {}
 
-        // Attempt to extract SYLT (Synchronized Lyrics) or USLT from native ID3 tags
-        if (metadata.native && metadata.native['ID3v2']) {
-          const id3v2 = metadata.native['ID3v2']
-          const syltTag = id3v2.find((t: any) => t.id === 'SYLT')
-          if (syltTag && syltTag.value && Array.isArray(syltTag.value)) {
-            let lrc = ''
-            for (const line of syltTag.value) {
-              if (line.text && line.timestamp !== undefined) {
-                const t = line.timestamp
-                const m = Math.floor(t / 60000)
-                const s = Math.floor((t % 60000) / 1000)
-                const ms = Math.floor((t % 1000) / 10)
-                lrc += `[${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}.${ms.toString().padStart(2, '0')}] ${line.text}\n`
-              }
-            }
-            if (lrc) lyrics = lrc.trim()
-          } else if (!lyrics) {
-            const usltTag = id3v2.find((t: any) => t.id === 'USLT')
-            if (usltTag && usltTag.value && (usltTag.value as any).text) {
-              lyrics = (usltTag.value as any).text
-            }
-          }
+      // Extracción avanzada de letras en capas con AudioLyricsExtractor
+      try {
+        const lyricsRes = await AudioLyricsExtractor.extractLyrics(filePath, parsedMeta)
+        if (lyricsRes && lyricsRes.lyrics) {
+          lyrics = lyricsRes.lyrics
         }
-
-        // Generic fallback for Vorbis (Opus/FLAC/Ogg) and others
-        if (!lyrics && metadata.native) {
-          for (const tagType in metadata.native) {
-            const tags = metadata.native[tagType]
-            if (Array.isArray(tags)) {
-              const lyricsTag = tags.find(
-                (t: any) =>
-                  t.id &&
-                  typeof t.id === 'string' &&
-                  (t.id.toLowerCase().includes('lyric') ||
-                    t.id.toLowerCase().includes('sylt') ||
-                    t.id.toLowerCase().includes('uslt'))
-              )
-              if (lyricsTag && lyricsTag.value) {
-                if (typeof lyricsTag.value === 'string') {
-                  lyrics = lyricsTag.value
-                } else if (
-                  Array.isArray(lyricsTag.value) &&
-                  typeof lyricsTag.value[0] === 'string'
-                ) {
-                  lyrics = lyricsTag.value.join('\n')
-                } else {
-                  lyrics = String(lyricsTag.value)
-                }
-                break
-              }
-            }
-          }
-        }
-
-        // Check for sidecar .lrc file if no embedded lyrics were found
-        if (!lyrics) {
-          try {
-            const lrcPath = filePath.replace(/\.[^/.]+$/, '') + '.lrc'
-            if (existsSync(lrcPath)) {
-              lyrics = await fs.readFile(lrcPath, 'utf8')
-            }
-          } catch (e) {
-            // Ignore if file doesn't exist or can't be read
-          }
-        }
-
-        title = metadata.common.title || title
-        artist = metadata.common.albumartist || metadata.common.artist || artist
-        album = metadata.common.album || album
-        year = metadata.common.year?.toString() || metadata.common.date || year
       } catch (e) {}
 
       if (filePath.toLowerCase().endsWith('.opus') || filePath.toLowerCase().endsWith('.ogg')) {
@@ -475,20 +417,9 @@ export function setupIpc() {
           if (ffMeta.artist) artist = ffMeta.artist
           if (ffMeta.album) album = ffMeta.album
           if (ffMeta.year) year = ffMeta.year
-          if (ffMeta.lyrics) lyrics = ffMeta.lyrics
+          if (ffMeta.lyrics && !lyrics) lyrics = ffMeta.lyrics
           if (ffMeta.genre) genre = ffMeta.genre
         }
-      }
-
-      // Fallback: look for a local .lrc file
-      if (!lyrics || typeof lyrics !== 'string' || !lyrics.includes('[')) {
-        try {
-          const lrcPath = filePath.substring(0, filePath.lastIndexOf('.')) + '.lrc'
-          const lrcContent = await fs.readFile(lrcPath, 'utf8')
-          if (lrcContent && lrcContent.trim().length > 0) {
-            lyrics = lrcContent
-          }
-        } catch (e) {}
       }
 
       if (title === path.basename(filePath, path.extname(filePath))) {
@@ -498,24 +429,6 @@ export function setupIpc() {
           artist = parts[0].trim()
           title = parts.slice(1).join(' - ').trim()
         }
-      }
-
-      if (!lyrics) {
-        try {
-          const dir = path.dirname(filePath)
-          const base = path.basename(filePath, path.extname(filePath))
-          const extensions = ['.lrc', '.txt', '.srt', '.vtt']
-          for (const ext of extensions) {
-            const extPath = path.join(dir, base + ext)
-            try {
-              const stat = await fs.stat(extPath)
-              if (stat.isFile()) {
-                lyrics = await fs.readFile(extPath, 'utf8')
-                break
-              }
-            } catch (e) {}
-          }
-        } catch (e) {}
       }
 
       return {
@@ -1184,27 +1097,9 @@ async function parseSongFile(
     if (meta.common.track.no) trackNumber = meta.common.track.no
     year = meta.common.year?.toString() || meta.common.date || year
 
-    if (meta.common.lyrics && meta.common.lyrics.length > 0) {
-      hasLyrics = true
-    } else if (meta.native) {
-      for (const tagType in meta.native) {
-        const tags = meta.native[tagType]
-        if (Array.isArray(tags)) {
-          const lyricsTag = tags.find(
-            (t: any) =>
-              t.id &&
-              typeof t.id === 'string' &&
-              (t.id.toLowerCase().includes('lyric') ||
-                t.id.toLowerCase().includes('sylt') ||
-                t.id.toLowerCase().includes('uslt'))
-          )
-          if (lyricsTag && lyricsTag.value) {
-            hasLyrics = true
-            break
-          }
-        }
-      }
-    }
+    try {
+      hasLyrics = await AudioLyricsExtractor.hasLyrics(fullPath, meta)
+    } catch (e) {}
   } catch (e) {}
 
   if (
@@ -1244,23 +1139,6 @@ async function parseSongFile(
     const temp = title
     title = artist
     artist = temp
-  }
-
-  if (!hasLyrics) {
-    try {
-      const base = path.basename(fullPath, path.extname(fullPath))
-      const extensions = ['.lrc', '.txt', '.srt', '.vtt']
-      for (const e of extensions) {
-        const extPath = path.join(dir, base + e)
-        try {
-          const statLrc = await fs.stat(extPath)
-          if (statLrc.isFile()) {
-            hasLyrics = true
-            break
-          }
-        } catch (e) {}
-      }
-    } catch (e) {}
   }
 
   let thumbUrl: string | null = null

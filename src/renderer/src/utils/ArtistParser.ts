@@ -144,6 +144,12 @@ export interface ArtistSegment {
   raw: string;
 }
 
+export interface TitleSegment {
+  type: 'text' | 'artist';
+  text: string;
+  artistName?: string;
+}
+
 // Caché en memoria equivalente a ConcurrentHashMap
 const cache = new Map<string, string[]>();
 
@@ -235,6 +241,18 @@ export class ArtistParser {
       }
     }
 
+    if (list.length === 0) {
+      const unbracketed = title.match(/(?:^|[\s\-–—]+)(?:feat\.?|ft\.?|featuring|with|w\/|vs\.?)\s+([^\(\[\{\)\]\}]+)$/i);
+      if (unbracketed && unbracketed[1]) {
+        const parsed = this.parseArtistString(unbracketed[1]);
+        for (const artist of parsed) {
+          if (!list.some(existing => existing.toLowerCase() === artist.toLowerCase())) {
+            list.push(artist);
+          }
+        }
+      }
+    }
+
     return list;
   }
 
@@ -307,6 +325,111 @@ export class ArtistParser {
             raw: restored
           });
         }
+      }
+    }
+
+    return segments;
+  }
+
+  /**
+   * Divide el título de la canción en segmentos de texto y artistas colaboradores interactivos.
+   * Por ejemplo: "LAST BREATH (feat. Peso Pluma)" produce:
+   * - text: "LAST BREATH ("
+   * - text: "feat. "
+   * - artist: "Peso Pluma"
+   * - text: ")"
+   */
+  public static parseTitleSegments(title?: string | null): TitleSegment[] {
+    if (!title || !title.trim()) return [];
+
+    const segments: TitleSegment[] = [];
+    const bracketedRegex = /([\(\[\{]\s*(?:feat\.?|ft\.?|featuring|with|w\/|vs\.?)\s+)([^\)\]\}]+)([\)\]\}])/gi;
+
+    let lastIndex = 0;
+    let match: RegExpExecArray | null;
+
+    while ((match = bracketedRegex.exec(title)) !== null) {
+      const matchStart = match.index;
+      const matchEnd = bracketedRegex.lastIndex;
+
+      if (matchStart > lastIndex) {
+        segments.push({
+          type: 'text',
+          text: title.slice(lastIndex, matchStart)
+        });
+      }
+
+      const prefix = match[1];
+      const featArtistsRaw = match[2];
+      const suffix = match[3];
+
+      segments.push({
+        type: 'text',
+        text: prefix
+      });
+
+      const artistSegments = this.parseWithSeparators(featArtistsRaw);
+      if (artistSegments.length > 0) {
+        for (const seg of artistSegments) {
+          if (seg.type === 'artist' && seg.name) {
+            segments.push({
+              type: 'artist',
+              text: seg.raw,
+              artistName: seg.name
+            });
+          } else {
+            segments.push({
+              type: 'text',
+              text: seg.raw
+            });
+          }
+        }
+      } else {
+        segments.push({
+          type: 'text',
+          text: featArtistsRaw
+        });
+      }
+
+      segments.push({
+        type: 'text',
+        text: suffix
+      });
+
+      lastIndex = matchEnd;
+    }
+
+    if (lastIndex < title.length) {
+      const remaining = title.slice(lastIndex);
+      const unbracketedRegex = /^([\s\-–—]+(?:feat\.?|ft\.?|featuring|with|w\/|vs\.?)\s+)(.+)$/i;
+      const unbracketedMatch = remaining.match(unbracketedRegex);
+      if (unbracketedMatch) {
+        const prefix = unbracketedMatch[1];
+        const featArtistsRaw = unbracketedMatch[2];
+        segments.push({
+          type: 'text',
+          text: prefix
+        });
+        const artistSegments = this.parseWithSeparators(featArtistsRaw);
+        for (const seg of artistSegments) {
+          if (seg.type === 'artist' && seg.name) {
+            segments.push({
+              type: 'artist',
+              text: seg.raw,
+              artistName: seg.name
+            });
+          } else {
+            segments.push({
+              type: 'text',
+              text: seg.raw
+            });
+          }
+        }
+      } else {
+        segments.push({
+          type: 'text',
+          text: remaining
+        });
       }
     }
 

@@ -1,9 +1,12 @@
 import React, { useState, useRef, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAudio } from '../context/AudioContext';
 import { useTheme } from '../context/ThemeContext';
 import { X, GripVertical } from 'lucide-react';
 import CoverImage from './CoverImage';
 import SongContextMenu from './SongContextMenu';
+import ArtistLinks from './ArtistLinks';
+import SongTitleLinks from './SongTitleLinks';
 import { Virtuoso, VirtuosoHandle } from 'react-virtuoso';
 import { useTranslation } from 'react-i18next';
 
@@ -13,6 +16,7 @@ interface QueuePanelProps {
 }
 
 export default function QueuePanel({ onClose }: QueuePanelProps) {
+  const navigate = useNavigate();
   const { queue, queuePosition, currentSong, reorderQueue, playSound, currentContextId, playlists } = useAudio();
   const { colors, isFullMode } = useTheme();
   const { t } = useTranslation();
@@ -278,9 +282,26 @@ export default function QueuePanel({ onClose }: QueuePanelProps) {
 
                   <div className="flex-1 overflow-hidden">
                     <p className={`font-bold text-sm truncate ${isPlaying ? 'text-white' : 'text-white/90'}`} style={{ color: isPlaying ? colors.primary : undefined }}>
-                      {song.title || song.filename.replace(/\.[^/.]+$/, "")}
+                      <SongTitleLinks
+                        title={song.title}
+                        fallbackFilename={song.filename}
+                        artistLinkClassName="hover:underline hover:text-white cursor-pointer transition-colors"
+                        onArtistClick={(artistName) => {
+                          onClose();
+                          navigate(`/detail/artist/${encodeURIComponent(artistName)}`);
+                        }}
+                      />
                     </p>
-                    <p className="text-xs text-white/50 truncate mt-0.5">{song.artist || t('artists.unknown', 'Desconocido')}</p>
+                    <div className="text-xs text-white/50 truncate mt-0.5">
+                      <ArtistLinks
+                        artist={song.artist}
+                        linkClassName="hover:underline hover:text-white cursor-pointer transition-colors"
+                        onArtistClick={(artistName) => {
+                          onClose();
+                          navigate(`/detail/artist/${encodeURIComponent(artistName)}`);
+                        }}
+                      />
+                    </div>
                   </div>
 
                   {!isPlaying && (

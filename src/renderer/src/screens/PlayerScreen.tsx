@@ -12,8 +12,9 @@ import LyricsView from '../components/LyricsView';
 import AddToPlaylistModal from '../components/AddToPlaylistModal';
 import PlaylistCreateModal from '../components/PlaylistCreateModal';
 import ArtistLinks from '../components/ArtistLinks';
+import SongTitleLinks from '../components/SongTitleLinks';
 
-const MarqueeText = ({ text, className }: { text: string, className?: string }) => {
+const MarqueeText = ({ text, children, className }: { text: string, children?: React.ReactNode, className?: string }) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const textRef = useRef<HTMLSpanElement>(null);
   const [isOverflowing, setIsOverflowing] = useState(false);
@@ -33,10 +34,12 @@ const MarqueeText = ({ text, className }: { text: string, className?: string }) 
     };
   }, [text]);
 
+  const content = children || text;
+
   if (!isOverflowing) {
     return (
       <div ref={containerRef} className={`overflow-hidden whitespace-nowrap w-full ${className}`}>
-        <span ref={textRef} className="inline-block">{text}</span>
+        <span ref={textRef} className="inline-block">{content}</span>
       </div>
     );
   }
@@ -44,10 +47,10 @@ const MarqueeText = ({ text, className }: { text: string, className?: string }) 
   return (
     <div className={`overflow-hidden whitespace-nowrap flex flex-row w-full ${className}`} style={{ WebkitMaskImage: 'linear-gradient(to right, transparent, black 10px, black calc(100% - 10px), transparent)' }}>
       <div className="flex animate-marquee-text shrink-0">
-        <span className="pr-16">{text}</span>
+        <span className="pr-16">{content}</span>
       </div>
       <div className="flex animate-marquee-text shrink-0">
-        <span className="pr-16">{text}</span>
+        <span className="pr-16">{content}</span>
       </div>
     </div>
   );
@@ -677,7 +680,17 @@ export default function PlayerScreen() {
                       <MarqueeText
                         text={currentSong.title || currentSong.filename.replace(/\.[^/.]+$/, "")}
                         className="text-3xl font-black text-white mb-1"
-                      />
+                      >
+                        <SongTitleLinks
+                          title={currentSong.title}
+                          fallbackFilename={currentSong.filename}
+                          artistLinkClassName="hover:underline hover:text-white cursor-pointer transition-colors"
+                          onArtistClick={(artistName) => {
+                            setIsPlayerOpen(false);
+                            navigate(`/detail/artist/${encodeURIComponent(artistName)}`);
+                          }}
+                        />
+                      </MarqueeText>
                       <div className="text-lg font-medium text-white/70 truncate w-fit">
                         <ArtistLinks
                           artist={currentSong.artist}

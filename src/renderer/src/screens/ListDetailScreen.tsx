@@ -10,6 +10,7 @@ import lutoImg from '../assets/luto.png';
 import { useTranslation } from 'react-i18next';
 import SongContextMenu from '../components/SongContextMenu';
 import ArtistLinks from '../components/ArtistLinks';
+import SongTitleLinks from '../components/SongTitleLinks';
 import { ArtistParser } from '../utils/ArtistParser';
 
 const SongListItem = React.memo(({ item, isPlaying, onPress, index, hideCover, onRemove }: any) => {
@@ -39,7 +40,11 @@ const SongListItem = React.memo(({ item, isPlaying, onPress, index, hideCover, o
           className="text-base font-bold mb-0.5 truncate"
           style={{ color: isPlaying ? colors.primary : colors.text }}
         >
-          {item.title || item.filename.replace(/\.[^/.]+$/, "")}
+          <SongTitleLinks
+            title={item.title}
+            fallbackFilename={item.filename}
+            artistLinkClassName="hover:underline hover:opacity-100 transition-opacity cursor-pointer"
+          />
         </span>
         <div className="text-sm font-medium truncate opacity-70" style={{ color: colors.text }}>
           <ArtistLinks

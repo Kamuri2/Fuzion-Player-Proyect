@@ -8,6 +8,7 @@ import { Pause, Play, SkipBack, SkipForward, ListMusic, X, Settings, Mic2, Power
 import LyricsView from './LyricsView';
 import { useTranslation } from 'react-i18next';
 import ArtistLinks from './ArtistLinks';
+import SongTitleLinks from './SongTitleLinks';
 
 const fmtTime = (secs: number) => `${Math.floor(secs / 60)}:${String(Math.floor(secs % 60)).padStart(2, '0')}`;
 
@@ -1842,7 +1843,16 @@ export default function AlbumsCoverFlow({ albums, onExpand }: any) {
             </div>
             <div className="flex flex-col justify-center flex-1 min-w-0">
               <p className="text-[10px] text-white/50 mb-0.5 uppercase font-bold tracking-widest">{t('player.nowPlaying', 'Reproduciendo')}</p>
-              <p className="text-base text-white font-black truncate leading-tight mb-0.5">{currentSong?.title || currentSong?.filename.replace(/\.[^/.]+$/, "") || playingAlbum.name}</p>
+              <p className="text-base text-white font-black truncate leading-tight mb-0.5">
+                <SongTitleLinks
+                  title={currentSong?.title}
+                  fallbackFilename={currentSong?.filename}
+                  artistLinkClassName="hover:underline hover:text-white transition-colors cursor-pointer"
+                  onArtistClick={(artistName) => {
+                    navigate(`/detail/artist/${encodeURIComponent(artistName)}`);
+                  }}
+                />
+              </p>
               <div className="text-xs text-white/70 font-medium truncate">
                 <ArtistLinks
                   artist={currentSong?.artist || playingAlbum.artist}
