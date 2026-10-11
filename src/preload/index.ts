@@ -1,7 +1,12 @@
-import { contextBridge } from 'electron'
+import { contextBridge, ipcRenderer, webFrame } from 'electron'
 import { electronAPI } from '@electron-toolkit/preload'
 
-import { ipcRenderer } from 'electron'
+// Forzar reseteo del nivel de zoom en el frame web al 100%
+try {
+  webFrame.setZoomLevel(0)
+  webFrame.setZoomFactor(1.0)
+  webFrame.setVisualZoomLevelLimits(1, 1)
+} catch (e) {}
 
 // Custom APIs for renderer
 const api = {

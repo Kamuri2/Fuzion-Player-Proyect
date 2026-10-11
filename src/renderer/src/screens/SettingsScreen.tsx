@@ -541,7 +541,7 @@ export default function SettingsScreen() {
         <div className={`p-6 rounded-2xl border border-white/10 shadow-sm backdrop-blur-2xl ${isDarkMode ? 'bg-black/40' : 'bg-white/40'}`}>
           <h2 className="text-xl font-bold mb-4" style={{ color: colors.text }}>{t('settings.about', 'Acerca de')}</h2>
           <p className="text-sm" style={{ color: colors.subText }}>
-            Fuzion Player v1.0.0<br />
+            Fuzion Player v1.2.5<br />
             {t('settings.songsRead', 'Canciones Leídas:')} {songs.length}
           </p>
         </div>

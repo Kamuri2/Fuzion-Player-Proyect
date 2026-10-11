@@ -136,7 +136,7 @@ const DELIMITER_REGEX = /\s*(?:[,;/\\~～〜]|\s*&\s*|\s*\+\s*|\s+(?:feat\.?|ft\
 const DELIMITER_CAPTURE_REGEX = /(\s*(?:[,;/\\~～〜]|\s*&\s*|\s*\+\s*|\s+(?:feat\.?|ft\.?|featuring|with|w\/|vs\.?|x|and)\s+)\s*)/i;
 
 // Regex para extraer colaboraciones en el título de la canción (ej: Song (feat. Pharrell))
-const TITLE_FEAT_REGEX = /[\(\[\{]\s*(?:feat\.?|ft\.?|featuring|with|w\/|vs\.?)\s+([^\)\]\}]+)[\)\]\}]/gi;
+const TITLE_FEAT_REGEX = /[\(\[\{]\s*(?:feat\.?|ft\.?|featuring|with|w\/)\s+([^\)\]\}]+)[\)\]\}]/gi;
 
 export interface ArtistSegment {
   type: 'artist' | 'separator';
@@ -242,7 +242,7 @@ export class ArtistParser {
     }
 
     if (list.length === 0) {
-      const unbracketed = title.match(/(?:^|[\s\-–—]+)(?:feat\.?|ft\.?|featuring|with|w\/|vs\.?)\s+([^\(\[\{\)\]\}]+)$/i);
+      const unbracketed = title.match(/(?:^|[\s\-–—]+)\b(?:feat\.?|ft\.?|featuring)\b\s+([^\(\[\{\)\]\}]+)$/i);
       if (unbracketed && unbracketed[1]) {
         const parsed = this.parseArtistString(unbracketed[1]);
         for (const artist of parsed) {
@@ -343,7 +343,7 @@ export class ArtistParser {
     if (!title || !title.trim()) return [];
 
     const segments: TitleSegment[] = [];
-    const bracketedRegex = /([\(\[\{]\s*(?:feat\.?|ft\.?|featuring|with|w\/|vs\.?)\s+)([^\)\]\}]+)([\)\]\}])/gi;
+    const bracketedRegex = /([\(\[\{]\s*(?:feat\.?|ft\.?|featuring|with|w\/)\s+)([^\)\]\}]+)([\)\]\}])/gi;
 
     let lastIndex = 0;
     let match: RegExpExecArray | null;
@@ -401,7 +401,7 @@ export class ArtistParser {
 
     if (lastIndex < title.length) {
       const remaining = title.slice(lastIndex);
-      const unbracketedRegex = /^([\s\-–—]+(?:feat\.?|ft\.?|featuring|with|w\/|vs\.?)\s+)(.+)$/i;
+      const unbracketedRegex = /^([\s\-–—]+\b(?:feat\.?|ft\.?|featuring)\b\s+)(.+)$/i;
       const unbracketedMatch = remaining.match(unbracketedRegex);
       if (unbracketedMatch) {
         const prefix = unbracketedMatch[1];

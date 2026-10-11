@@ -1,6 +1,6 @@
 import { app, shell, BrowserWindow, ipcMain } from 'electron'
 import { join } from 'path'
-import { electronApp, optimizer, is } from '@electron-toolkit/utils'
+import { electronApp, is } from '@electron-toolkit/utils'
 import icon from '../../resources/icon.png?asset'
 import { setupIpc } from './ipc'
 
@@ -30,8 +30,71 @@ function createWindow(): void {
       preload: join(__dirname, '../preload/index.js'),
       sandbox: false,
       webSecurity: false,
-      backgroundThrottling: false
+      backgroundThrottling: false,
+      devTools: false
     }
+  })
+
+  // Forzar reseteo de zoom a su tamaño original (100%) y fijar límites
+  mainWindow.webContents.setZoomLevel(0)
+  mainWindow.webContents.setZoomFactor(1.0)
+  mainWindow.webContents.setVisualZoomLevelLimits(1, 1)
+
+  mainWindow.webContents.on('dom-ready', () => {
+    mainWindow.webContents.setZoomLevel(0)
+    mainWindow.webContents.setZoomFactor(1.0)
+    mainWindow.webContents.setVisualZoomLevelLimits(1, 1)
+  })
+
+  mainWindow.webContents.on('did-finish-load', () => {
+    mainWindow.webContents.setZoomLevel(0)
+    mainWindow.webContents.setZoomFactor(1.0)
+    mainWindow.webContents.setVisualZoomLevelLimits(1, 1)
+  })
+
+  // Bloquear atajos de zoom (Ctrl +, Ctrl -, Ctrl 0), F12, DevTools e inspeccionar
+  mainWindow.webContents.on('before-input-event', (event, input) => {
+    // Bloquear Ctrl + +, Ctrl + -, Ctrl + 0
+    if (input.control || input.meta) {
+      if (
+        input.key === '+' ||
+        input.key === '=' ||
+        input.key === '-' ||
+        input.key === '_' ||
+        input.key === '0' ||
+        input.code === 'NumpadAdd' ||
+        input.code === 'NumpadSubtract' ||
+        input.code === 'Equal' ||
+        input.code === 'Minus' ||
+        input.code === 'Digit0'
+      ) {
+        event.preventDefault()
+      }
+
+      // Bloquear atajos de inspeccionar / herramientas de desarrollo (Ctrl + Shift + I/J/C) y ver código fuente (Ctrl + U)
+      if (
+        (input.shift && ['i', 'j', 'c'].includes(input.key?.toLowerCase() || '')) ||
+        input.key?.toLowerCase() === 'u'
+      ) {
+        event.preventDefault()
+      }
+    }
+
+    // Bloquear tecla F12
+    if (input.key === 'F12') {
+      event.preventDefault()
+    }
+  })
+
+  // Prevenir zoom con rueda del ratón
+  mainWindow.webContents.on('zoom-changed', (event) => {
+    event.preventDefault()
+    mainWindow.webContents.setZoomFactor(1.0)
+  })
+
+  // Prevenir menú contextual del navegador (evita la opción de "Inspeccionar elemento")
+  mainWindow.webContents.on('context-menu', (event) => {
+    event.preventDefault()
   })
 
   mainWindow.on('ready-to-show', () => {
@@ -93,13 +156,6 @@ if (!gotTheLock) {
 
     // Set app user model id for windows
     electronApp.setAppUserModelId('com.kevin.fuzionplayer')
-
-    // Default open or close DevTools by F12 in development
-    // and ignore CommandOrControl + R in production.
-    // see https://github.com/alex8088/electron-toolkit/tree/master/packages/utils
-    app.on('browser-window-created', (_, window) => {
-      optimizer.watchWindowShortcuts(window)
-    })
 
   // IPC test
   ipcMain.on('ping', () => console.log('pong'))

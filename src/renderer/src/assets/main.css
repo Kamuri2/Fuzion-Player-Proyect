@@ -5,12 +5,26 @@
     --background: #0f172a;
     --foreground: #f8fafc;
   }
-  html, body {
+  html, body, #root {
     margin: 0;
     padding: 0;
     height: 100vh;
     overflow: hidden;
     overscroll-behavior: none;
+    user-select: none;
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+  }
+
+  input, textarea, [contenteditable="true"] {
+    user-select: text;
+    -webkit-user-select: text;
+  }
+
+  img {
+    -webkit-user-drag: none;
+    user-drag: none;
   }
 
   body {
