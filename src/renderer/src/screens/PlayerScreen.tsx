@@ -11,6 +11,7 @@ import QueuePanel from '../components/QueuePanel';
 import LyricsView from '../components/LyricsView';
 import AddToPlaylistModal from '../components/AddToPlaylistModal';
 import PlaylistCreateModal from '../components/PlaylistCreateModal';
+import ArtistLinks from '../components/ArtistLinks';
 
 const MarqueeText = ({ text, className }: { text: string, className?: string }) => {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -677,15 +678,16 @@ export default function PlayerScreen() {
                         text={currentSong.title || currentSong.filename.replace(/\.[^/.]+$/, "")}
                         className="text-3xl font-black text-white mb-1"
                       />
-                      <p
-                        className="text-lg font-medium text-white/70 truncate cursor-pointer hover:underline hover:text-white transition-colors w-fit"
-                        onClick={() => {
-                          setIsPlayerOpen(false);
-                          navigate(`/detail/artist/${encodeURIComponent(currentSong.artist || 'Desconocido')}`);
-                        }}
-                      >
-                        {currentSong.artist || 'Desconocido'}
-                      </p>
+                      <div className="text-lg font-medium text-white/70 truncate w-fit">
+                        <ArtistLinks
+                          artist={currentSong.artist}
+                          onArtistClick={(artistName) => {
+                            setIsPlayerOpen(false);
+                            navigate(`/detail/artist/${encodeURIComponent(artistName)}`);
+                          }}
+                          linkClassName="hover:underline hover:text-white transition-colors cursor-pointer"
+                        />
+                      </div>
                     </motion.div>
                   </AnimatePresence>
                 </div>

@@ -1,11 +1,13 @@
 import { useState, useEffect, useRef, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useNavigate } from 'react-router-dom';
 import { useAudio } from '../context/AudioContext';
 import { useTheme } from '../context/ThemeContext';
 import CoverImage from './CoverImage';
 import { Pause, Play, SkipBack, SkipForward, ListMusic, X, Settings, Mic2, Power } from 'lucide-react';
 import LyricsView from './LyricsView';
 import { useTranslation } from 'react-i18next';
+import ArtistLinks from './ArtistLinks';
 
 const fmtTime = (secs: number) => `${Math.floor(secs / 60)}:${String(Math.floor(secs % 60)).padStart(2, '0')}`;
 
@@ -1063,6 +1065,7 @@ export default function AlbumsCoverFlow({ albums, onExpand }: any) {
   const { colors, albumZenMode, setAlbumZenMode, reduceAnimations } = useTheme();
   const { playSound, pauseOrResumeSound, playNext, playPrevious, currentSong, subscribeToProgress, isPlaying: globalIsPlaying, volume, setVolume } = useAudio();
   const { t } = useTranslation();
+  const navigate = useNavigate();
 
   const [activeIndex, setActiveIndex] = useState(Math.floor(albums.length / 2));
   const [expandedIndex, setExpandedIndex] = useState<number | null>(null);
@@ -1840,7 +1843,15 @@ export default function AlbumsCoverFlow({ albums, onExpand }: any) {
             <div className="flex flex-col justify-center flex-1 min-w-0">
               <p className="text-[10px] text-white/50 mb-0.5 uppercase font-bold tracking-widest">{t('player.nowPlaying', 'Reproduciendo')}</p>
               <p className="text-base text-white font-black truncate leading-tight mb-0.5">{currentSong?.title || currentSong?.filename.replace(/\.[^/.]+$/, "") || playingAlbum.name}</p>
-              <p className="text-xs text-white/70 font-medium truncate">{currentSong?.artist || playingAlbum.artist}</p>
+              <div className="text-xs text-white/70 font-medium truncate">
+                <ArtistLinks
+                  artist={currentSong?.artist || playingAlbum.artist}
+                  onArtistClick={(artistName) => {
+                    navigate(`/detail/artist/${encodeURIComponent(artistName)}`);
+                  }}
+                  linkClassName="hover:underline hover:text-white transition-colors cursor-pointer"
+                />
+              </div>
             </div>
             {/* NUEVO BOTÓN PARA PAUSAR DESDE EL MINI REPRODUCTOR */}
             <div

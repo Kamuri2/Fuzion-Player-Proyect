@@ -9,6 +9,7 @@ export interface Song {
   // Extra metadata populated later
   album?: string;
   artist?: string;
+  artists?: string[];
   cover?: string | null;
   lyrics?: string;
   hasLyrics?: boolean;

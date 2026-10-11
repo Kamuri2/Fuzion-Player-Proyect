@@ -5,6 +5,7 @@ import { useTheme } from '../context/ThemeContext';
 import { Play, Pause, SkipForward, SkipBack, Shuffle, Repeat } from 'lucide-react';
 import { motion } from 'framer-motion';
 import CoverImage from './CoverImage';
+import ArtistLinks from './ArtistLinks';
 export default function MiniPlayer() {
   const {
     currentSong, pauseOrResumeSound, playNext, playPrevious, metadata,
@@ -76,15 +77,15 @@ export default function MiniPlayer() {
             <span className="font-bold text-sm text-white truncate hover:underline cursor-pointer">
               {currentSong.title || currentSong.filename.replace(/\.[^/.]+$/, "")}
             </span>
-            <span
-              className="text-xs text-white/60 truncate font-medium mt-0.5 hover:underline cursor-pointer"
-              onClick={(e) => {
-                e.stopPropagation();
-                navigate(`/detail/artist/${encodeURIComponent(currentSong.artist || 'Desconocido')}`);
-              }}
-            >
-              {currentSong.artist || 'Desconocido'}
-            </span>
+            <div className="text-xs text-white/60 truncate font-medium mt-0.5">
+              <ArtistLinks
+                artist={currentSong.artist}
+                onArtistClick={(artistName) => {
+                  navigate(`/detail/artist/${encodeURIComponent(artistName)}`);
+                }}
+                linkClassName="hover:underline hover:text-white transition-colors cursor-pointer"
+              />
+            </div>
           </div>
         </div>
 

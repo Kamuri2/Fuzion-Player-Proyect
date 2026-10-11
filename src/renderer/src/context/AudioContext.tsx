@@ -2,6 +2,7 @@
 import React, { createContext, useState, useEffect, useContext, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Song, Album, Folder, Artist, AudioContextType, Playlist } from '../types';
+import { ArtistParser } from '../utils/ArtistParser';
 
 const AudioContext = createContext<AudioContextType | undefined>(undefined);
 
@@ -274,8 +275,9 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       if (!albumsObj[aName]) albumsObj[aName] = { name: aName, artist: artName, cover: song.cover || null, songs: [], year: song.year };
       albumsObj[aName].songs.push(song);
 
-      const individualArtists = [rawArtist.trim()].filter(a => a.length > 0);
-      if (individualArtists.length === 0) individualArtists.push('Desconocido');
+      const parsedArtists = ArtistParser.parseArtists(rawArtist, song.title);
+      const individualArtists = parsedArtists.length > 0 ? parsedArtists : ['Desconocido'];
+      song.artists = individualArtists;
 
       individualArtists.forEach(indvArtist => {
         let normIndv = indvArtist.toLowerCase();

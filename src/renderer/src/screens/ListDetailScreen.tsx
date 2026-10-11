@@ -9,6 +9,7 @@ import { motion } from 'framer-motion';
 import lutoImg from '../assets/luto.png';
 import { useTranslation } from 'react-i18next';
 import SongContextMenu from '../components/SongContextMenu';
+import ArtistLinks from '../components/ArtistLinks';
 
 const SongListItem = React.memo(({ item, isPlaying, onPress, index, hideCover, onRemove }: any) => {
   const { colors } = useTheme();
@@ -39,9 +40,12 @@ const SongListItem = React.memo(({ item, isPlaying, onPress, index, hideCover, o
         >
           {item.title || item.filename.replace(/\.[^/.]+$/, "")}
         </span>
-        <span className="text-sm font-medium truncate opacity-70" style={{ color: colors.text }}>
-          {item.artist || t('detail.unknown')}
-        </span>
+        <div className="text-sm font-medium truncate opacity-70" style={{ color: colors.text }}>
+          <ArtistLinks
+            artist={item.artist}
+            linkClassName="hover:underline hover:opacity-100 transition-opacity cursor-pointer"
+          />
+        </div>
       </div>
       {item.duration > 0 && (
         <div className="text-sm font-medium opacity-50 mr-4" style={{ color: colors.text }}>
@@ -450,12 +454,10 @@ export default function ListDetailScreen() {
           </h1>
           <div className="flex flex-row items-center flex-wrap gap-2 text-sm md:text-base font-bold opacity-90" style={{ color: colors.text }}>
             {type === 'album' && subtitle !== 'Carpeta' ? (
-              <span
-                className="cursor-pointer hover:underline"
-                onClick={() => navigate(`/detail/artist/${encodeURIComponent(subtitle)}`)}
-              >
-                {subtitle}
-              </span>
+              <ArtistLinks
+                artist={subtitle}
+                linkClassName="cursor-pointer hover:underline"
+              />
             ) : type === 'artist' ? (
               <span>{artistAlbums.length} {artistAlbums.length === 1 ? t('detail.album') : t('detail.albums')}</span>
             ) : (

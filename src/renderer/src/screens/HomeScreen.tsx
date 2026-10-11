@@ -7,10 +7,10 @@ import { useTranslation } from 'react-i18next';
 import CoverImage from '../components/CoverImage';
 import { Virtuoso } from 'react-virtuoso';
 import SongContextMenu from '../components/SongContextMenu';
+import ArtistLinks from '../components/ArtistLinks';
 
 const SongListItem = React.memo(({ item, isPlaying, onPress, index }: any) => {
   const { colors } = useTheme();
-  const { t } = useTranslation();
 
   return (
     <div 
@@ -33,9 +33,12 @@ const SongListItem = React.memo(({ item, isPlaying, onPress, index }: any) => {
           {item.title || item.filename.replace(/\.[^/.]+$/, "")}
           {item.hasLyrics && <Mic2 size={16} className="opacity-50" />}
         </span>
-        <span className="text-sm font-bold truncate" style={{ color: colors.subText }}>
-          {item.artist || t('detail.unknown')}
-        </span>
+        <div className="text-sm font-bold truncate" style={{ color: colors.subText }}>
+          <ArtistLinks
+            artist={item.artist}
+            linkClassName="hover:underline hover:opacity-100 transition-opacity cursor-pointer"
+          />
+        </div>
       </div>
       <div className="flex items-center gap-3 ml-3">
         {isPlaying && (
@@ -334,7 +337,9 @@ export default function HomeScreen() {
                     <CoverImage coverUrl={item.data.cover} audioPath={item.data.songs[0]?.path} hq={false} className="w-16 h-16 rounded-lg" placeholderClassName="w-16 h-16 rounded-lg bg-black/10 dark:bg-white/10" />
                     <div className="ml-4 flex flex-col justify-center">
                       <span className="text-xl font-black" style={{ color: colors.text }}>{item.data.name}</span>
-                      <span className="text-sm font-bold opacity-70" style={{ color: colors.text }}>{t('detail.album')} • {item.data.artist}</span>
+                      <span className="text-sm font-bold opacity-70" style={{ color: colors.text }}>
+                        {t('detail.album')} • <ArtistLinks artist={item.data.artist} linkClassName="hover:underline cursor-pointer" />
+                      </span>
                     </div>
                   </div>
                 );
