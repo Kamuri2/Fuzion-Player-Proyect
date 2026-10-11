@@ -344,6 +344,15 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       }
     };
     fetchArtistImages();
+
+    // Migración única: si el caché no tenía la versión 2, guarda la lista con artistas procesados
+    try {
+      const parserVer = localStorage.getItem('@artist_parser_ver');
+      if (parserVer !== '2') {
+        localStorage.setItem('@cached_songs', JSON.stringify(formattedSongs));
+        localStorage.setItem('@artist_parser_ver', '2');
+      }
+    } catch (e) { }
   };
 
   const startCrossfade = (exactTimeLeft: number) => {

@@ -10,6 +10,7 @@ import lutoImg from '../assets/luto.png';
 import { useTranslation } from 'react-i18next';
 import SongContextMenu from '../components/SongContextMenu';
 import ArtistLinks from '../components/ArtistLinks';
+import { ArtistParser } from '../utils/ArtistParser';
 
 const SongListItem = React.memo(({ item, isPlaying, onPress, index, hideCover, onRemove }: any) => {
   const { colors } = useTheme();
@@ -241,15 +242,19 @@ export default function ListDetailScreen() {
 
   useEffect(() => {
     if (type === 'artist' && id) {
-      let artistData = artists[id];
+      let rawId = id;
+      try { rawId = decodeURIComponent(id).trim(); } catch (e) { }
+
+      let artistData = artists[rawId] || artists[id];
       if (!artistData) {
-        const lowerId = id.trim().toLowerCase();
+        const lowerId = rawId.toLowerCase();
         const realKey = Object.keys(artists).find(k => k.trim().toLowerCase() === lowerId);
         if (realKey) artistData = artists[realKey];
       }
 
-      if (artistData && artistData.name !== 'Desconocido') {
-        const artistName = artistData.name;
+      const artistName = artistData?.name || rawId;
+
+      if (artistName && artistName !== 'Desconocido') {
         setRetrySearchTerm(artistName);
         
         const cacheKey = `artist_details_cache_${artistName.toLowerCase()}`;
@@ -303,12 +308,33 @@ export default function ListDetailScreen() {
       audioPath = dataList[0]?.path;
     }
   } else if (type === 'artist' && id) {
-    let artistData = artists[id];
+    let rawId = id;
+    try { rawId = decodeURIComponent(id).trim(); } catch (e) { }
+
+    let artistData = artists[rawId] || artists[id];
     if (!artistData) {
-      const lowerId = id.trim().toLowerCase();
+      const lowerId = rawId.toLowerCase();
       const realKey = Object.keys(artists).find(k => k.trim().toLowerCase() === lowerId);
       if (realKey) artistData = artists[realKey];
     }
+
+    // Dynamic Fallback: si no está en el índice artists, busca en songs en tiempo real
+    if (!artistData && songs && songs.length > 0) {
+      const lowerId = rawId.toLowerCase();
+      const matchingSongs = songs.filter(s => {
+        const parsed = s.artists || ArtistParser.parseArtists(s.artist, s.title);
+        return parsed.some(a => a.toLowerCase() === lowerId);
+      });
+
+      if (matchingSongs.length > 0) {
+        artistData = {
+          name: rawId,
+          cover: matchingSongs.find(s => s.cover)?.cover || null,
+          songs: matchingSongs
+        };
+      }
+    }
+
     if (artistData) {
       dataList = artistData.songs;
       title = artistData.name;
