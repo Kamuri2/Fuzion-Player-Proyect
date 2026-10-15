@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ArrowLeft, Play, Pause, SkipBack, SkipForward, Repeat, Shuffle, ListMusic, Mic2, Heart, Plus, ThumbsDown, FolderOpen, Disc3, Mic2 as Mic2Icon, Menu } from 'lucide-react';
+import { ArrowLeft, Play, Pause, SkipBack, SkipForward, Repeat, Shuffle, ListMusic, Mic2, Heart, Plus, ThumbsDown, FolderOpen, Disc3, Mic2 as Mic2Icon, Menu, Video, Music } from 'lucide-react';
 import { Virtuoso } from 'react-virtuoso';
 import { useAudio } from '../context/AudioContext';
 import { useTheme } from '../context/ThemeContext';
@@ -13,6 +13,7 @@ import AddToPlaylistModal from '../components/AddToPlaylistModal';
 import PlaylistCreateModal from '../components/PlaylistCreateModal';
 import ArtistLinks from '../components/ArtistLinks';
 import SongTitleLinks from '../components/SongTitleLinks';
+import IntegratedVideoPlayer from '../components/IntegratedVideoPlayer';
 
 const MarqueeText = ({ text, children, className }: { text: string, children?: React.ReactNode, className?: string }) => {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -179,6 +180,41 @@ export default function PlayerScreen() {
       setProgress(p);
     });
   }, [subscribeToProgress]);
+
+  const [isVideoMode, setIsVideoMode] = useState(false);
+  const [isOnline, setIsOnline] = useState(navigator.onLine);
+  const wasPlayingBeforeVideoRef = useRef(false);
+
+  useEffect(() => {
+    const handleOnline = () => setIsOnline(true);
+    const handleOffline = () => {
+      setIsOnline(false);
+      setIsVideoMode(false);
+    };
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
+  }, []);
+
+  const handleToggleVideoMode = (forcedState?: boolean) => {
+    const nextState = typeof forcedState === 'boolean' ? forcedState : !isVideoMode;
+    if (nextState) {
+      if (!navigator.onLine) return;
+      wasPlayingBeforeVideoRef.current = isPlaying;
+      if (isPlaying) {
+        pauseOrResumeSound();
+      }
+      setIsVideoMode(true);
+    } else {
+      setIsVideoMode(false);
+      if (wasPlayingBeforeVideoRef.current && !isPlaying) {
+        pauseOrResumeSound();
+      }
+    }
+  };
 
   const leftPanelTimerRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -691,15 +727,31 @@ export default function PlayerScreen() {
                           }}
                         />
                       </MarqueeText>
-                      <div className="text-lg font-medium text-white/70 truncate w-fit">
-                        <ArtistLinks
-                          artist={currentSong.artist}
-                          onArtistClick={(artistName) => {
-                            setIsPlayerOpen(false);
-                            navigate(`/detail/artist/${encodeURIComponent(artistName)}`);
-                          }}
-                          linkClassName="hover:underline hover:text-white transition-colors cursor-pointer"
-                        />
+                      <div className="flex flex-row items-center gap-3">
+                        <div className="text-lg font-medium text-white/70 truncate w-fit">
+                          <ArtistLinks
+                            artist={currentSong.artist}
+                            onArtistClick={(artistName) => {
+                              setIsPlayerOpen(false);
+                              navigate(`/detail/artist/${encodeURIComponent(artistName)}`);
+                            }}
+                            linkClassName="hover:underline hover:text-white transition-colors cursor-pointer"
+                          />
+                        </div>
+                        {isOnline && (
+                          <button
+                            onClick={() => handleToggleVideoMode()}
+                            className="flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold backdrop-blur-md transition-all shadow-md bg-white/10 hover:bg-red-600/80 hover:text-white text-white/90 border border-white/10 hover:border-red-500/50 shrink-0 cursor-pointer"
+                            title={isVideoMode ? t('player.switchToAudio', 'Cambiar a música') : t('player.switchToVideo', 'Cambiar a video')}
+                          >
+                            {isVideoMode ? (
+                              <Music size={13} style={{ color: colors.primary }} />
+                            ) : (
+                              <Video size={13} className="text-red-400" />
+                            )}
+                            <span>{isVideoMode ? t('player.switchToAudio', 'Cambiar a música') : t('player.switchToVideo', 'Cambiar a video')}</span>
+                          </button>
+                        )}
                       </div>
                     </motion.div>
                   </AnimatePresence>
@@ -745,6 +797,27 @@ export default function PlayerScreen() {
                     style={{ color: isQueueOpen ? colors.primary : undefined }}
                   >
                     <ListMusic size={24} />
+                  </button>
+                  {/* YouTube Video Mode Toggle Button */}
+                  <button
+                    onClick={() => handleToggleVideoMode()}
+                    disabled={!isOnline}
+                    className={`p-3 rounded-full transition-all flex items-center justify-center cursor-pointer ${
+                      isVideoMode
+                        ? 'bg-red-600 text-white shadow-lg shadow-red-600/40 ring-2 ring-red-400/50'
+                        : isOnline
+                          ? 'hover:bg-white/10 text-white/70 hover:text-white'
+                          : 'opacity-30 cursor-not-allowed text-white/40'
+                    }`}
+                    title={
+                      !isOnline
+                        ? t('player.videoOffline', 'Se requiere conexión a internet para ver el video')
+                        : isVideoMode
+                          ? t('player.switchToAudio', 'Cambiar a música')
+                          : t('player.switchToVideo', 'Cambiar a video')
+                    }
+                  >
+                    <Video size={24} />
                   </button>
                 </div>
               </div>
@@ -854,6 +927,30 @@ export default function PlayerScreen() {
           </div>
         </div>
       </div>
+
+      {/* Seamless Integrated Video Player View */}
+      <AnimatePresence>
+        {isVideoMode && (
+          <motion.div
+            key="integrated-video-player"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.25 }}
+            className="absolute inset-0 z-50 flex flex-col w-full h-full bg-black overflow-hidden"
+          >
+            <IntegratedVideoPlayer
+              song={currentSong}
+              onClose={() => handleToggleVideoMode(false)}
+              onNext={() => playNext()}
+              onPrevious={() => playPrevious()}
+              hasNext={queuePosition < queue.length}
+              hasPrevious={queuePosition > 1}
+              colors={colors}
+            />
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       <AddToPlaylistModal
         isOpen={isAddToPlaylistOpen}

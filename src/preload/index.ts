@@ -24,6 +24,8 @@ const api = {
   translateUI: (langCode: string, baseDictionary: any) => ipcRenderer.invoke('api:translateUI', langCode, baseDictionary),
   getTranslatedUI: (langCode: string) => ipcRenderer.invoke('api:getTranslatedUI', langCode),
   getAlbumInfo: (artistName: string, albumName: string) => ipcRenderer.invoke('api:getAlbumInfo', artistName, albumName),
+  searchYouTube: (query: string) => ipcRenderer.invoke('api:searchYouTube', query),
+  openExternal: (url: string) => ipcRenderer.invoke('shell:openExternal', url),
   setTheme: (isDark: boolean) => ipcRenderer.send('theme-changed', isDark)
 }
 // Use `contextBridge` APIs to expose Electron APIs to

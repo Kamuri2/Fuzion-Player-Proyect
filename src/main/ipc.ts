@@ -1,4 +1,4 @@
-import { ipcMain, dialog } from 'electron'
+import { ipcMain, dialog, shell } from 'electron'
 import { execFile } from 'child_process'
 import util from 'util'
 
@@ -959,6 +959,93 @@ export function setupIpc() {
       return translatedDict
     }
   )
+
+  ipcMain.handle('api:searchYouTube', async (_, query: string) => {
+    if (!query || typeof query !== 'string' || !query.trim()) return []
+    const cleanQuery = query.trim()
+
+    try {
+      const url = `https://www.youtube.com/results?search_query=${encodeURIComponent(cleanQuery)}`
+      const res = await fetch(url, {
+        headers: {
+          'User-Agent':
+            'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
+          'Accept-Language': 'es,en;q=0.9'
+        }
+      })
+
+      if (!res.ok) {
+        console.warn(`YouTube search returned status ${res.status}`)
+        return []
+      }
+
+      const html = await res.text()
+      const results: { id: string; title: string; thumbnail?: string; duration?: string; channel?: string }[] = []
+
+      // 1. Intentar parsear a través de ytInitialData
+      const jsonMatch = html.match(/var ytInitialData = ({.*?});<\/script>/)
+      if (jsonMatch) {
+        try {
+          const data = JSON.parse(jsonMatch[1])
+          const sections =
+            data.contents?.twoColumnSearchResultsRenderer?.primaryContents?.sectionListRenderer?.contents || []
+
+          for (const section of sections) {
+            const items = section.itemSectionRenderer?.contents || []
+            for (const item of items) {
+              if (item.videoRenderer) {
+                const vr = item.videoRenderer
+                if (vr.videoId) {
+                  results.push({
+                    id: vr.videoId,
+                    title: vr.title?.runs?.map((r: any) => r.text).join('') || vr.title?.simpleText || '',
+                    thumbnail:
+                      vr.thumbnail?.thumbnails?.slice(-1)[0]?.url ||
+                      `https://i.ytimg.com/vi/${vr.videoId}/hqdefault.jpg`,
+                    duration: vr.lengthText?.simpleText,
+                    channel: vr.ownerText?.runs?.[0]?.text
+                  })
+                }
+              }
+            }
+          }
+        } catch (parseErr) {
+          console.error('Error parsing ytInitialData:', parseErr)
+        }
+      }
+
+      // 2. Fallback por expresiones regulares si no se obtuvieron resultados
+      if (results.length === 0) {
+        const videoIdMatches = html.matchAll(/"videoId":"([a-zA-Z0-9_-]{11})"/g)
+        const seenIds = new Set<string>()
+        for (const match of videoIdMatches) {
+          const id = match[1]
+          if (!seenIds.has(id)) {
+            seenIds.add(id)
+            results.push({
+              id,
+              title: cleanQuery,
+              thumbnail: `https://i.ytimg.com/vi/${id}/hqdefault.jpg`
+            })
+            if (results.length >= 5) break
+          }
+        }
+      }
+
+      return results.slice(0, 8)
+    } catch (err) {
+      console.error('Error executing api:searchYouTube:', err)
+      return []
+    }
+  })
+
+  ipcMain.handle('shell:openExternal', async (_, url: string) => {
+    if (url && (url.startsWith('https://') || url.startsWith('http://'))) {
+      await shell.openExternal(url)
+      return true
+    }
+    return false
+  })
 }
 
 async function generateAndCacheCover(filePath: string): Promise<string | null> {

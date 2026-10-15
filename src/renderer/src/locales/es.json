@@ -253,7 +253,17 @@
     "hideCenterLabel": "Ocultar etiqueta central",
     "hideGrooves": "Ocultar surcos",
     "reset": "Restablecer",
-    "infoTracks": "INFO & TRACKS"
+    "infoTracks": "INFO & TRACKS",
+    "switchToVideo": "Cambiar a video",
+    "switchToAudio": "Cambiar a música",
+    "videoMode": "Modo Video",
+    "searchingVideo": "Buscando video...",
+    "searchingVideoDesc": "Buscando la mejor coincidencia en YouTube...",
+    "videoSearchError": "No se encontró ningún video para esta canción",
+    "videoOffline": "Se requiere conexión a internet para ver el video",
+    "selectVideo": "Seleccionar video",
+    "availableVideos": "Videos disponibles",
+    "openInYouTube": "Abrir en YouTube"
   },
   "common": {
     "cancel": "Cancelar",

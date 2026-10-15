@@ -253,7 +253,17 @@
     "hideCenterLabel": "Hide center label",
     "hideGrooves": "Hide vinyl grooves",
     "reset": "Reset",
-    "infoTracks": "INFO & TRACKS"
+    "infoTracks": "INFO & TRACKS",
+    "switchToVideo": "Switch to video",
+    "switchToAudio": "Switch to music",
+    "videoMode": "Video Mode",
+    "searchingVideo": "Searching video...",
+    "searchingVideoDesc": "Searching for the best match on YouTube...",
+    "videoSearchError": "No video found for this song",
+    "videoOffline": "Internet connection required to play video",
+    "selectVideo": "Select video",
+    "availableVideos": "Available videos",
+    "openInYouTube": "Open in YouTube"
   },
   "common": {
     "cancel": "Cancel",

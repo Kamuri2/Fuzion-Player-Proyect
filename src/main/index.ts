@@ -1,4 +1,4 @@
-import { app, shell, BrowserWindow, ipcMain } from 'electron'
+import { app, shell, BrowserWindow, ipcMain, session } from 'electron'
 import { join } from 'path'
 import { electronApp, is } from '@electron-toolkit/utils'
 import icon from '../../resources/icon.png?asset'
@@ -30,6 +30,7 @@ function createWindow(): void {
       preload: join(__dirname, '../preload/index.js'),
       sandbox: false,
       webSecurity: false,
+      webviewTag: true,
       backgroundThrottling: false,
       devTools: false
     }
@@ -153,6 +154,55 @@ if (!gotTheLock) {
   // initialization and is ready to create browser windows.
   // Some APIs can only be used after this event occurs.
   app.whenReady().then(() => {
+    // Configurar User-Agent de Chrome estándar (evita que YouTube detecte Electron y bloquee la reproducción)
+    const customUserAgent =
+      'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36'
+    session.defaultSession.setUserAgent(customUserAgent)
+
+    // 1. Interceptar encabezados recibidos para eliminar X-Frame-Options y CSP restrictivos
+    session.defaultSession.webRequest.onHeadersReceived((details, callback) => {
+      if (
+        details.url.includes('youtube.com') ||
+        details.url.includes('youtube-nocookie.com') ||
+        details.url.includes('googlevideo.com')
+      ) {
+        const headers = { ...details.responseHeaders }
+        delete headers['x-frame-options']
+        delete headers['X-Frame-Options']
+        delete headers['frame-options']
+        for (const key of Object.keys(headers)) {
+          if (key.toLowerCase() === 'content-security-policy') {
+            headers[key] = headers[key].map((csp) =>
+              csp.replace(/frame-ancestors[^;]+;?/gi, '')
+            )
+          }
+        }
+        callback({ cancel: false, responseHeaders: headers })
+      } else {
+        callback({ cancel: false, responseHeaders: details.responseHeaders })
+      }
+    })
+
+    // 2. Interceptar encabezados enviados para proveer Referer y Origin válidos de YouTube (elimina error 152-4)
+    session.defaultSession.webRequest.onBeforeSendHeaders((details, callback) => {
+      if (
+        details.url.includes('youtube.com') ||
+        details.url.includes('youtube-nocookie.com') ||
+        details.url.includes('googlevideo.com')
+      ) {
+        const headers = { ...details.requestHeaders }
+        for (const key of Object.keys(headers)) {
+          if (key.toLowerCase() === 'referer' || key.toLowerCase() === 'origin') {
+            delete headers[key]
+          }
+        }
+        headers['Referer'] = 'https://www.youtube.com/'
+        headers['Origin'] = 'https://www.youtube.com'
+        callback({ cancel: false, requestHeaders: headers })
+      } else {
+        callback({ cancel: false, requestHeaders: details.requestHeaders })
+      }
+    })
 
     // Set app user model id for windows
     electronApp.setAppUserModelId('com.kevin.fuzionplayer')
