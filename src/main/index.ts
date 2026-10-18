@@ -1,4 +1,5 @@
 import { app, shell, BrowserWindow, ipcMain, session } from 'electron'
+import type { Session } from 'electron'
 import { join } from 'path'
 import { electronApp, is } from '@electron-toolkit/utils'
 import icon from '../../resources/icon.png?asset'
@@ -10,6 +11,76 @@ app.commandLine.appendSwitch('force-gpu-mem-available-mb', '4096')
 app.commandLine.appendSwitch('ignore-gpu-blocklist')
 app.commandLine.appendSwitch('enable-gpu-rasterization')
 app.commandLine.appendSwitch('enable-zero-copy')
+
+// Partición (sesión) aislada donde vive el <webview> de YouTube.
+// DEBE coincidir con el atributo `partition` del <webview> en IntegratedVideoPlayer.tsx
+const YT_PARTITION = 'persist:youtube'
+
+// User-Agent de Chrome limpio, construido con la versión REAL de Chromium de este Electron
+// (sin "Electron/" ni el nombre de la app). Así no queda desfasado cuando actualices Electron.
+function buildChromeUserAgent(): string {
+  const major = process.versions.chrome.split('.')[0]
+  return `Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/${major}.0.0.0 Safari/537.36`
+}
+
+// Hosts a los que se permite navegar dentro del <webview> (YouTube + login/consentimiento de Google)
+function isAllowedWebviewNavigation(url: string): boolean {
+  try {
+    const { protocol, hostname } = new URL(url)
+    if (protocol !== 'https:') return false
+    return (
+      hostname === 'youtube.com' ||
+      hostname.endsWith('.youtube.com') ||
+      hostname === 'google.com' ||
+      hostname.endsWith('.google.com')
+    )
+  } catch {
+    return false
+  }
+}
+
+function configureYouTubeSession(ses: Session): void {
+  ses.setUserAgent(buildChromeUserAgent())
+
+  // Solo agregamos el Referer cuando falta y únicamente en la carga del documento
+  // (mainFrame / subFrame). Ya NO tocamos Origin ni los requests de googlevideo.com,
+  // porque forzarlos podía romper las peticiones del reproductor.
+  ses.webRequest.onBeforeSendHeaders(
+    { urls: ['*://*.youtube.com/*', '*://*.youtube-nocookie.com/*'] },
+    (details, callback) => {
+      const headers = details.requestHeaders
+      const hasReferer = Object.keys(headers).some((k) => k.toLowerCase() === 'referer')
+      const isDocument = details.resourceType === 'mainFrame' || details.resourceType === 'subFrame'
+      if (!hasReferer && isDocument) {
+        headers['Referer'] = 'https://www.youtube.com/'
+      }
+      callback({ requestHeaders: headers })
+    }
+  )
+}
+
+// Seguridad extra para todos los <webview> de la app
+app.on('web-contents-created', (_event, contents) => {
+  // Ventana principal: los webviews no pueden tener Node ni preload propio
+  contents.on('will-attach-webview', (_e, webPreferences) => {
+    delete webPreferences.preload
+    webPreferences.nodeIntegration = false
+    webPreferences.contextIsolation = true
+  })
+
+  if (contents.getType() === 'webview') {
+    // Sin ventanas emergentes: lo externo se abre en el navegador del sistema
+    contents.setWindowOpenHandler(({ url }) => {
+      if (/^https?:\/\//i.test(url)) shell.openExternal(url)
+      return { action: 'deny' }
+    })
+
+    // El webview no puede salirse de YouTube/Google
+    contents.on('will-navigate', (event, url) => {
+      if (!isAllowedWebviewNavigation(url)) event.preventDefault()
+    })
+  }
+})
 
 function createWindow(): void {
   // Create the browser window.
@@ -138,7 +209,6 @@ if (!gotTheLock) {
   app.commandLine.appendSwitch('disable-backgrounding-occluded-windows')
   app.commandLine.appendSwitch('disable-renderer-backgrounding')
 
-
   app.on('second-instance', () => {
     // Alguien intentó abrir otra instancia, enfocamos la original
     const mainWindow = BrowserWindow.getAllWindows()[0]
@@ -148,89 +218,41 @@ if (!gotTheLock) {
     }
   })
 
-
-
   // This method will be called when Electron has finished
   // initialization and is ready to create browser windows.
   // Some APIs can only be used after this event occurs.
   app.whenReady().then(() => {
-    // Configurar User-Agent de Chrome estándar (evita que YouTube detecte Electron y bloquee la reproducción)
-    const customUserAgent =
-      'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36'
-    session.defaultSession.setUserAgent(customUserAgent)
-
-    // 1. Interceptar encabezados recibidos para eliminar X-Frame-Options y CSP restrictivos
-    session.defaultSession.webRequest.onHeadersReceived((details, callback) => {
-      if (
-        details.url.includes('youtube.com') ||
-        details.url.includes('youtube-nocookie.com') ||
-        details.url.includes('googlevideo.com')
-      ) {
-        const headers = { ...details.responseHeaders }
-        delete headers['x-frame-options']
-        delete headers['X-Frame-Options']
-        delete headers['frame-options']
-        for (const key of Object.keys(headers)) {
-          if (key.toLowerCase() === 'content-security-policy') {
-            headers[key] = headers[key].map((csp) =>
-              csp.replace(/frame-ancestors[^;]+;?/gi, '')
-            )
-          }
-        }
-        callback({ cancel: false, responseHeaders: headers })
-      } else {
-        callback({ cancel: false, responseHeaders: details.responseHeaders })
-      }
-    })
-
-    // 2. Interceptar encabezados enviados para proveer Referer y Origin válidos de YouTube (elimina error 152-4)
-    session.defaultSession.webRequest.onBeforeSendHeaders((details, callback) => {
-      if (
-        details.url.includes('youtube.com') ||
-        details.url.includes('youtube-nocookie.com') ||
-        details.url.includes('googlevideo.com')
-      ) {
-        const headers = { ...details.requestHeaders }
-        for (const key of Object.keys(headers)) {
-          if (key.toLowerCase() === 'referer' || key.toLowerCase() === 'origin') {
-            delete headers[key]
-          }
-        }
-        headers['Referer'] = 'https://www.youtube.com/'
-        headers['Origin'] = 'https://www.youtube.com'
-        callback({ cancel: false, requestHeaders: headers })
-      } else {
-        callback({ cancel: false, requestHeaders: details.requestHeaders })
-      }
-    })
+    // Sesión aislada para el reproductor de YouTube (<webview partition="persist:youtube">):
+    // User-Agent de Chrome limpio + Referer válido en la carga del documento.
+    configureYouTubeSession(session.fromPartition(YT_PARTITION))
 
     // Set app user model id for windows
     electronApp.setAppUserModelId('com.kevin.fuzionplayer')
 
-  // IPC test
-  ipcMain.on('ping', () => console.log('pong'))
+    // IPC test
+    ipcMain.on('ping', () => console.log('pong'))
 
-  ipcMain.on('theme-changed', (event, isDarkMode) => {
-    const win = BrowserWindow.fromWebContents(event.sender)
-    if (win) {
-      win.setTitleBarOverlay({
-        color: '#00000000',
-        symbolColor: isDarkMode ? '#ffffff' : '#000000',
-        height: 38
-      })
-    }
+    ipcMain.on('theme-changed', (event, isDarkMode) => {
+      const win = BrowserWindow.fromWebContents(event.sender)
+      if (win) {
+        win.setTitleBarOverlay({
+          color: '#00000000',
+          symbolColor: isDarkMode ? '#ffffff' : '#000000',
+          height: 38
+        })
+      }
+    })
+
+    setupIpc()
+
+    createWindow()
+
+    app.on('activate', function () {
+      // On macOS it's common to re-create a window in the app when the
+      // dock icon is clicked and there are no other windows open.
+      if (BrowserWindow.getAllWindows().length === 0) createWindow()
+    })
   })
-
-  setupIpc()
-
-  createWindow()
-
-  app.on('activate', function () {
-    // On macOS it's common to re-create a window in the app when the
-    // dock icon is clicked and there are no other windows open.
-    if (BrowserWindow.getAllWindows().length === 0) createWindow()
-  })
-})
 }
 
 // Quit when all windows are closed, except on macOS. There, it's common

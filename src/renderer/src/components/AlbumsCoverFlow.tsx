@@ -4,13 +4,52 @@ import { useNavigate } from 'react-router-dom';
 import { useAudio } from '../context/AudioContext';
 import { useTheme } from '../context/ThemeContext';
 import CoverImage from './CoverImage';
-import { Pause, Play, SkipBack, SkipForward, ListMusic, X, Settings, Mic2, Power } from 'lucide-react';
+import { Pause, Play, SkipBack, SkipForward, ListMusic, X, Settings, Mic2, Power, Disc3 } from 'lucide-react';
 import LyricsView from './LyricsView';
+import AlbumTriptych from './AlbumTriptych';
 import { useTranslation } from 'react-i18next';
 import ArtistLinks from './ArtistLinks';
 import SongTitleLinks from './SongTitleLinks';
 
 const fmtTime = (secs: number) => `${Math.floor(secs / 60)}:${String(Math.floor(secs % 60)).padStart(2, '0')}`;
+
+// --- Parámetros de la caja 3D de cada álbum (estantería) ---
+// Grosor de la caja en px: 26 px originales + 3 %. Cambia el 1.03 si quieres más o menos grosor.
+const BOX_DEPTH = 26 * 1.03;
+const BOX_HALF = BOX_DEPTH / 2;
+// Giro de cada caja en la estantería (como la imagen de referencia). 90 = totalmente de canto.
+const SHELF_ANGLE = 78;
+// Separación entre cajas, en % del ancho de la portada (menor = más juntas)
+const SHELF_STEP_PCT = 14;
+// NUEVO: factor de aumento del tamaño de las cajas del carrusel (1.17 = 17 % más grandes).
+// Al abrir un álbum se compensa para que el reproductor conserve su tamaño de antes.
+const CAROUSEL_BOOST = 1.0;
+// NUEVO: carrusel mariposa. Las cajas se curvan hacia el fondo según su distancia a la activa
+// (mayor valor = alas más cerradas) y se abre un hueco en el centro donde sobresale la activa.
+const CURVE_Z = 16;
+// NUEVO: hueco a cada lado de la caja activa, para que su portada quede libre y centrada
+const CENTER_GAP_PCT = 14;
+const ACTIVE_POP = 80;
+// NUEVO: giro de la caja activa (las demás usan SHELF_ANGLE). Menor = la portada del centro se ve más de frente.
+const ACTIVE_ANGLE = 71;
+// NUEVO: inclinación de la curva según el lado del scroll. Con scroll hacia la derecha, el ala derecha se aleja
+// más y la izquierda se acerca (y al revés). Pon 0 para una curva simétrica.
+const CURVE_LEAN = 18;
+// NUEVO: tamaño de la pantalla del reproductor (portada + tocadiscos) respecto al tamaño que tenía antes (1 = igual)
+const PLAYER_BOOST = 1.12;
+const EXPANDED_SCALE = (0.96 * PLAYER_BOOST) / CAROUSEL_BOOST;
+const shelfX = (o: number) => o * SHELF_STEP_PCT + Math.sign(o) * CENTER_GAP_PCT;
+const shelfZ = (o: number, dir: number) => -Math.pow(Math.abs(o), 1.5) * CURVE_Z - dir * o * CURVE_LEAN;
+// Tope de cajas que se dibujan a cada lado de la activa (aunque la pantalla sea enorme)
+const MAX_RENDER_RANGE = 16;
+// NUEVO: cuánto sale hacia el frente (hacia ti) al pasar el mouse, sin moverse en X
+const HOVER_Z = 90;
+// NUEVO: cuánto sale la caja de su hueco al abrir/cerrar, antes de girar
+const PULL_Z = 130;
+// NUEVO: tiempo sin moverse en el selector de letras antes de mostrar el carrusel ya acomodado (ms)
+const SCRUB_REVEAL_MS = 450;
+// Mismo tamaño que usa el estilo de cada caja: min(58vh, 36vw) limitado entre 320 y 750 px
+const getItemSize = (vw: number, vh: number) => Math.min(750 * CAROUSEL_BOOST, Math.max(320 * CAROUSEL_BOOST, Math.min(vh * 0.58 * CAROUSEL_BOOST, vw * 0.36 * CAROUSEL_BOOST)));
 
 // --- Estilo del tocadiscos: plinto blanco mate, inspirado en un giradiscos de mesa (vista superior) ---
 const PLINTH_STYLE: React.CSSProperties = {
@@ -355,7 +394,7 @@ const VinylPlayer = ({
         setTimeout(() => setVolume(originalVolumeRef.current), 150);
       }, 1500);
     } else if (!isPlaying && !isPendingResume) {
-      // NUEVO: si el disco estaba fuera de la bandeja, vuelve a colocarse al reanudar
+      // Si el disco estaba fuera de la bandeja, vuelve a colocarse al reanudar
       if (onDiscReturn) onDiscReturn();
       setIsPendingResume(true);
       setVolume(0);
@@ -1064,13 +1103,14 @@ const ArtistSticker = ({ album }: { album: any }) => {
 
 export default function AlbumsCoverFlow({ albums, onExpand }: any) {
   const { colors, albumZenMode, setAlbumZenMode, reduceAnimations } = useTheme();
-  const { playSound, pauseOrResumeSound, playNext, playPrevious, currentSong, subscribeToProgress, isPlaying: globalIsPlaying, volume, setVolume } = useAudio();
+  const { playSound, pauseOrResumeSound, playNext, playPrevious, currentSong, subscribeToProgress, isPlaying: globalIsPlaying, volume, setVolume, artists } = useAudio();
   const { t } = useTranslation();
   const navigate = useNavigate();
 
   const [activeIndex, setActiveIndex] = useState(Math.floor(albums.length / 2));
   const [expandedIndex, setExpandedIndex] = useState<number | null>(null);
   const [isPaperOpen, setIsPaperOpen] = useState(false);
+  const [isTriptychOpen, setIsTriptychOpen] = useState(false);
   const [showLyrics, setShowLyrics] = useState(false);
   const [albumInfo, setAlbumInfo] = useState<string>('');
   const [isDiscOnPlatter, setIsDiscOnPlatter] = useState(false);
@@ -1087,16 +1127,53 @@ export default function AlbumsCoverFlow({ albums, onExpand }: any) {
   const [isScrubbing, setIsScrubbing] = useState(false);
   const scrubTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
-  // NUEVO: el tocadiscos entra cuando termina el giro de la funda (ajusta 650 a la duración del giro)
+  // El tocadiscos entra cuando termina el giro de la funda
   const [playerReady, setPlayerReady] = useState(false);
 
+  // NUEVO: etapa de la animación de apertura/cierre del álbum
+  // 0 = reposo | 1 = sale del hueco y las demás se hacen a un lado | 2 = abierto (de frente)
+  // 3 = vuelve a girar a su hueco | 4 = las demás regresan
+  const [expandStage, setExpandStage] = useState(0);
+  // NUEVO: caja bajo el mouse (sale hacia el frente sin moverse en X)
+  const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
+  // NUEVO: referencia a la canción actual para decidir (sin re-disparar el efecto) si se abre el tríptico
+  const currentSongRef = useRef(currentSong);
+  currentSongRef.current = currentSong;
+
+  // Tamaño de la ventana, para saber cuántas cajas caben realmente en pantalla
+  const [view, setView] = useState({
+    vw: typeof window !== 'undefined' ? window.innerWidth : 1600,
+    vh: typeof window !== 'undefined' ? window.innerHeight : 900
+  });
+
+  useEffect(() => {
+    const update = () => setView({ vw: window.innerWidth, vh: window.innerHeight });
+    update();
+    window.addEventListener('resize', update);
+    return () => window.removeEventListener('resize', update);
+  }, []);
+
+  // NUEVO: secuencia de apertura.
+  // 1) la caja sobresale en su hueco y las demás se abren a los lados
+  // 2) gira (78° -> 0°) hasta quedar de frente a la pantalla
+  // 3) entra el tocadiscos; el tríptico solo se abre solo si el álbum NO está ya en reproducción
   useEffect(() => {
     if (expandedIndex === null) {
+      setExpandStage(0);
       setPlayerReady(false);
+      setIsTriptychOpen(false);
       return;
     }
-    const id = setTimeout(() => setPlayerReady(true), 900);
-    return () => clearTimeout(id);
+    setHoveredIndex(null);
+    setExpandStage(1);
+    const t1 = setTimeout(() => setExpandStage(2), 450);
+    const t2 = setTimeout(() => {
+      setPlayerReady(true);
+      const cs = currentSongRef.current;
+      const alreadyPlaying = !!cs && albums[expandedIndex]?.songs.some((s: any) => s.path === cs.path);
+      if (!alreadyPlaying) setIsTriptychOpen(true);
+    }, 1500);
+    return () => { clearTimeout(t1); clearTimeout(t2); };
   }, [expandedIndex]);
 
   useEffect(() => {
@@ -1109,7 +1186,7 @@ export default function AlbumsCoverFlow({ albums, onExpand }: any) {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, []);
 
-  // NUEVO: pantalla fija, sin barras de desplazamiento (bloquea el scroll de la página y de cualquier contenedor padre con scroll)
+  // Pantalla fija, sin barras de desplazamiento (bloquea el scroll de la página y de cualquier contenedor padre con scroll)
   useEffect(() => {
     const locked: { el: HTMLElement; prev: string }[] = [];
     const lock = (el: HTMLElement | null) => {
@@ -1143,15 +1220,23 @@ export default function AlbumsCoverFlow({ albums, onExpand }: any) {
     }
   }, [expandedIndex, onExpand, albums, t]);
 
+  // NUEVO: secuencia de cierre.
+  // se guarda el tocadiscos -> la caja gira de vuelta a su hueco (las demás siguen apartadas)
+  // -> las demás regresan -> la caja se mete de nuevo al estante
   const handleCloseAlbum = () => {
     setShowLyrics(false);
+    setIsTriptychOpen(false);
+    const run = () => {
+      setPlayerReady(false);
+      setTimeout(() => setExpandStage(3), 500);
+      setTimeout(() => setExpandStage(4), 1500);
+      setTimeout(() => setExpandedIndex(null), 2150);
+    };
     if (isPaperOpen) {
       setIsPaperOpen(false);
-      setTimeout(() => {
-        setExpandedIndex(null);
-      }, 900);
+      setTimeout(run, 900);
     } else {
-      setExpandedIndex(null);
+      run();
     }
   };
 
@@ -1183,10 +1268,6 @@ export default function AlbumsCoverFlow({ albums, onExpand }: any) {
     const handlePointerMove = (e: PointerEvent) => {
       if (discDragStartRef.current) {
         setDiscDragPos({ x: e.clientX, y: e.clientY });
-
-        if (turntableRef.current) {
-          // The center of the platter we found earlier
-        }
       }
     };
 
@@ -1227,6 +1308,28 @@ export default function AlbumsCoverFlow({ albums, onExpand }: any) {
   const playingAlbumIndex = albums.findIndex((a: any) => a.songs.some((s: any) => s.path === currentSong?.path));
   const playingAlbum = playingAlbumIndex >= 0 ? albums[playingAlbumIndex] : null;
 
+  // Cuántas cajas a cada lado caben en pantalla (más 1 de margen para que entren suavemente).
+  // Todo lo que queda fuera de ese rango no se dibuja.
+  const shelfItemSize = getItemSize(view.vw, view.vh);
+  const shelfStepPx = shelfItemSize * (SHELF_STEP_PCT / 100);
+  const visibleRange = Math.min(
+    MAX_RENDER_RANGE,
+    Math.ceil(((view.vw / 2 + shelfItemSize * 0.16 + BOX_DEPTH) / shelfStepPx) * 1.35) + 1
+  );
+
+  // NUEVO: lado hacia el que se hizo el último scroll (1 = adelante/derecha, -1 = atrás/izquierda)
+  const prevActiveRef = useRef(activeIndex);
+  const scrollDirRef = useRef(1);
+  if (activeIndex !== prevActiveRef.current) {
+    scrollDirRef.current = activeIndex > prevActiveRef.current ? 1 : -1;
+    prevActiveRef.current = activeIndex;
+  }
+  const scrollDir = scrollDirRef.current;
+
+  // NUEVO: el disco que se arrastra tiene el tamaño real del tocadiscos en pantalla
+  const turntableW = turntableRef.current?.getBoundingClientRect().width;
+  const dragDiscSize = (turntableW || Math.max(450, Math.min(1200, Math.min(view.vh * 0.75, view.vw * 0.40)))) * 0.92;
+
   return (
     <>
       <div
@@ -1235,10 +1338,10 @@ export default function AlbumsCoverFlow({ albums, onExpand }: any) {
         ref={containerRef}
         style={{ perspective: '1500px' }}
       >
-        {/* NUEVO: superficie de cristal donde "flotan" las portadas */}
+        {/* Superficie de cristal donde "flotan" las portadas */}
         <div
           className={`absolute left-0 right-0 pointer-events-none transition-opacity duration-500 ${expandedIndex === null ? 'opacity-100' : 'opacity-0'}`}
-          style={{ top: 'calc(50% + clamp(350px, min(65vh, 40vw), 1000px) * 0.395 + 4px)' }}
+          style={{ top: 'calc(50% + clamp(410px, min(76vh, 47vw), 1170px) * 0.395 + 4px)' }}
         >
           <div className="h-px bg-gradient-to-r from-transparent via-white/40 to-transparent" />
           <div
@@ -1260,13 +1363,15 @@ export default function AlbumsCoverFlow({ albums, onExpand }: any) {
           )}
         </AnimatePresence>
 
-        <div className={`relative w-full h-full flex items-center justify-center transition-opacity duration-200 ${isScrubbing ? 'opacity-0' : 'opacity-100'}`} style={{ transformStyle: 'preserve-3d' }}>
+        <div className={`relative w-full h-full flex items-center justify-center `} style={{ transformStyle: 'preserve-3d', visibility: isScrubbing ? 'hidden' : 'visible' }}>
           {albums.map((album: any, index: number) => {
-            if (Math.abs(activeIndex - index) > 6) return null;
+            // Solo se dibujan las cajas que caben en pantalla
+            if (Math.abs(activeIndex - index) > visibleRange) return null;
 
             const isActive = index === activeIndex;
             const isExpanded = index === expandedIndex;
-            // NUEVO: el reproductor y sus pestañas aparecen solo cuando terminó el giro
+
+            // El reproductor y sus pestañas aparecen solo cuando terminó el giro
             const showPlayer = isExpanded && playerReady;
             const sideSplit = getSideSplit(album.songs);
             const totalSecsAlbum = album.songs.reduce((acc: number, s: any) => acc + (Number(s.duration) || 0), 0);
@@ -1292,24 +1397,41 @@ export default function AlbumsCoverFlow({ albums, onExpand }: any) {
             };
 
             const offset = index - activeIndex;
-            const direction = Math.sign(offset);
             const absOffset = Math.abs(offset);
 
-            // Abanico 3D: el central de frente y grande; los vecinos pegados, girados hacia el centro y alineados por abajo
-            // (misma línea de base para que el reflejo del "cristal" quede continuo)
-            let translateX: number | string = `${direction * (absOffset === 0 ? 0 : 58 + (absOffset - 1) * 32)}%`;
-            let translateZ = absOffset === 0 ? 140 : -absOffset * 40;
-            let rotateY = direction * -58;
-            let scale = absOffset === 0 ? 0.72 : 0.6;
-            let zIndex = 70 - absOffset;
-            let opacity = 1 - absOffset * 0.1;
-            let translateY = absOffset === 0 ? '-50%' : '-40%';
+            // NUEVO: posición de cada caja.
+            // Todas giran el mismo ángulo (SHELF_ANGLE), alineadas en la misma línea, con el lomo a la vista.
+            // - Hover: la caja sale hacia el frente (eje Z), en su mismo hueco, sin moverse en X.
+            // - Abrir/cerrar: la elegida sobresale en su hueco, las demás se apartan a los lados (xPx) y no se encima nada.
+            let xPct = shelfX(offset);
+            let xPx = 0;
+            let translateZ = isActive ? ACTIVE_POP : shelfZ(offset, scrollDir);
+            let rotateY = isActive ? ACTIVE_ANGLE : SHELF_ANGLE;
+            let scale = 1;
+            let zIndex = isActive ? 300 : (100 - index);
+            let translateY = '-50%'; // Todos apoyados en la misma línea de suelo/estante
 
-            if (isExpanded) {
-              // NUEVO: rotateY = 360 -> la funda gira una vuelta completa sobre su eje mientras se desplaza a la izquierda
-              translateX = '-53%'; translateY = '-46.5%'; translateZ = 200; rotateY = 360; scale = 0.96; zIndex = 200; opacity = 1;
-            } else if (expandedIndex !== null) {
-              translateZ -= 500; opacity = 0; scale = 0.5;
+            if (expandedIndex !== null) {
+              if (isExpanded) {
+                zIndex = 400;
+                if (expandStage === 2) {
+                  // Abierto: de frente a la pantalla, a la izquierda
+                  xPct = -55 * EXPANDED_SCALE; translateY = '-46.5%'; translateZ = 200; rotateY = 0; scale = EXPANDED_SCALE;
+                } else {
+                  // Etapas 0, 1, 3 y 4: sobresale hacia ti pero en su propio hueco
+                  xPct = 0; translateZ = PULL_Z; rotateY = ACTIVE_ANGLE;
+                }
+              } else {
+                // Las demás se hacen a un lado (izquierda/derecha) y regresan en la etapa 4
+                const rel = index - expandedIndex;
+                xPct = shelfX(rel);
+                xPx = expandStage === 4 ? 0 : (rel < 0 ? -1 : 1) * view.vw;
+                translateZ = shelfZ(rel, scrollDir);
+              }
+            } else if (hoveredIndex === index) {
+              // Hover: sale hacia el frente, sin moverse en X ni encimarse
+              translateZ += HOVER_Z;
+              zIndex = 350;
             }
 
             return (
@@ -1317,19 +1439,20 @@ export default function AlbumsCoverFlow({ albums, onExpand }: any) {
                 key={album.name}
                 className="absolute top-1/2 left-1/2 cursor-pointer group"
                 initial={false}
-                variants={{ hover: {} }}
-                whileHover={expandedIndex === null ? 'hover' : undefined}
-                animate={{ x: `calc(-50% + ${typeof translateX === 'number' ? translateX + 'px' : translateX})`, y: translateY, z: translateZ, scale: scale, opacity: opacity, rotateY: rotateY }}
-                // NUEVO: resorte propio (más lento y con rebote suave) para el giro de la tarjeta activa
+                onHoverStart={() => { if (expandedIndex === null) setHoveredIndex(index); }}
+                onHoverEnd={() => setHoveredIndex(p => (p === index ? null : p))}
+                // Siempre la misma estructura calc(-50% + X% + Ypx) para que Framer Motion interpole sin saltos
+                animate={{ x: `calc(-50% + ${xPct}% + ${xPx}px)`, y: translateY, z: translateZ, scale: scale, rotateY: rotateY }}
                 transition={
-                  isActive
-                    ? {
-                      type: 'spring', stiffness: 170, damping: 26, mass: 1.2,
-                      rotateY: { type: 'tween', duration: 1.1, ease: [0.45, 0, 0.15, 1] }
-                    }
-                    : { type: 'spring', stiffness: 260, damping: 30, mass: 1.2 }
+                  isScrubbing ? { duration: 0 } :
+                    isExpanded
+                      ? {
+                        type: 'spring', stiffness: 170, damping: 26, mass: 1.2,
+                        rotateY: { type: 'tween', duration: 0.9, ease: [0.45, 0, 0.15, 1] }
+                      }
+                      : { type: 'spring', stiffness: 200, damping: 30, mass: 1.1 }
                 }
-                style={{ zIndex, width: 'min(65vh, 40vw)', minWidth: '350px', maxWidth: '1000px', height: 'min(65vh, 40vw)', minHeight: '350px', maxHeight: '1000px', transformStyle: 'preserve-3d', pointerEvents: (expandedIndex !== null && !isExpanded) ? 'none' : 'auto' }}
+                style={{ zIndex, width: `${shelfItemSize}px`, height: `${shelfItemSize}px`, transformStyle: 'preserve-3d', pointerEvents: (expandedIndex !== null && !isExpanded) ? 'none' : 'auto' }}
                 onClick={(e) => {
                   e.stopPropagation();
                   if (expandedIndex === null) {
@@ -1340,10 +1463,6 @@ export default function AlbumsCoverFlow({ albums, onExpand }: any) {
                 <motion.div
                   className="relative w-full h-full rounded-lg"
                   style={{ transformStyle: 'preserve-3d' }}
-                  variants={{
-                    hover: { scale: 1.1, z: 120, transition: { type: 'spring', stiffness: 300, damping: 32 } }
-                  }}
-                  transition={{ type: 'spring', stiffness: 300, damping: 32 }}
                 >
                   <AnimatePresence>
                     {showPlayer && (
@@ -1377,7 +1496,7 @@ export default function AlbumsCoverFlow({ albums, onExpand }: any) {
                         initial={{ opacity: 0, x: -20 }}
                         animate={{ opacity: 1, x: 0, transition: { delay: 0.5 } }}
                         exit={{ opacity: 0, x: -20 }}
-                        onClick={(e) => { e.stopPropagation(); setIsPaperOpen(true); }}
+                        onClick={(e) => { e.stopPropagation(); setIsTriptychOpen(true); }}
                         className="absolute top-3 right-0 translate-x-[90%] w-10 h-32 bg-[#f4f0ea] rounded-r-xl shadow-xl border-y border-r border-[#d8cdbc] flex items-center justify-center cursor-pointer hover:bg-white transition-colors z-[15]"
                       >
                         <div className="rotate-90 whitespace-nowrap text-[#5c5444] font-bold tracking-widest text-[11px] flex items-center gap-1.5">
@@ -1403,7 +1522,7 @@ export default function AlbumsCoverFlow({ albums, onExpand }: any) {
                     )}
                   </AnimatePresence>
 
-                  {/* NUEVO: un solo disco de vinilo, continuo: asoma en el carrusel, se queda entre las dos caras de la funda mientras gira
+                  {/* Un solo disco de vinilo, continuo: asoma en el carrusel, se queda entre las dos caras de la funda mientras gira
                       (la cara trasera lo tapa) y se desliza un poco más cuando entra el reproductor */}
                   <AnimatePresence>
                     {isActive && (expandedIndex === null || (isExpanded && !isDiscOnPlatter && !isDraggingDisc)) && (
@@ -1433,7 +1552,7 @@ export default function AlbumsCoverFlow({ albums, onExpand }: any) {
                     )}
                   </AnimatePresence>
 
-                  {/* NUEVO: solo la portada hace zoom frontal al abrir la hoja (el reproductor no cambia de tamaño) */}
+                  {/* Solo la portada hace zoom frontal al abrir la hoja (el reproductor no cambia de tamaño) */}
                   <motion.div
                     className="absolute inset-0"
                     style={{ transformStyle: 'preserve-3d' }}
@@ -1445,22 +1564,31 @@ export default function AlbumsCoverFlow({ albums, onExpand }: any) {
                         : { type: 'spring', stiffness: 180, damping: 24 }
                     }
                   >
-                    {/* NUEVO: cara trasera = la misma portada, espejada, difuminada y translúcida (como vidrio) */}
+                    {/* CARA TRASERA (BACK COVER) - ROTADA 180° CON LA MITAD DEL GROSOR DE PROFUNDIDAD.
+                        NUEVO: ahora es la misma portada, difuminada y espejada (como la cara inversa de una funda), en vez de verse oscura.
+                        La imagen solo se carga en el álbum abierto y en las cajas cuya parte trasera queda a la vista (offset >= -1). */}
                     <div
-                      className="absolute inset-0 rounded-lg z-20 overflow-hidden pointer-events-none"
-                      style={{ transform: 'translateZ(-2px) rotateY(180deg)', backfaceVisibility: 'hidden', WebkitBackfaceVisibility: 'hidden' }}
+                      className="absolute inset-0 rounded-lg z-20 overflow-hidden pointer-events-none bg-[#2a2a30]"
+                      style={{ transform: `rotateY(180deg) translateZ(${BOX_HALF}px)`, backfaceVisibility: 'hidden', WebkitBackfaceVisibility: 'hidden' }}
                     >
-                      <div className="absolute inset-0" style={{ transform: 'scaleX(-1)', filter: 'blur(18px) saturate(1.3) brightness(1.1)', opacity: 0.9 }}>
-                        <CoverImage coverUrl={album.cover} audioPath={album.songs[0]?.path} hq={false} className="w-full h-full object-cover scale-110" />
-                      </div>
-                      <div className="absolute inset-0 rounded-lg bg-white/10 border border-white/25 shadow-[inset_0_0_40px_rgba(255,255,255,0.15)]" />
+                      {(isExpanded || offset >= -1) && (
+                        <div className="absolute inset-0" style={{ transform: 'scaleX(-1)', filter: 'blur(10px) saturate(1.15) brightness(1.05)' }}>
+                          <CoverImage coverUrl={album.cover} audioPath={album.songs[0]?.path} hq={false} className="w-full h-full object-cover scale-110" />
+                        </div>
+                      )}
+                      <div className="absolute inset-0 rounded-lg bg-white/5 border border-white/20" />
                     </div>
 
+                    {/* CARA FRONTAL (PORTADA) - CON LA MITAD DEL GROSOR DE PROFUNDIDAD */}
                     <div
                       className="absolute inset-0 overflow-hidden rounded-lg z-20 bg-black shadow-[0_30px_80px_rgba(0,0,0,0.9)]"
-                      style={{ transform: 'translateZ(2px)', backfaceVisibility: 'hidden', WebkitBackfaceVisibility: 'hidden' }}
+                      style={{ transform: `translateZ(${BOX_HALF}px)`, backfaceVisibility: 'hidden', WebkitBackfaceVisibility: 'hidden' }}
                     >
                       <CoverImage coverUrl={album.cover} audioPath={album.songs[0]?.path} hq={isActive} className="w-full h-full object-cover" />
+
+                      {/* Pliegue interno realista en el borde del lomo */}
+                      <div className="absolute top-0 bottom-0 left-0 w-3.5 bg-gradient-to-r from-black/60 via-black/25 to-transparent pointer-events-none z-30" />
+
                       {expandedIndex === null && (
                         <div className="absolute inset-0 pointer-events-none rounded-lg border-[3px] border-white/80 shadow-[inset_0_0_35px_rgba(255,255,255,0.3)] opacity-0 group-hover:opacity-100 transition-opacity duration-200 z-30" />
                       )}
@@ -1505,17 +1633,96 @@ export default function AlbumsCoverFlow({ albums, onExpand }: any) {
                       )}
                     </div>
 
-                    {/* NUEVO: grosor de la funda de vinilo (se nota al verla de lado) */}
-                    <div className="absolute top-0 bottom-0 w-1 pointer-events-none" style={{ left: 0, transformOrigin: 'left center', transform: 'translateZ(2px) rotateY(90deg)', background: 'linear-gradient(to right, #26262b, #070708)' }} />
-                    <div className="absolute top-0 bottom-0 w-1 pointer-events-none" style={{ right: 0, transformOrigin: 'right center', transform: 'translateZ(2px) rotateY(-90deg)', background: 'linear-gradient(to left, #26262b, #070708)' }} />
+                    {/* LOMO IZQUIERDO 3D (SPINE) CON COLOR DEL ÁLBUM Y TÍTULO VERTICAL - EXACTO A LA FOTO DE REFERENCIA */}
+                    <div
+                      className="absolute top-0 bottom-0 left-0 border-r border-white/25 flex flex-col items-center justify-between py-6 px-0.5 overflow-hidden pointer-events-none z-20"
+                      style={{
+                        width: `${BOX_DEPTH}px`,
+                        transform: 'translateX(-50%) rotateY(-90deg)',
+                        transformOrigin: 'center center',
+                        backfaceVisibility: 'hidden',
+                        boxShadow: 'inset 0 0 10px rgba(0,0,0,0.8)'
+                      }}
+                    >
+                      {/* Fondo de color extraído del álbum con desenfoque para efecto idéntico a la foto de referencia */}
+                      <div className="absolute inset-0 overflow-hidden pointer-events-none">
+                        <CoverImage
+                          coverUrl={album.cover}
+                          audioPath={album.songs[0]?.path}
+                          hq={false}
+                          className="w-full h-full object-cover scale-[5] blur-md saturate-200 brightness-95"
+                        />
+                        <div className="absolute inset-0 bg-gradient-to-b from-white/25 via-transparent to-black/40 pointer-events-none" />
+                        <div className="absolute inset-0 bg-black/20 pointer-events-none" />
+                      </div>
 
-                    {/* NUEVO: reflejo de cristal = copia volteada de la portada con degradado que se desvanece */}
-                    {expandedIndex === null && (
+                      {/* Título en tipografía vertical con sombra para máxima legibilidad */}
+                      <div
+                        className="relative z-10 text-[11px] font-black text-white uppercase tracking-[0.22em] whitespace-nowrap drop-shadow-[0_2px_4px_rgba(0,0,0,0.9)] select-none px-1"
+                        style={{
+                          writingMode: 'vertical-rl',
+                          transform: 'rotate(180deg)'
+                        }}
+                      >
+                        {album.name}
+                      </div>
+
+                      <div className="relative z-10 flex flex-col items-center gap-2">
+                        <div
+                          className="text-[9px] font-extrabold text-white/90 uppercase tracking-widest whitespace-nowrap drop-shadow-[0_1px_3px_rgba(0,0,0,0.9)] select-none px-1"
+                          style={{
+                            writingMode: 'vertical-rl',
+                            transform: 'rotate(180deg)'
+                          }}
+                        >
+                          {album.artist}
+                        </div>
+                        <Disc3 size={12} className="text-white/80 my-1 drop-shadow" />
+                      </div>
+                    </div>
+
+                    {/* BORDE DERECHO (APERTURA DE LA FUNDA DE VINILO) */}
+                    <div
+                      className="absolute top-0 bottom-0 right-0 bg-[#090a0c] border-l border-white/10 flex items-center justify-center overflow-hidden pointer-events-none z-20"
+                      style={{
+                        width: `${BOX_DEPTH}px`,
+                        transform: 'translateX(50%) rotateY(90deg)',
+                        transformOrigin: 'center center',
+                        backfaceVisibility: 'hidden'
+                      }}
+                    >
+                      <div className="w-[3px] h-[80%] bg-black/90 rounded-full shadow-inner" />
+                    </div>
+
+                    {/* BORDE SUPERIOR */}
+                    <div
+                      className="absolute top-0 left-0 right-0 bg-[#141518] border-b border-black/40 pointer-events-none z-20"
+                      style={{
+                        height: `${BOX_DEPTH}px`,
+                        transform: 'translateY(-50%) rotateX(90deg)',
+                        transformOrigin: 'center center',
+                        backfaceVisibility: 'hidden'
+                      }}
+                    />
+
+                    {/* BORDE INFERIOR */}
+                    <div
+                      className="absolute bottom-0 left-0 right-0 bg-[#0b0c0e] border-t border-black/60 pointer-events-none z-20"
+                      style={{
+                        height: `${BOX_DEPTH}px`,
+                        transform: 'translateY(50%) rotateX(-90deg)',
+                        transformOrigin: 'center center',
+                        backfaceVisibility: 'hidden'
+                      }}
+                    />
+
+                    {/* REFLEJO DE CRISTAL (FLOOR GLASS REFLECTION) - solo en las cajas cercanas a la activa */}
+                    {expandedIndex === null && absOffset <= 6 && (
                       <div
                         className="absolute left-0 right-0 pointer-events-none rounded-lg overflow-hidden"
                         style={{
-                          top: 'calc(100% + 6px)', height: '100%',
-                          transform: 'translateZ(2px) scaleY(-1)',
+                          top: `calc(100% + ${BOX_HALF}px)`, height: '100%',
+                          transform: `translateZ(${BOX_HALF}px) scaleY(-1)`,
                           backfaceVisibility: 'hidden', WebkitBackfaceVisibility: 'hidden',
                           opacity: 0.6,
                           WebkitMaskImage: 'linear-gradient(to top, rgba(0,0,0,0.6) 0%, rgba(0,0,0,0) 36%)',
@@ -1709,8 +1916,6 @@ export default function AlbumsCoverFlow({ albums, onExpand }: any) {
 
         {/* Mini reproductor movido al final del componente para no verse afectado por la perspectiva */}
 
-
-
         <AnimatePresence>
           {expandedIndex === null && activeIndex >= 0 && activeIndex < albums.length && (
             <motion.div
@@ -1742,14 +1947,13 @@ export default function AlbumsCoverFlow({ albums, onExpand }: any) {
                           setIsScrubbing(true);
                           setActiveIndex(targetIndex);
                           if (scrubTimeoutRef.current) clearTimeout(scrubTimeoutRef.current);
-                          scrubTimeoutRef.current = setTimeout(() => setIsScrubbing(false), 500);
+                          scrubTimeoutRef.current = setTimeout(() => setIsScrubbing(false), SCRUB_REVEAL_MS);
                         }
                       }
                     }
                   }
                 }}
               >
-
 
                 {/* Thin background bar */}
                 <div className="absolute left-0 right-0 top-1/2 -translate-y-1/2 h-7 bg-black/60 backdrop-blur-md rounded-full border border-white/10 shadow-[inset_0_4px_10px_rgba(0,0,0,0.5)] pointer-events-none" />
@@ -1781,7 +1985,7 @@ export default function AlbumsCoverFlow({ albums, onExpand }: any) {
                             setIsScrubbing(true);
                             setActiveIndex(targetIndex);
                             if (scrubTimeoutRef.current) clearTimeout(scrubTimeoutRef.current);
-                            scrubTimeoutRef.current = setTimeout(() => setIsScrubbing(false), 500);
+                            scrubTimeoutRef.current = setTimeout(() => setIsScrubbing(false), SCRUB_REVEAL_MS);
                           }
                         }}
                         className={`relative z-10 text-[10px] sm:text-[11px] font-black w-full h-full flex items-center justify-center transition-all duration-200 
@@ -1799,17 +2003,15 @@ export default function AlbumsCoverFlow({ albums, onExpand }: any) {
           )}
         </AnimatePresence>
 
-
-
         {isDraggingDisc && discDragPos && expandedIndex !== null && !isDiscOnPlatter && (
           <motion.div
             layoutId="vinyl-disc"
             className="fixed z-[9999] pointer-events-none"
             style={{
-              left: discDragPos.x - (typeof window !== 'undefined' ? Math.max(450, Math.min(1200, Math.min(window.innerHeight * 0.75, window.innerWidth * 0.40))) * 0.92 / 2 : 150),
-              top: discDragPos.y - (typeof window !== 'undefined' ? Math.max(450, Math.min(1200, Math.min(window.innerHeight * 0.75, window.innerWidth * 0.40))) * 0.92 / 2 : 150),
-              width: typeof window !== 'undefined' ? Math.max(450, Math.min(1200, Math.min(window.innerHeight * 0.75, window.innerWidth * 0.40))) * 0.92 : 300,
-              height: typeof window !== 'undefined' ? Math.max(450, Math.min(1200, Math.min(window.innerHeight * 0.75, window.innerWidth * 0.40))) * 0.92 : 300,
+              left: discDragPos.x - dragDiscSize / 2,
+              top: discDragPos.y - dragDiscSize / 2,
+              width: dragDiscSize,
+              height: dragDiscSize,
             }}
             initial={false}
             animate={{
@@ -1863,7 +2065,7 @@ export default function AlbumsCoverFlow({ albums, onExpand }: any) {
                 />
               </div>
             </div>
-            {/* NUEVO BOTÓN PARA PAUSAR DESDE EL MINI REPRODUCTOR */}
+            {/* BOTÓN PARA PAUSAR DESDE EL MINI REPRODUCTOR */}
             <div
               className="ml-auto flex-shrink-0 pl-2"
               onClick={(e) => {
@@ -1878,6 +2080,34 @@ export default function AlbumsCoverFlow({ albums, onExpand }: any) {
           </motion.button>
         )}
       </AnimatePresence>
+
+      {/* Tríptico Desplegable (Canciones, Álbum, Artista) con Scroll Horizontal */}
+      {expandedIndex !== null && albums[expandedIndex] && (
+        <AlbumTriptych
+          isOpen={isTriptychOpen}
+          onClose={() => setIsTriptychOpen(false)}
+          song={
+            albums[expandedIndex].songs?.[0] ||
+            currentSong || {
+              id: 'temp',
+              title: albums[expandedIndex].name,
+              artist: albums[expandedIndex].artist,
+              path: '',
+              filename: '',
+              folder: '',
+              duration: 0
+            }
+          }
+          album={albums[expandedIndex]}
+          artist={albums[expandedIndex]?.artist ? artists[albums[expandedIndex].artist] : undefined}
+          onPlaySong={(track) => {
+            if (!isDiscOnPlatter) setIsDiscOnPlatter(true);
+            playSound(track, `album_${albums[expandedIndex].name}`, albums[expandedIndex].songs);
+          }}
+          currentSongId={currentSong?.id}
+          isPlaying={globalIsPlaying}
+        />
+      )}
     </>
   );
 }
