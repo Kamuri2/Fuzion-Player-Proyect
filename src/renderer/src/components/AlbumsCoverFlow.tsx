@@ -1493,6 +1493,7 @@ export default function AlbumsCoverFlow({ albums, onExpand }: any) {
                   <AnimatePresence>
                     {showPlayer && !isPaperOpen && (
                       <motion.button
+                        data-triptych-tab
                         initial={{ opacity: 0, x: -20 }}
                         animate={{ opacity: 1, x: 0, transition: { delay: 0.5 } }}
                         exit={{ opacity: 0, x: -20 }}
@@ -1581,6 +1582,7 @@ export default function AlbumsCoverFlow({ albums, onExpand }: any) {
 
                     {/* CARA FRONTAL (PORTADA) - CON LA MITAD DEL GROSOR DE PROFUNDIDAD */}
                     <div
+                      data-expanded-cover={isExpanded ? 'true' : undefined}
                       className="absolute inset-0 overflow-hidden rounded-lg z-20 bg-black shadow-[0_30px_80px_rgba(0,0,0,0.9)]"
                       style={{ transform: `translateZ(${BOX_HALF}px)`, backfaceVisibility: 'hidden', WebkitBackfaceVisibility: 'hidden' }}
                     >
