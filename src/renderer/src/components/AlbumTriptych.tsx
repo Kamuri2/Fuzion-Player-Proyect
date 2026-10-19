@@ -2,8 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import type { ChangeEvent, ReactNode } from 'react';
 import { motion } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
-import { useNavigate } from 'react-router-dom';
-import { X, Settings, ImagePlus, Trash2, RotateCcw, ExternalLink } from 'lucide-react';
+import { X, Settings, ImagePlus, Trash2, RotateCcw } from 'lucide-react';
 import CoverImage from './CoverImage';
 import type { Song, Album, Artist } from '../types';
 
@@ -27,7 +26,7 @@ interface Props {
   onPlaySong: (song: Song) => void;
   currentSongId?: string;
   isPlaying?: boolean;
-  setIsPlayerOpen?: (isOpen: boolean) => void;
+  setIsPlayerOpen?: (isOpen: boolean) => void; // en desuso: se conserva para no romper llamadas existentes
   // Opcional: rectángulo de la portada. Si no se pasa, se busca el elemento [data-expanded-cover]
   originRect?: Rect | null;
 }
@@ -79,9 +78,8 @@ async function prepareImage(file: File, max: number, alpha: boolean): Promise<st
   return alpha ? c.toDataURL('image/png') : c.toDataURL('image/jpeg', 0.82);
 }
 
-export function AlbumTriptych({ isOpen, onClose, song, album: albumProp, artist, onPlaySong, currentSongId, isPlaying = false, setIsPlayerOpen, originRect }: Props) {
+export function AlbumTriptych({ isOpen, onClose, song, album: albumProp, artist, onPlaySong, currentSongId, isPlaying = false, originRect }: Props) {
   const { t, i18n } = useTranslation();
-  const navigate = useNavigate();
   // Si no llega el álbum, se arma uno con los datos de la canción
   const album: any = albumProp || { name: song.album || song.title, artist: song.artist, cover: song.cover, year: song.year, songs: [song] };
 
@@ -485,14 +483,6 @@ export function AlbumTriptych({ isOpen, onClose, song, album: albumProp, artist,
     </>
   );
 
-  const handleArtistClick = () => {
-    const name = song.artist || album.artist;
-    if (!name) return;
-    if (setIsPlayerOpen) setIsPlayerOpen(false);
-    onClose();
-    navigate(`/detail/artist/${encodeURIComponent(name)}`);
-  };
-
   // ---------- Hoja 3: artista ----------
   const panel3 = (
     <>
@@ -514,13 +504,6 @@ export function AlbumTriptych({ isOpen, onClose, song, album: albumProp, artist,
         <span style={{ fontFamily: SANS, fontSize: fs(9), fontWeight: 800, letterSpacing: '0.12em', textTransform: 'uppercase', opacity: 0.75 }}>
           {artist?.songs?.length || 1} {t('player.artistSongsCount', 'canciones en tu biblioteca')}
         </span>
-        <button
-          onClick={(e) => { e.stopPropagation(); handleArtistClick(); }}
-          style={{ display: 'flex', alignItems: 'center', gap: 5 * k, padding: `${6 * k}px ${12 * k}px`, borderRadius: 999, background: custom.accent, color: '#fff', fontFamily: SANS, fontSize: fs(10), fontWeight: 800, letterSpacing: '0.08em', textTransform: 'uppercase', cursor: 'pointer', border: 'none', whiteSpace: 'nowrap' }}
-        >
-          <ExternalLink size={12 * k} />
-          {t('player.viewArtistProfile', 'Ver perfil')}
-        </button>
       </div>
     </>
   );

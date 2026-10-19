@@ -1,6 +1,5 @@
 import { useState, useEffect, useRef, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { useNavigate } from 'react-router-dom';
 import { useAudio } from '../context/AudioContext';
 import { useTheme } from '../context/ThemeContext';
 import CoverImage from './CoverImage';
@@ -8,8 +7,6 @@ import { Pause, Play, SkipBack, SkipForward, ListMusic, X, Settings, Mic2, Power
 import LyricsView from './LyricsView';
 import AlbumTriptych from './AlbumTriptych';
 import { useTranslation } from 'react-i18next';
-import ArtistLinks from './ArtistLinks';
-import SongTitleLinks from './SongTitleLinks';
 
 const fmtTime = (secs: number) => `${Math.floor(secs / 60)}:${String(Math.floor(secs % 60)).padStart(2, '0')}`;
 
@@ -51,27 +48,89 @@ const SCRUB_REVEAL_MS = 450;
 // Mismo tamaño que usa el estilo de cada caja: min(58vh, 36vw) limitado entre 320 y 750 px
 const getItemSize = (vw: number, vh: number) => Math.min(750 * CAROUSEL_BOOST, Math.max(320 * CAROUSEL_BOOST, Math.min(vh * 0.58 * CAROUSEL_BOOST, vw * 0.36 * CAROUSEL_BOOST)));
 
-// --- Estilo del tocadiscos: plinto blanco mate, inspirado en un giradiscos de mesa (vista superior) ---
-const PLINTH_STYLE: React.CSSProperties = {
-  backgroundColor: '#f4f4f5',
-  backgroundImage: 'radial-gradient(rgba(0,0,0,0.035) 1px, transparent 1.2px), linear-gradient(160deg, #fcfcfc 0%, #f2f2f3 55%, #e9e9eb 100%)',
-  backgroundSize: '3px 3px, 100% 100%'
+// --- Reproductor de CD: cuerpo blanco con rejilla de altavoz, compartimento circular con tapa de cristal ---
+const PLAYER_ASPECT = 1.08;              // Compensación para el nuevo formato aspect-[1/1.08]
+const CD_BAY = 82;                       // diámetro del compartimento del disco
+const CD_BAY_TOP_VW = 3.5;               // distancia original en base al ancho
+const CD_BAY_TOP = CD_BAY_TOP_VW / PLAYER_ASPECT; // convertido a % de altura real
+const CD_CENTER_Y = (CD_BAY_TOP_VW + CD_BAY / 2) / PLAYER_ASPECT;
+const CD_DISC = 78;                      // diámetro del CD
+const CD_LID = 85;                       // diámetro de la tapa de cristal
+const CD_LID_TOP = (CD_BAY_TOP_VW - (CD_LID - CD_BAY) / 2) / PLAYER_ASPECT;
+const CD_LID_OPEN_ANGLE = 64;            // cuánto se levanta la tapa al abrirse
+// Agujero central del CD (12,5 % del diámetro, como un CD real)
+const CD_HOLE_MASK = 'radial-gradient(circle closest-side at 50% 50%, transparent 0, transparent 12.5%, #000 13.2%)';
+const CD_BODY_STYLE: React.CSSProperties = {
+  backgroundColor: '#f5f5f6',
+  backgroundImage: 'radial-gradient(circle at center, rgba(0,0,0,0.17) 0, rgba(0,0,0,0.17) 1px, transparent 1.5px), linear-gradient(160deg, #ffffff 0%, #f1f1f3 55%, #e6e6e9 100%)',
+  backgroundSize: '7px 7px, 100% 100%'
 };
 const KEY_BTN = 'bg-gradient-to-b from-white to-[#e7e7ea] border border-[#d4d4d8] shadow-[0_2px_0_#cfcfd3,0_5px_10px_rgba(0,0,0,0.12)] active:translate-y-[2px] active:shadow-[0_0_0_#cfcfd3,0_1px_3px_rgba(0,0,0,0.15)] transition-all';
 const HINGE_STYLE: React.CSSProperties = { background: 'linear-gradient(#f9f9fa,#cfcfd4)', boxShadow: '0 1px 2px rgba(0,0,0,0.25), inset 0 1px 0 #fff' };
 
-// --- Vinyl Player Component ---
-const VinylPlayer = ({
+// Brillo irisado fijo sobre el CD (no gira con el disco)
+const CdSheen = () => (
+  <div
+    className="absolute inset-0 rounded-full pointer-events-none"
+    style={{
+      background: 'conic-gradient(from 25deg, rgba(255,255,255,0) 0deg, rgba(255,255,255,0.38) 22deg, rgba(255,255,255,0) 60deg, rgba(120,190,255,0.20) 110deg, rgba(255,255,255,0) 150deg, rgba(255,255,255,0.30) 205deg, rgba(255,170,220,0.20) 250deg, rgba(255,255,255,0) 290deg, rgba(255,255,255,0.34) 335deg, rgba(255,255,255,0) 360deg)',
+      mixBlendMode: 'screen'
+    }}
+  />
+);
+
+// Cara impresa del CD: portada (o textura propia), pistas, aro central transparente y texto en el aro
+const CdFace = ({
+  album, texture, textureOpacity = 100, scale = 100, offsetX = 0, offsetY = 0,
+  hideHub = false, showText = true, idPrefix = 'cd'
+}: any) => {
+  const key = `${idPrefix}_${album.name.replace(/[^a-zA-Z0-9]/g, '')}`;
+  const customized = !!texture;
+  return (
+    <div className="absolute inset-0">
+      <div className="absolute inset-0 pointer-events-none" style={{ transform: `scale(${scale / 100}) translate(${offsetX}%, ${offsetY}%)`, transformOrigin: 'center' }}>
+        {texture ? (
+          <img src={texture} className="w-full h-full object-cover" style={{ opacity: textureOpacity / 100 }} />
+        ) : (
+          <CoverImage coverUrl={album.cover} audioPath={album.songs[0]?.path} hq={false} className="w-full h-full object-cover" />
+        )}
+      </div>
+      <div className="absolute inset-0 bg-black/10 pointer-events-none" />
+      <svg viewBox="0 0 100 100" className="absolute inset-0 w-full h-full pointer-events-none">
+        {!(customized && hideHub) && (
+          <>
+            <circle cx="50" cy="50" r="17" fill="rgba(235,238,242,0.30)" stroke="rgba(255,255,255,0.55)" strokeWidth="0.35" />
+            <circle cx="50" cy="50" r="12.2" fill="none" stroke="rgba(255,255,255,0.35)" strokeWidth="0.25" />
+            <circle cx="50" cy="50" r="6.9" fill="rgba(210,214,220,0.55)" stroke="rgba(255,255,255,0.8)" strokeWidth="0.3" />
+            {showText && (
+              <>
+                <path id={`${key}_curve`} d="M 50,50 m -14.6,0 a 14.6,14.6 0 1,1 29.2,0 a 14.6,14.6 0 1,1 -29.2,0" fill="none" />
+                <text fontSize="2.3" fontWeight="700" letterSpacing="0.5" fill="rgba(20,20,24,0.78)" style={{ textTransform: 'uppercase' }}>
+                  <textPath href={`#${key}_curve`} startOffset="50%" textAnchor="middle">
+                    {album.name.substring(0, 22)} • {album.year || '2024'} •
+                  </textPath>
+                </text>
+              </>
+            )}
+          </>
+        )}
+        <circle cx="50" cy="50" r="49.6" fill="none" stroke="rgba(255,255,255,0.35)" strokeWidth="0.5" />
+      </svg>
+    </div>
+  );
+};
+
+// --- CD Player Component ---
+const CdPlayer = ({
   album, currentSong, isPlaying, subscribeToProgress, playSound,
   isPaperOpen, volume, setVolume, pauseOrResumeSound, playNext,
   playPrevious, isDiscOnPlatter, turntableRef, onDiscDragStart, isInstantSnap, onPowerOff, isDraggingDisc, onDiscReturn
 }: any) => {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
+  const L = (es: string, en: string) => ((i18n.language || 'es').startsWith('en') ? en : es);
   const { setPlaybackRate } = useAudio();
   const [progress, setProgress] = useState(0);
-  const [isDragging, setIsDragging] = useState(false);
-  const [dragAngle, setDragAngle] = useState(0);
-  const [showVinylSettings, setShowVinylSettings] = useState(false);
+  const [showSettings, setShowSettings] = useState(false);
   const [customTexture, setCustomTexture] = useState<string | null>(null);
   const [customScale, setCustomScale] = useState<number>(100);
   const [hideCenterLabel, setHideCenterLabel] = useState<boolean>(false);
@@ -81,39 +140,14 @@ const VinylPlayer = ({
   const [customTextureOpacity, setCustomTextureOpacity] = useState<number>(100);
   const [customOffsetX, setCustomOffsetX] = useState<number>(0);
   const [customOffsetY, setCustomOffsetY] = useState<number>(0);
-  const [vinylRpm, setVinylRpm] = useState<number>(33);
-  const vinylRpmRef = useRef(33);
-  const currentPlaybackRateRef = useRef(1);
-  const targetPlaybackRateRef = useRef(1);
-  const transitionRafRef = useRef<number>(0);
 
-  useEffect(() => {
-    vinylRpmRef.current = vinylRpm;
-    targetPlaybackRateRef.current = vinylRpm / 33;
-
-    const transitionRate = () => {
-      const diff = targetPlaybackRateRef.current - currentPlaybackRateRef.current;
-      if (Math.abs(diff) < 0.005) {
-        currentPlaybackRateRef.current = targetPlaybackRateRef.current;
-        setPlaybackRate(targetPlaybackRateRef.current);
-        return;
-      }
-      currentPlaybackRateRef.current += diff * 0.03;
-      setPlaybackRate(currentPlaybackRateRef.current);
-      transitionRafRef.current = requestAnimationFrame(transitionRate);
-    };
-
-    cancelAnimationFrame(transitionRafRef.current);
-    transitionRafRef.current = requestAnimationFrame(transitionRate);
-
-    return () => cancelAnimationFrame(transitionRafRef.current);
-  }, [vinylRpm, setPlaybackRate]);
+  // Un CD siempre gira a velocidad normal: se asegura que no quede una velocidad de reproducción heredada
+  useEffect(() => { setPlaybackRate(1); }, []);
 
   const [isPendingPause, setIsPendingPause] = useState(false);
   const [isPendingResume, setIsPendingResume] = useState(false);
   const [isPendingTrackChange, setIsPendingTrackChange] = useState(false);
-  const vinylRef = useRef<HTMLDivElement>(null);
-  const pivotRef = useRef<HTMLDivElement>(null);
+  const discRef = useRef<HTMLDivElement>(null);
   const rotationAngleRef = useRef(0);
   const spinSpeedRef = useRef(0);
   const lastTimeRef = useRef(performance.now());
@@ -128,8 +162,8 @@ const VinylPlayer = ({
 
       if (spinSpeedRef.current > 0) {
         rotationAngleRef.current = (rotationAngleRef.current + spinSpeedRef.current * delta) % 360;
-        if (vinylRef.current) {
-          vinylRef.current.style.transform = `rotate(${rotationAngleRef.current}deg)`;
+        if (discRef.current) {
+          discRef.current.style.transform = `rotate(${rotationAngleRef.current}deg)`;
         }
       }
       rafRef.current = requestAnimationFrame(animate);
@@ -138,12 +172,8 @@ const VinylPlayer = ({
     return () => cancelAnimationFrame(rafRef.current);
   }, []);
 
-  const getSpinSpeed = () => {
-    if (vinylRpmRef.current === 23) return 0.14;
-    if (vinylRpmRef.current === 45) return 0.27;
-    if (vinylRpmRef.current === 78) return 0.47;
-    return 0.2;
-  };
+  // Velocidad de giro del CD (grados por milisegundo)
+  const getSpinSpeed = () => 0.45;
 
   useEffect(() => {
     if (isPlaying && !isPendingPause && !isPendingResume) {
@@ -155,8 +185,9 @@ const VinylPlayer = ({
         spinSpeedRef.current = 0;
       }
     }
-  }, [isPlaying, isPendingPause, isPendingResume, isPendingTrackChange, vinylRpm]);
+  }, [isPlaying, isPendingPause, isPendingResume, isPendingTrackChange]);
 
+  // (Se conservan las mismas claves de almacenamiento que usaba el disco anterior, para no perder texturas guardadas)
   useEffect(() => {
     const savedTexture = localStorage.getItem(`vinyl_texture_${album.name}`);
     const savedHistory = localStorage.getItem(`vinyl_textures_history_${album.name}`);
@@ -165,10 +196,6 @@ const VinylPlayer = ({
     const savedOpacity = localStorage.getItem(`vinyl_opacity_${album.name}`);
     const savedOffsetX = localStorage.getItem(`vinyl_offset_x_${album.name}`);
     const savedOffsetY = localStorage.getItem(`vinyl_offset_y_${album.name}`);
-    const savedRpm = localStorage.getItem(`vinyl_rpm_${album.name}`);
-
-    if (savedRpm) setVinylRpm(Number(savedRpm));
-    else setVinylRpm(33);
 
     if (savedOffsetX) setCustomOffsetX(Number(savedOffsetX));
     else setCustomOffsetX(0);
@@ -321,14 +348,12 @@ const VinylPlayer = ({
     setCustomTextureOpacity(100);
     setCustomOffsetX(0);
     setCustomOffsetY(0);
-    setVinylRpm(33);
     localStorage.removeItem(`vinyl_texture_${album.name}`);
     localStorage.removeItem(`vinyl_scale_${album.name}`);
     localStorage.removeItem(`vinyl_hide_label_${album.name}`);
     localStorage.removeItem(`vinyl_opacity_${album.name}`);
     localStorage.removeItem(`vinyl_offset_x_${album.name}`);
     localStorage.removeItem(`vinyl_offset_y_${album.name}`);
-    localStorage.removeItem(`vinyl_rpm_${album.name}`);
   };
 
   useEffect(() => {
@@ -394,7 +419,7 @@ const VinylPlayer = ({
         setTimeout(() => setVolume(originalVolumeRef.current), 150);
       }, 1500);
     } else if (!isPlaying && !isPendingResume) {
-      // Si el disco estaba fuera de la bandeja, vuelve a colocarse al reanudar
+      // Si el disco estaba fuera del compartimento, vuelve a colocarse al reanudar
       if (onDiscReturn) onDiscReturn();
       setIsPendingResume(true);
       setVolume(0);
@@ -444,131 +469,70 @@ const VinylPlayer = ({
   useEffect(() => {
     if (!isPlaying) return;
     const unsub = subscribeToProgress((prog: number) => {
-      if (!isDragging) setProgress(prog);
+      setProgress(prog);
     });
     return unsub;
-  }, [isPlaying, isDragging, subscribeToProgress]);
-
-  const minAngle = -1;
-  const maxAngle = 31;
+  }, [isPlaying, subscribeToProgress]);
 
   let currentSongIndex = album.songs.findIndex((s: any) => s.path === currentSong?.path);
   if (currentSongIndex === -1) currentSongIndex = 0;
 
-  const tonearmAngle = useMemo(() => {
-    if (isDragging) return dragAngle;
-    if (!totalDuration) return minAngle;
-
-    let timeBeforeCurrent = 0;
-    if (currentSongIndex < cumulativeDurations.length) {
-      timeBeforeCurrent = cumulativeDurations[currentSongIndex];
-    }
-    const currentTimeTotal = timeBeforeCurrent + progress;
-    const ratio = currentTimeTotal / totalDuration;
-
-    if (ratio >= 0.99 && !isPlaying) {
-      return -10;
-    }
-
-    return minAngle + (ratio * (maxAngle - minAngle));
-  }, [isDragging, dragAngle, totalDuration, cumulativeDurations, currentSongIndex, progress, isPlaying]);
-
-  useEffect(() => {
-    if (!isDragging) return;
-
-    const handlePointerMove = (e: PointerEvent) => {
-      if (!pivotRef.current) return;
-      const rect = pivotRef.current.getBoundingClientRect();
-      const pivotX = rect.left + rect.width / 2;
-      const pivotY = rect.top + 16; // Center of the visual pivot circle is 16px down
-
-      const dx = e.clientX - pivotX;
-      const dy = e.clientY - pivotY;
-
-      let angle = Math.atan2(dy, dx) * (180 / Math.PI);
-      angle = (angle + 360) % 360;
-      angle -= 90;
-
-      if (angle < minAngle) angle = minAngle;
-      if (angle > maxAngle) angle = maxAngle;
-
-      setDragAngle(angle);
-    };
-
-    const handlePointerUp = () => {
-      setIsDragging(false);
-
-      const ratio = (dragAngle - minAngle) / (maxAngle - minAngle);
-      const targetTime = ratio * totalDuration;
-
-      let selectedSongIndex = 0;
-      for (let i = 0; i < cumulativeDurations.length; i++) {
-        if (targetTime >= cumulativeDurations[i] && (i === cumulativeDurations.length - 1 || targetTime < cumulativeDurations[i + 1])) {
-          selectedSongIndex = i;
-          break;
-        }
-      }
-
-      const selectedSong = album.songs[selectedSongIndex];
-      if (selectedSong && selectedSong.path !== currentSong?.path) {
-        if (onDiscReturn) onDiscReturn();
-        playSound(selectedSong, `album_${album.name}`, album.songs);
-      }
-    };
-
-    window.addEventListener('pointermove', handlePointerMove);
-    window.addEventListener('pointerup', handlePointerUp);
-
-    return () => {
-      window.removeEventListener('pointermove', handlePointerMove);
-      window.removeEventListener('pointerup', handlePointerUp);
-    };
-  }, [isDragging, dragAngle, totalDuration, songDurations, album, playSound, cumulativeDurations, currentSong]);
-
   const isVinylOut = isDiscOnPlatter;
+  const canGrabDisc = !isPlaying && spinSpeedRef.current < 0.01;
+
+  // Tapa de cristal: se abre al seleccionar el álbum (y cuando no suena nada) y se cierra al empezar a reproducir
+  const lidOpen = !isPlaying && !isPendingTrackChange;
+
+  const hasTrack = !!(isThisAlbumActive && currentSong);
+  const statusText = hasTrack
+    ? (isPlaying && !isPendingPause ? t('player.playing', 'REPRODUCIENDO') : t('player.paused', 'PAUSADO'))
+    : t('player.standby', 'En Espera');
+  const lcdTitle = hasTrack
+    ? (currentSong.title || currentSong.filename.replace(/\.[^/.]+$/, ''))
+    : t('player.noActiveTrack', 'Sin pista activa');
+  const trackLabel = hasTrack ? `${String(currentSongIndex + 1).padStart(2, '0')}/${String(album.songs.length).padStart(2, '0')}` : '--/--';
+  const timeLabel = hasTrack ? fmtTime(progress) : '--:--';
+  const playingNow = isPlaying && !isPendingPause;
 
   return (
     <div className="absolute inset-0 pointer-events-none" style={{ zIndex: -1 }}>
 
-      {/* 1. BASE DEL TOCADISCOS (z-10) */}
+      {/* 1. CUERPO DEL REPRODUCTOR DE CD (z-10) */}
       <motion.div
         ref={turntableRef}
         initial={{ opacity: 0, x: 0 }}
         animate={{ opacity: 1, x: '110%' }}
         exit={{ opacity: 0, x: 0 }}
         transition={{ type: 'spring', damping: 20 }}
-        className="absolute top-1/2 -translate-y-1/2 w-[100%] aspect-square rounded-t-[2rem] rounded-b-none border-[3px] border-white shadow-[0_30px_100px_rgba(0,0,0,0.9)] flex items-center justify-center pointer-events-auto z-10"
-        style={PLINTH_STYLE}
+        className="absolute top-1/2 -translate-y-1/2 w-[100%] aspect-[1/1.08] rounded-[2.4rem] border-[3px] border-white shadow-[0_30px_100px_rgba(0,0,0,0.9)] pointer-events-auto z-10"
+        style={CD_BODY_STYLE}
       >
-        {/* Bisel del plinto */}
-        <div className="absolute inset-0 rounded-t-[2rem] pointer-events-none shadow-[inset_0_2px_0_rgba(255,255,255,0.95),inset_0_-3px_8px_rgba(0,0,0,0.07),inset_0_0_0_1px_rgba(0,0,0,0.04)]" />
+        {/* Bisel del cuerpo */}
+        <div className="absolute inset-0 rounded-[2.2rem] pointer-events-none shadow-[inset_0_2px_0_rgba(255,255,255,0.95),inset_0_-3px_8px_rgba(0,0,0,0.07),inset_0_0_0_1px_rgba(0,0,0,0.04)]" />
 
-        {/* Bisagras de la tapa */}
-        <div className="absolute top-[1.6%] left-[17%] w-[6%] h-[3.4%] rounded-[3px] pointer-events-none" style={HINGE_STYLE} />
-        <div className="absolute top-[1.6%] right-[25%] w-[6%] h-[3.4%] rounded-[3px] pointer-events-none" style={HINGE_STYLE} />
+        {/* Compartimento circular del disco */}
+        <div
+          className="absolute rounded-full pointer-events-none"
+          style={{
+            left: `${(100 - CD_BAY) / 2}%`, top: `${CD_BAY_TOP}%`, width: `${CD_BAY}%`, aspectRatio: '1',
+            background: 'linear-gradient(145deg, #cfcfd4, #fafafa)',
+            boxShadow: 'inset 0 6px 14px rgba(0,0,0,0.28), 0 1px 0 rgba(255,255,255,0.95), 0 0 0 5px rgba(255,255,255,0.92), 0 0 0 6px rgba(0,0,0,0.06)'
+          }}
+        >
+          {/* Piso oscuro del compartimento */}
+          <div
+            className="absolute inset-[2.2%] rounded-full"
+            style={{ background: 'radial-gradient(circle at 50% 40%, #34343a 0%, #202024 60%, #141417 100%)', boxShadow: 'inset 0 0 0 2px rgba(0,0,0,0.55), inset 0 10px 24px rgba(0,0,0,0.65)' }}
+          />
+          <div className="absolute inset-[13%] rounded-full" style={{ border: '2px solid rgba(255,255,255,0.07)' }} />
+          {/* Eje central */}
+          <div
+            className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[9%] aspect-square rounded-full"
+            style={{ background: 'radial-gradient(circle at 35% 30%, #ffffff, #8d8d95)', boxShadow: '0 1px 4px rgba(0,0,0,0.6), 0 0 0 3px rgba(255,255,255,0.12)' }}
+          />
+        </div>
 
-        {/* Bandeja: hueco hundido en el plinto blanco */}
-        <div
-          className="absolute inset-[0.8%] rounded-full pointer-events-none"
-          style={{ background: 'linear-gradient(145deg, #d4d4d8, #f4f4f5)', boxShadow: 'inset 0 6px 14px rgba(0,0,0,0.28), inset 0 -2px 4px rgba(255,255,255,0.9), 0 1px 0 rgba(255,255,255,0.9)' }}
-        />
-        {/* Plato negro-gris (su borde asoma alrededor del disco) */}
-        <div
-          className="absolute inset-[1.6%] rounded-full pointer-events-none"
-          style={{ background: 'conic-gradient(from 20deg, #2a2a2e, #4a4a50, #1c1c1f, #3d3d43, #232326, #4a4a50, #2a2a2e)', boxShadow: '0 0 0 1px #0d0d0f, 0 8px 18px rgba(0,0,0,0.45), inset 0 2px 3px rgba(255,255,255,0.25), inset 0 -3px 8px rgba(0,0,0,0.6)' }}
-        />
-        {/* Fieltro negro-gris */}
-        <div
-          className="absolute inset-[6.5%] rounded-full pointer-events-none"
-          style={{ backgroundImage: 'radial-gradient(rgba(255,255,255,0.05) 1px, transparent 1.2px), radial-gradient(circle at 50% 42%, #3a3a40 0%, #2a2a2f 65%, #1d1d21 100%)', backgroundSize: '3px 3px, 100% 100%', boxShadow: 'inset 0 0 0 2px rgba(0,0,0,0.5), inset 0 8px 18px rgba(0,0,0,0.55)' }}
-        />
-        {/* Eje central */}
-        <div
-          className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[2.4%] aspect-square rounded-full pointer-events-none"
-          style={{ background: 'radial-gradient(circle at 35% 30%, #ffffff, #a9a9b0)', boxShadow: '0 1px 3px rgba(0,0,0,0.45)' }}
-        />
-
-        <span className="absolute left-[5%] bottom-[3.5%] text-[10px] font-black tracking-[0.3em] text-zinc-600 uppercase pointer-events-none" style={{ textShadow: '0 1px 0 rgba(255,255,255,0.95)' }}>Hi-Fi Turntable</span>
+        <span className="absolute right-[5%] top-[3.2%] text-[10px] font-black tracking-[0.3em] text-zinc-500 uppercase pointer-events-none" style={{ textShadow: '0 1px 0 rgba(255,255,255,0.95)' }}>CD Player</span>
 
         {/* Botón de Apagado (Power) */}
         <button
@@ -583,77 +547,89 @@ const VinylPlayer = ({
               if (onPowerOff) onPowerOff();
             }
           }}
-          className={`absolute top-6 left-6 p-3 rounded-full text-zinc-500 hover:text-red-500 z-20 cursor-pointer ${KEY_BTN}`}
+          className={`absolute top-5 left-5 p-3 rounded-full text-zinc-500 hover:text-red-500 z-20 cursor-pointer ${KEY_BTN}`}
           title={t('player.modeOff', 'MODO ÁLBUM DESACTIVADO')}
         >
-          <span className={`absolute -right-0.5 -top-0.5 w-2 h-2 rounded-full ${isPlaying && !isPendingPause ? 'bg-green-500 shadow-[0_0_6px_#22c55e]' : 'bg-zinc-300'}`} />
+          <span className={`absolute -right-0.5 -top-0.5 w-2 h-2 rounded-full ${playingNow ? 'bg-green-500 shadow-[0_0_6px_#22c55e]' : 'bg-zinc-300'}`} />
           <Power size={22} />
         </button>
 
-        {/* Pestaña de Reproducción */}
-        <div
-          className="absolute top-[calc(100%-2px)] left-[-3px] rounded-bl-[2rem] rounded-br-2xl shadow-xl border-[3px] border-t-0 border-white px-6 py-4 flex flex-col min-w-[220px] max-w-[280px]"
-          style={{ ...PLINTH_STYLE, zIndex: -1 }}
-        >
-          {isThisAlbumActive && currentSong ? (
-            <>
-              <div className="flex items-center gap-2 mb-1.5">
-                <div className={`w-2 h-2 rounded-full ${isPlaying && !isPendingPause ? 'bg-green-500 animate-pulse shadow-[0_0_6px_#22c55e]' : 'bg-zinc-400'}`} />
-                <span className="text-xs font-black text-zinc-600 tracking-widest">
-                  {isPlaying && !isPendingPause ? t('player.playing', 'REPRODUCIENDO').toUpperCase() : t('player.paused', 'PAUSADO').toUpperCase()}
+        {/* Panel de control integrado: pantalla + botones */}
+        <div className="absolute left-[5%] right-[5%] bottom-[3%] h-[11%] flex items-center gap-[3%] pointer-events-auto">
+          <div
+            className="flex-1 min-w-0 h-[85%] rounded-lg px-4 flex items-center justify-between"
+            style={{ background: 'linear-gradient(#17201c, #0e1411)', boxShadow: 'inset 0 2px 6px rgba(0,0,0,0.7), 0 1px 0 rgba(255,255,255,0.9), 0 0 0 1px rgba(0,0,0,0.25)' }}
+          >
+            {/* Lado izquierdo: Estado y Título */}
+            <div className="flex flex-col justify-center min-w-0 pr-3 overflow-hidden">
+              <span className="flex items-center gap-1.5 min-w-0 mb-[3px]">
+                <i className={`w-1.5 h-1.5 rounded-full shrink-0 ${playingNow ? 'bg-emerald-400 animate-pulse' : 'bg-emerald-900'}`} style={{ boxShadow: playingNow ? '0 0 8px #34d399, 0 0 4px #34d399' : 'none' }} />
+                <span className="text-[12px] font-black tracking-[0.16em] text-emerald-400 uppercase truncate" style={{ textShadow: '0 0 5px rgba(52,211,153,0.8), 0 0 10px rgba(52,211,153,0.4)' }}>
+                  {statusText}
                 </span>
-              </div>
-              <span className="text-lg font-black text-zinc-800 truncate leading-tight">
-                {currentSong.title || currentSong.filename.replace(/\.[^/.]+$/, "")}
               </span>
-              <span className="text-xs font-bold text-zinc-600 truncate mt-0.5">
-                {currentSong.artist || album.artist}
-              </span>
-            </>
-          ) : (
-            <>
-              <div className="flex items-center gap-2 mb-1.5 opacity-60">
-                <div className="w-2 h-2 rounded-full bg-zinc-400" />
-                <span className="text-[10px] font-black text-zinc-500 tracking-widest uppercase">
-                  {t('player.standby', 'En Espera')}
-                </span>
-              </div>
-              <span className="text-lg font-black text-zinc-400 truncate leading-tight">
-                {t('player.noActiveTrack', 'Sin pista activa')}
-              </span>
-            </>
-          )}
-        </div>
 
-        {/* Pestaña de Controles - Siempre Visible */}
-        <div
-          className="absolute top-[calc(100%-3px)] right-[-3px] h-[3.5rem] rounded-br-[2rem] rounded-bl-2xl shadow-xl border-[3px] border-t-0 border-white flex flex-row items-center gap-3 px-4 pointer-events-auto"
-          style={{ ...PLINTH_STYLE, zIndex: -1 }}
-        >
-          <button onClick={(e) => { e.stopPropagation(); setShowVinylSettings(!showVinylSettings); }} className="w-7 h-7 flex items-center justify-center text-zinc-500 hover:text-black transition-colors" title={t('player.discDesign', 'Diseño del Disco')}>
-            <Settings size={16} />
-          </button>
-          <div className="w-[1px] h-6 bg-zinc-300 mx-1" />
-          <button onClick={handlePlayPrevWithDust} className={`w-8 h-8 flex items-center justify-center text-zinc-800 rounded-md ${KEY_BTN}`}><SkipBack size={14} fill="currentColor" /></button>
-          <button onClick={handlePauseOrResumeDelay} className={`w-9 h-9 flex items-center justify-center text-zinc-800 rounded-full ${KEY_BTN} ${isPlaying && !isPendingPause ? 'ring-2 ring-green-500/50' : ''}`}>
-            {isPlaying && !isPendingPause ? <Pause size={16} fill="currentColor" /> : <Play size={16} fill="currentColor" className="ml-0.5" />}
-          </button>
-          <button onClick={handlePlayNextWithDust} className={`w-8 h-8 flex items-center justify-center text-zinc-800 rounded-md ${KEY_BTN}`}><SkipForward size={14} fill="currentColor" /></button>
+              {/* Contenedor del título con efecto Marquee (Desplazamiento infinito) */}
+              <div className="relative w-full overflow-hidden flex" style={{ maskImage: 'linear-gradient(to right, black 85%, transparent 100%)', WebkitMaskImage: 'linear-gradient(to right, black 85%, transparent 100%)' }}>
+                <style>{`
+                  @keyframes scrollLcd {
+                    0%, 15% { transform: translateX(0); }
+                    100% { transform: translateX(-50%); }
+                  }
+                  .lcd-marquee {
+                    display: flex;
+                    width: max-content;
+                    /* Cambia los 8s para hacerlo más rápido o más lento */
+                    animation: scrollLcd 8s linear infinite; 
+                  }
+                `}</style>
+                <div className="lcd-marquee">
+                  <span className="pr-10 text-[17px] font-black text-emerald-300 leading-none whitespace-nowrap" style={{ textShadow: '0 0 6px rgba(110,231,183,0.9), 0 0 12px rgba(110,231,183,0.5)' }}>
+                    {lcdTitle}
+                  </span>
+                  {/* Etiqueta duplicada para crear el bucle sin cortes visuales */}
+                  <span className="pr-10 text-[17px] font-black text-emerald-300 leading-none whitespace-nowrap" style={{ textShadow: '0 0 6px rgba(110,231,183,0.9), 0 0 12px rgba(110,231,183,0.5)' }} aria-hidden="true">
+                    {lcdTitle}
+                  </span>
+                </div>
+              </div>
+            </div>
+            {/* Lado derecho: Track y Tiempo centrados verticalmente */}
+            <span className="font-mono text-[15px] font-bold text-emerald-400 shrink-0" style={{ textShadow: '0 0 5px rgba(52,211,153,0.8), 0 0 10px rgba(52,211,153,0.4)' }}>
+              {trackLabel} - {timeLabel}
+            </span>
+          </div>
+
+          <div className="flex items-center gap-2 shrink-0">
+            <button onClick={(e) => { e.stopPropagation(); setShowSettings(!showSettings); }} className="w-7 h-7 flex items-center justify-center text-zinc-500 hover:text-black transition-colors" title={t('player.cdDesign', L('Diseño del CD', 'CD Design'))}>
+              <Settings size={16} />
+            </button>
+            <div className="w-[1px] h-6 bg-zinc-300" />
+            <button onClick={handlePlayPrevWithDust} className={`w-8 h-8 flex items-center justify-center text-zinc-800 rounded-full ${KEY_BTN}`}><SkipBack size={14} fill="currentColor" /></button>
+            <button onClick={handlePauseOrResumeDelay} className={`w-10 h-10 flex items-center justify-center text-zinc-800 rounded-full ${KEY_BTN} ${playingNow ? 'ring-2 ring-green-500/50' : ''}`}>
+              {playingNow ? <Pause size={17} fill="currentColor" /> : <Play size={17} fill="currentColor" className="ml-0.5" />}
+            </button>
+            <button onClick={handlePlayNextWithDust} className={`w-8 h-8 flex items-center justify-center text-zinc-800 rounded-full ${KEY_BTN}`}><SkipForward size={14} fill="currentColor" /></button>
+          </div>
         </div>
       </motion.div>
 
-      {/* 2. DISCO GIRANDO (z-20) */}
+      {/* 2. CD GIRANDO (z-20) */}
       <motion.div
         initial={{ x: 0, scale: 0.9, opacity: 1 }}
         animate={isVinylOut ? { x: '110%', scale: 1, opacity: 1 } : { x: 0, scale: 0.9, opacity: isDraggingDisc ? 0 : 1 }}
         exit={{ opacity: 0, scale: 0.9, transition: { duration: 0.2 } }}
         transition={(isInstantSnap || isDraggingDisc) ? { duration: 0 } : { type: 'spring', damping: 15, mass: 1, stiffness: 100 }}
-        className="absolute top-1/2 -translate-y-1/2 w-[100%] aspect-square flex items-center justify-center z-20 pointer-events-none"
+        className="absolute top-1/2 -translate-y-1/2 w-[100%] aspect-[1/1.08] z-20 pointer-events-none"
       >
         <div
-          className={`w-[92%] aspect-square rounded-full relative shadow-[0_10px_30px_rgba(0,0,0,0.5)] bg-[#0a0a0a] border border-[#222] overflow-hidden ${(!isPlaying && spinSpeedRef.current < 0.01) ? 'cursor-grab active:cursor-grabbing pointer-events-auto' : 'pointer-events-none'}`}
+          className={`absolute rounded-full ${canGrabDisc ? 'cursor-grab active:cursor-grabbing pointer-events-auto' : 'pointer-events-none'}`}
+          style={{
+            left: '50%', top: `${CD_CENTER_Y}%`, width: `${CD_DISC}%`, aspectRatio: '1', transform: 'translate(-50%, -50%)',
+            filter: 'drop-shadow(0 8px 14px rgba(0,0,0,0.55))', WebkitMaskImage: CD_HOLE_MASK, maskImage: CD_HOLE_MASK
+          }}
           onPointerDown={(e) => {
-            if (!isPlaying && spinSpeedRef.current < 0.01) {
+            if (canGrabDisc) {
               e.stopPropagation();
               e.preventDefault();
               if (onDiscDragStart) onDiscDragStart(e);
@@ -661,120 +637,66 @@ const VinylPlayer = ({
           }}
         >
           <div
-            ref={vinylRef}
-            className="absolute inset-0 rounded-full flex items-center justify-center overflow-hidden pointer-events-none"
-            style={{ backgroundColor: '#111', willChange: 'transform' }}
+            ref={discRef}
+            className="absolute inset-0 rounded-full overflow-hidden pointer-events-none"
+            style={{ backgroundColor: '#1a1a1d', willChange: 'transform' }}
           >
-            <div className="absolute inset-0 pointer-events-none" style={{ transform: `scale(${customScale / 100}) translate(${customOffsetX}%, ${customOffsetY}%)`, transformOrigin: 'center' }}>
-              {customTexture ? (
-                <img src={customTexture} className="w-full h-full object-cover" style={{ opacity: customTextureOpacity / 100 }} />
-              ) : (
-                <CoverImage coverUrl={album.cover} audioPath={album.songs[0]?.path} hq={false} className="w-full h-full object-cover" />
-              )}
-            </div>
-
-            <div className="absolute inset-0 rounded-full bg-black/15 pointer-events-none" />
-            <div className="absolute top-1 left-1/2 w-1.5 h-1.5 bg-white/20 rounded-full z-10" />
-
-            {!(customTexture && hideGrooves) && (
-              <svg viewBox="0 0 100 100" className="w-full h-full opacity-60 z-10 pointer-events-none">
-                {album.songs.map((_: any, i: number) => {
-                  const startRadius = 18;
-                  const maxPlayableWidth = 30;
-                  const grooveWidth = (songDurations[i] / (totalDuration || 1)) * maxPlayableWidth;
-                  const prevWidths = cumulativeDurations[i] / (totalDuration || 1) * maxPlayableWidth;
-                  const r = startRadius + prevWidths + (grooveWidth / 2);
-                  return (
-                    <circle
-                      key={i}
-                      cx="50" cy="50"
-                      r={r}
-                      fill="none" stroke="#222" strokeWidth={grooveWidth - 0.5} strokeOpacity="0.4"
-                    />
-                  );
-                })}
-                <circle cx="50" cy="50" r="49" fill="none" stroke="#111" strokeWidth="2" />
-              </svg>
-            )}
-
-            <div className={`absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[35%] h-[35%] rounded-full z-10 flex items-center justify-center pointer-events-none ${customTexture && hideCenterLabel ? '' : 'bg-[#111] border-[4px] border-[#222] shadow-[inset_0_0_20px_rgba(0,0,0,0.8)]'}`}>
-              {!(customTexture && hideCenterLabel) && (
-                <>
-                  <svg viewBox="0 0 100 100" className="absolute inset-0 w-full h-full opacity-70">
-                    <path id={`curve_${album.name.replace(/[^a-zA-Z0-9]/g, '')}`} d="M 50, 50 m -38, 0 a 38,38 0 1,1 76,0 a 38,38 0 1,1 -76,0" fill="none" />
-                    <text className="text-[8px] fill-zinc-300 font-bold uppercase tracking-[0.2em]" dy="0">
-                      <textPath href={`#curve_${album.name.replace(/[^a-zA-Z0-9]/g, '')}`} startOffset="50%" textAnchor="middle">
-                        {album.name.substring(0, 20)} • {album.year || '2024'} •
-                      </textPath>
-                    </text>
-                  </svg>
-                  <div className="w-[15%] aspect-square rounded-full border border-[#333] bg-[#050505] shadow-[inset_0_2px_4px_rgba(0,0,0,0.5)]" />
-                </>
-              )}
-            </div>
+            <CdFace
+              album={album} texture={customTexture} textureOpacity={customTextureOpacity} scale={customScale}
+              offsetX={customOffsetX} offsetY={customOffsetY} hideHub={hideCenterLabel} hideRings={hideGrooves}
+              idPrefix="cdplayer" durations={songDurations} cumulative={cumulativeDurations} total={totalDuration}
+            />
           </div>
+          <CdSheen />
         </div>
       </motion.div>
 
-      {/* 3. BRAZO DE LA AGUJA (z-30) */}
+      {/* 3. TAPA DE CRISTAL (z-30): se abre al elegir el álbum y se cierra al empezar a sonar */}
       <motion.div
         initial={{ opacity: 0, x: 0 }}
         animate={{ opacity: 1, x: '110%' }}
         exit={{ opacity: 0, x: 0 }}
         transition={{ type: 'spring', damping: 20 }}
-        className="absolute top-1/2 -translate-y-1/2 w-[100%] aspect-square pointer-events-none z-30"
+        className="absolute top-1/2 -translate-y-1/2 w-[100%] aspect-[1/1.08] pointer-events-none z-30"
       >
-        {/* Tapa de acrílico: reflejo suave sobre el plato */}
-        <div className="absolute inset-0 rounded-t-[2rem] overflow-hidden pointer-events-none">
-          <div className="absolute inset-0" style={{ background: 'linear-gradient(118deg, rgba(255,255,255,0.38) 0%, rgba(255,255,255,0.10) 26%, rgba(255,255,255,0) 40%)' }} />
-          <div className="absolute inset-x-0 top-0 h-[4.5%]" style={{ background: 'linear-gradient(to bottom, rgba(190,200,210,0.22), rgba(255,255,255,0))', borderBottom: '1px solid rgba(255,255,255,0.55)' }} />
-        </div>
+        {/* Bisagras */}
+        <div className="absolute top-[2.4%] left-[34%] w-[7%] h-[2.6%] rounded-[3px] pointer-events-none" style={HINGE_STYLE} />
+        <div className="absolute top-[2.4%] right-[34%] w-[7%] h-[2.6%] rounded-[3px] pointer-events-none" style={HINGE_STYLE} />
 
-        <div ref={pivotRef} className="absolute top-[8%] right-[8%] w-8 h-8 pointer-events-none">
-          {/* Carcasa fija del pivote del brazo */}
-          <div className="absolute -inset-3 rounded-full" style={{ background: 'radial-gradient(circle at 35% 30%, #ffffff, #d9d9de)', boxShadow: '0 0 0 1px #c4c4ca, 0 8px 16px rgba(0,0,0,0.28), inset 0 1px 2px rgba(255,255,255,0.9)' }}>
-            <div className="absolute inset-[18%] rounded-full" style={{ background: 'linear-gradient(#e6e6ea,#f8f8f9)', boxShadow: 'inset 0 2px 4px rgba(0,0,0,0.18), 0 1px 0 rgba(255,255,255,0.9)' }} />
-          </div>
-        </div>
-        <div
-          className={`absolute top-[8%] right-[8%] w-8 h-[65%] pointer-events-none ${isDragging ? '' : 'transition-transform duration-1000 ease-linear'}`}
-          style={{ transformOrigin: '50% 16px', transform: `rotate(${tonearmAngle}deg)`, willChange: 'transform' }}
-        >
-          {/* Contrapeso (gira junto con el brazo) */}
-          <div className="absolute left-1/2 -translate-x-1/2 -top-[28px] w-7 h-[24px] rounded-md pointer-events-none" style={{ background: 'linear-gradient(90deg,#c9c9ce,#f8f8f9 45%,#b7b7be)', boxShadow: '0 4px 8px rgba(0,0,0,0.3), inset 0 0 0 1px rgba(0,0,0,0.12)' }}>
-            <div className="absolute inset-0 rounded-md" style={{ background: 'repeating-linear-gradient(0deg, rgba(0,0,0,0.12) 0 1px, transparent 1px 4px)' }} />
-          </div>
-          {/* Cojinete del brazo */}
-          <div className="w-10 h-10 rounded-full absolute -top-1 -left-1 flex items-center justify-center pointer-events-auto" style={{ background: 'radial-gradient(circle at 35% 30%, #ffffff, #cfcfd5)', boxShadow: '0 0 0 3px #b9b9bf, 0 6px 12px rgba(0,0,0,0.3), inset 0 1px 2px rgba(255,255,255,0.9)' }}>
-            <div className="w-3.5 h-3.5 rounded-full" style={{ background: 'radial-gradient(circle at 35% 30%, #8a8a92, #3f3f46)', boxShadow: '0 1px 2px rgba(0,0,0,0.5)' }} />
-          </div>
-          <div className="w-[7px] h-[85%] absolute left-1/2 -translate-x-1/2 top-4 rounded-full origin-top pointer-events-auto" style={{ background: 'linear-gradient(90deg,#a3a3aa,#fafafa 45%,#b4b4bb)', boxShadow: '3px 6px 10px rgba(0,0,0,0.25)' }} />
-          <div
-            className={`w-8 h-20 absolute bottom-[3%] left-1/2 -translate-x-1/2 flex items-start justify-center cursor-grab pointer-events-auto touch-none ${isDragging ? 'cursor-grabbing' : ''}`}
-            style={{ transformOrigin: 'top center', transform: 'rotate(5deg)' }}
-            onPointerDown={(e) => { e.stopPropagation(); e.preventDefault(); setIsDragging(true); }}
+        <div className="absolute inset-0 pointer-events-none" style={{ perspective: '2400px', perspectiveOrigin: '50% 12%' }}>
+          <motion.div
+            className="absolute rounded-full pointer-events-none"
+            style={{
+              left: `${(100 - CD_LID) / 2}%`, top: `${CD_LID_TOP}%`, width: `${CD_LID}%`, aspectRatio: '1',
+              transformOrigin: '50% 0%',
+              background: 'radial-gradient(120% 90% at 28% 18%, rgba(255,255,255,0.40) 0%, rgba(255,255,255,0.10) 38%, rgba(190,210,225,0.08) 70%, rgba(255,255,255,0.20) 100%)',
+              border: '3px solid rgba(255,255,255,0.75)',
+              boxShadow: '0 12px 30px rgba(0,0,0,0.35), inset 0 0 40px rgba(255,255,255,0.22)'
+            }}
+            initial={{ rotateX: 0 }}
+            animate={{ rotateX: lidOpen ? CD_LID_OPEN_ANGLE : 0 }}
+            transition={{ type: 'spring', stiffness: 70, damping: 15, delay: lidOpen ? 0.35 : 0 }}
           >
-            <div className="relative w-[22px] h-12 rounded-[3px] flex flex-col items-center pointer-events-none" style={{ background: 'linear-gradient(90deg,#d4d4d9,#fbfbfc 50%,#c4c4ca)', boxShadow: '4px 8px 14px rgba(0,0,0,0.3), inset 0 0 0 1px rgba(0,0,0,0.15)' }}>
-              {/* lengüeta para levantar el brazo */}
-              <div className="absolute -right-[7px] top-[30%] w-[9px] h-[3px] rounded-r bg-zinc-400" />
-              {/* cápsula */}
-              <div className="absolute bottom-0 inset-x-[2px] h-[45%] rounded-b-[3px]" style={{ background: 'linear-gradient(#52525b,#27272a)', boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.25)' }} />
-              <div className="w-0.5 h-3 bg-zinc-500 absolute -bottom-2 left-1/2 -translate-x-1/2 rounded-b-full" />
+            <div className="absolute inset-0 rounded-full overflow-hidden">
+              <div className="absolute inset-0" style={{ background: 'linear-gradient(118deg, rgba(255,255,255,0.50) 0%, rgba(255,255,255,0.12) 28%, rgba(255,255,255,0) 42%)' }} />
+              <div className="absolute inset-[7%] rounded-full" style={{ border: '1px solid rgba(255,255,255,0.35)' }} />
             </div>
-          </div>
+            {/* Asa para levantar la tapa */}
+            <div className="absolute left-1/2 -translate-x-1/2 bottom-[-1.6%] w-[16%] h-[3.2%] rounded-b-lg" style={{ background: 'rgba(255,255,255,0.72)', border: '1px solid rgba(255,255,255,0.9)', boxShadow: '0 2px 4px rgba(0,0,0,0.25)' }} />
+          </motion.div>
         </div>
       </motion.div>
 
-      {/* 4. MODAL AJUSTES DEL VINILO (z-50) Componente hermano a la base para evitar el Stacking Context */}
+      {/* 4. MODAL AJUSTES DEL CD (z-50) Componente hermano al cuerpo para evitar el Stacking Context */}
       <motion.div
         initial={{ opacity: 0, x: 50 }}
         animate={{ opacity: 1, x: '110%' }}
         exit={{ opacity: 0, x: 50 }}
         transition={{ type: 'spring', damping: 20 }}
-        className="absolute top-1/2 -translate-y-1/2 w-[100%] aspect-square pointer-events-none z-50"
+        className="absolute top-1/2 -translate-y-1/2 w-[100%] aspect-[1/1.08] pointer-events-none z-50"
       >
         <AnimatePresence>
-          {showVinylSettings && (
+          {showSettings && (
             <motion.div
               initial={{ opacity: 0, y: 15, scale: 0.95 }}
               animate={{ opacity: 1, y: 0, scale: 1 }}
@@ -783,12 +705,12 @@ const VinylPlayer = ({
               onClick={(e) => e.stopPropagation()}
             >
               <div className="flex justify-between items-center mb-4">
-                <h3 className="font-bold text-sm text-zinc-800">{t('player.discDesign', 'Diseño del Disco')}</h3>
-                <button onClick={() => setShowVinylSettings(false)} className="text-zinc-500 hover:text-black p-1 rounded-full hover:bg-zinc-100"><X size={16} /></button>
+                <h3 className="font-bold text-sm text-zinc-800">{t('player.cdDesign', L('Diseño del CD', 'CD Design'))}</h3>
+                <button onClick={() => setShowSettings(false)} className="text-zinc-500 hover:text-black p-1 rounded-full hover:bg-zinc-100"><X size={16} /></button>
               </div>
               <div className="flex flex-col gap-4">
                 <label className="flex flex-col gap-1 cursor-pointer">
-                  <span className="text-xs font-semibold text-zinc-600">{t('player.vinylTexture', 'TEXTURA DEL VINILO')}</span>
+                  <span className="text-xs font-semibold text-zinc-600">{t('player.cdTexture', L('TEXTURA DEL CD', 'CD TEXTURE'))}</span>
                   <div className="w-full h-9 bg-zinc-100 hover:bg-zinc-200 border border-zinc-300 rounded flex items-center justify-center text-xs font-medium transition-colors text-zinc-700">
                     {t('player.uploadImage', 'Subir Imagen...')}
                   </div>
@@ -814,24 +736,6 @@ const VinylPlayer = ({
                     </div>
                   </div>
                 )}
-
-                <div className="flex flex-col gap-1">
-                  <span className="text-xs font-semibold text-zinc-600">{t('player.rpm', 'VELOCIDAD (RPM)')}</span>
-                  <div className="flex bg-zinc-100 rounded p-1">
-                    {[23, 33, 45, 78].map(rpm => (
-                      <button
-                        key={rpm}
-                        onClick={() => {
-                          setVinylRpm(rpm);
-                          localStorage.setItem(`vinyl_rpm_${album.name}`, rpm.toString());
-                        }}
-                        className={`flex-1 text-xs font-semibold py-1 rounded transition-colors ${vinylRpm === rpm ? 'bg-white shadow-sm text-black' : 'text-zinc-500 hover:text-zinc-700'}`}
-                      >
-                        {rpm}
-                      </button>
-                    ))}
-                  </div>
-                </div>
 
                 <div className="flex flex-col gap-1" onWheel={handleWheelScale}>
                   <div className="flex justify-between">
@@ -865,20 +769,9 @@ const VinylPlayer = ({
                     </div>
                     <label className="flex items-center gap-2 cursor-pointer mt-1">
                       <input type="checkbox" checked={hideCenterLabel} onChange={handleHideLabelChange} className="w-4 h-4 accent-zinc-800 rounded border-zinc-300" />
-                      <span className="text-xs font-medium text-zinc-600">{t('player.hideCenterLabel', 'Ocultar etiqueta central')}</span>
+                      <span className="text-xs font-medium text-zinc-600">{t('player.cdHideHub', L('Ocultar aro central', 'Hide center ring'))}</span>
                     </label>
-                    <label className="flex items-center gap-2 cursor-pointer mt-1">
-                      <input
-                        type="checkbox"
-                        checked={hideGrooves}
-                        onChange={(e) => {
-                          setHideGrooves(e.target.checked);
-                          localStorage.setItem(`vinyl_hide_grooves_${album.name}`, e.target.checked ? 'true' : 'false');
-                        }}
-                        className="w-4 h-4 accent-zinc-800 rounded border-zinc-300"
-                      />
-                      <span className="text-xs font-medium text-zinc-600">{t('player.hideGrooves', 'Ocultar surcos')}</span>
-                    </label>
+
                   </>
                 )}
 
@@ -895,6 +788,7 @@ const VinylPlayer = ({
   );
 };
 
+// CD que asoma del álbum y que se arrastra hacia el reproductor (lee la personalización guardada)
 const PeekDiscVisuals = ({ album, isDragging = false }: { album: any; isDragging?: boolean }) => {
   const savedTexture = localStorage.getItem(`vinyl_texture_${album.name}`);
   const customTextureOpacity = Number(localStorage.getItem(`vinyl_opacity_${album.name}`) || 100);
@@ -905,42 +799,12 @@ const PeekDiscVisuals = ({ album, isDragging = false }: { album: any; isDragging
   const hideGrooves = localStorage.getItem(`vinyl_hide_grooves_${album.name}`) === 'true';
 
   return (
-    <div className="absolute inset-0 rounded-full flex items-center justify-center overflow-hidden" style={{ backgroundColor: '#111' }}>
-      <div className="absolute inset-0 pointer-events-none" style={{ transform: `scale(${customScale / 100}) translate(${customOffsetX}%, ${customOffsetY}%)`, transformOrigin: 'center' }}>
-        {savedTexture ? (
-          <img src={savedTexture} className="w-full h-full object-cover" style={{ opacity: customTextureOpacity / 100 }} />
-        ) : (
-          <CoverImage coverUrl={album.cover} audioPath={album.songs[0]?.path} hq={false} className="w-full h-full object-cover" />
-        )}
-      </div>
-      <div className="absolute inset-0 rounded-full bg-black/15 pointer-events-none" />
-
-      {!(savedTexture && hideGrooves) && (
-        <svg viewBox="0 0 100 100" className="w-full h-full opacity-60 z-10 pointer-events-none">
-          {Array.from({ length: 8 }).map((_, i) => (
-            <circle key={i} cx="50" cy="50" r={18 + i * 3.8} fill="none" stroke="#222" strokeWidth="0.5" />
-          ))}
-          <circle cx="50" cy="50" r="49" fill="none" stroke="#111" strokeWidth="2" />
-        </svg>
-      )}
-
-      <div className={`absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[35%] h-[35%] rounded-full z-10 flex items-center justify-center pointer-events-none ${savedTexture && hideCenterLabel ? '' : 'bg-[#111] border-[4px] border-[#222] shadow-[inset_0_0_20px_rgba(0,0,0,0.8)]'}`}>
-        {!(savedTexture && hideCenterLabel) && (
-          <>
-            {!isDragging && (
-              <svg viewBox="0 0 100 100" className="absolute inset-0 w-full h-full opacity-70">
-                <path id={`peekCurve_${album.name.replace(/[^a-zA-Z0-9]/g, '')}`} d="M 50, 50 m -38, 0 a 38,38 0 1,1 76,0 a 38,38 0 1,1 -76,0" fill="none" />
-                <text className="text-[8px] fill-zinc-300 font-bold uppercase tracking-[0.2em]" dy="0">
-                  <textPath href={`#peekCurve_${album.name.replace(/[^a-zA-Z0-9]/g, '')}`} startOffset="50%" textAnchor="middle">
-                    {album.name.substring(0, 20)} • {album.year || '2024'} •
-                  </textPath>
-                </text>
-              </svg>
-            )}
-            <div className="w-[15%] aspect-square rounded-full border border-[#333] bg-[#050505] shadow-[inset_0_2px_4px_rgba(0,0,0,0.5)]" />
-          </>
-        )}
-      </div>
+    <div className="absolute inset-0 rounded-full overflow-hidden" style={{ backgroundColor: '#1a1a1d' }}>
+      <CdFace
+        album={album} texture={savedTexture} textureOpacity={customTextureOpacity} scale={customScale}
+        offsetX={customOffsetX} offsetY={customOffsetY} hideHub={hideCenterLabel} hideRings={hideGrooves}
+        showText={!isDragging} idPrefix={isDragging ? 'cddrag' : 'cdpeek'}
+      />
     </div>
   );
 };
@@ -1105,7 +969,6 @@ export default function AlbumsCoverFlow({ albums, onExpand }: any) {
   const { colors, albumZenMode, setAlbumZenMode, reduceAnimations } = useTheme();
   const { playSound, pauseOrResumeSound, playNext, playPrevious, currentSong, subscribeToProgress, isPlaying: globalIsPlaying, volume, setVolume, artists } = useAudio();
   const { t } = useTranslation();
-  const navigate = useNavigate();
 
   const [activeIndex, setActiveIndex] = useState(Math.floor(albums.length / 2));
   const [expandedIndex, setExpandedIndex] = useState<number | null>(null);
@@ -1328,7 +1191,7 @@ export default function AlbumsCoverFlow({ albums, onExpand }: any) {
 
   // NUEVO: el disco que se arrastra tiene el tamaño real del tocadiscos en pantalla
   const turntableW = turntableRef.current?.getBoundingClientRect().width;
-  const dragDiscSize = (turntableW || Math.max(450, Math.min(1200, Math.min(view.vh * 0.75, view.vw * 0.40)))) * 0.92;
+  const dragDiscSize = (turntableW || Math.max(450, Math.min(1200, Math.min(view.vh * 0.75, view.vw * 0.40)))) * (CD_DISC / 100);
 
   return (
     <>
@@ -1466,7 +1329,7 @@ export default function AlbumsCoverFlow({ albums, onExpand }: any) {
                 >
                   <AnimatePresence>
                     {showPlayer && (
-                      <VinylPlayer
+                      <CdPlayer
                         album={album} currentSong={currentSong} isPlaying={globalIsPlaying} subscribeToProgress={subscribeToProgress}
                         playSound={playSound} isPaperOpen={isPaperOpen} volume={volume} setVolume={setVolume}
                         pauseOrResumeSound={pauseOrResumeSound} playNext={playNext} playPrevious={playPrevious}
@@ -1528,10 +1391,10 @@ export default function AlbumsCoverFlow({ albums, onExpand }: any) {
                   <AnimatePresence>
                     {isActive && (expandedIndex === null || (isExpanded && !isDiscOnPlatter && !isDraggingDisc)) && (
                       <motion.div
-                        className={`absolute top-1/2 right-0 w-[92%] aspect-square z-[10] ${showPlayer ? 'cursor-grab active:cursor-grabbing' : ''}`}
+                        className={`absolute top-1/2 right-0 w-[78%] aspect-square z-[10] ${showPlayer ? 'cursor-grab active:cursor-grabbing' : ''}`}
                         style={{ y: '-50%', pointerEvents: showPlayer ? 'auto' : 'none' }}
                         initial={{ x: '0%', opacity: 0 }}
-                        animate={{ x: showPlayer ? '32%' : '24%', opacity: 1 }}
+                        animate={{ x: showPlayer ? '42%' : '30%', opacity: 1 }}
                         exit={isExpanded ? { opacity: 0, transition: { duration: 0 } } : { x: '0%', opacity: 0 }}
                         transition={{ type: 'spring', stiffness: 120, damping: 20 }}
                         onPointerDown={(e) => {
@@ -1546,8 +1409,11 @@ export default function AlbumsCoverFlow({ albums, onExpand }: any) {
                           handleDiscDragStart(e);
                         }}
                       >
-                        <div className="relative w-full h-full rounded-full overflow-hidden border border-[#222] shadow-[0_10px_30px_rgba(0,0,0,0.6)]">
-                          <PeekDiscVisuals album={album} />
+                        <div className="relative w-full h-full" style={{ filter: 'drop-shadow(0 10px 18px rgba(0,0,0,0.6))', WebkitMaskImage: CD_HOLE_MASK, maskImage: CD_HOLE_MASK }}>
+                          <div className="absolute inset-0 rounded-full overflow-hidden">
+                            <PeekDiscVisuals album={album} />
+                          </div>
+                          <CdSheen />
                         </div>
                       </motion.div>
                     )}
@@ -2022,8 +1888,11 @@ export default function AlbumsCoverFlow({ albums, onExpand }: any) {
             exit={{ opacity: 0, transition: { duration: 0.2 } }}
             transition={{ duration: 0 }}
           >
-            <div className="w-full h-full rounded-full bg-[#0a0a0a] border border-[#222] shadow-[0_20px_60px_rgba(0,0,0,0.8)] overflow-hidden opacity-90">
-              <PeekDiscVisuals album={albums[expandedIndex]} isDragging={true} />
+            <div className="relative w-full h-full opacity-90" style={{ filter: 'drop-shadow(0 20px 30px rgba(0,0,0,0.7))', WebkitMaskImage: CD_HOLE_MASK, maskImage: CD_HOLE_MASK }}>
+              <div className="absolute inset-0 rounded-full overflow-hidden">
+                <PeekDiscVisuals album={albums[expandedIndex]} isDragging={true} />
+              </div>
+              <CdSheen />
             </div>
           </motion.div>
         )}
@@ -2048,23 +1917,10 @@ export default function AlbumsCoverFlow({ albums, onExpand }: any) {
             <div className="flex flex-col justify-center flex-1 min-w-0">
               <p className="text-[10px] text-white/50 mb-0.5 uppercase font-bold tracking-widest">{t('player.nowPlaying', 'Reproduciendo')}</p>
               <p className="text-base text-white font-black truncate leading-tight mb-0.5">
-                <SongTitleLinks
-                  title={currentSong?.title}
-                  fallbackFilename={currentSong?.filename}
-                  artistLinkClassName="hover:underline hover:text-white transition-colors cursor-pointer"
-                  onArtistClick={(artistName) => {
-                    navigate(`/detail/artist/${encodeURIComponent(artistName)}`);
-                  }}
-                />
+                {currentSong?.title || currentSong?.filename?.replace(/\.[^/.]+$/, '')}
               </p>
               <div className="text-xs text-white/70 font-medium truncate">
-                <ArtistLinks
-                  artist={currentSong?.artist || playingAlbum.artist}
-                  onArtistClick={(artistName) => {
-                    navigate(`/detail/artist/${encodeURIComponent(artistName)}`);
-                  }}
-                  linkClassName="hover:underline hover:text-white transition-colors cursor-pointer"
-                />
+                {currentSong?.artist || playingAlbum.artist}
               </div>
             </div>
             {/* BOTÓN PARA PAUSAR DESDE EL MINI REPRODUCTOR */}
