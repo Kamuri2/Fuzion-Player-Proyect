@@ -124,7 +124,7 @@ const CdFace = ({
 const CdPlayer = ({
   album, currentSong, isPlaying, subscribeToProgress, playSound,
   isPaperOpen, volume, setVolume, pauseOrResumeSound, playNext,
-  playPrevious, isDiscOnPlatter, turntableRef, onDiscDragStart, isInstantSnap, onPowerOff, isDraggingDisc, onDiscReturn
+  playPrevious, isDiscOnPlatter, turntableRef, onDiscDragStart, isInstantSnap, onPowerOff, isDraggingDisc, onDiscReturn, discDragPos
 }: any) => {
   const { t, i18n } = useTranslation();
   const L = (es: string, en: string) => ((i18n.language || 'es').startsWith('en') ? en : es);
@@ -651,6 +651,39 @@ const CdPlayer = ({
         </div>
       </motion.div>
 
+      {/* 2.5 DISCO ARRASTRADO LOCAL (z-25) - Renderizado debajo de la tapa de cristal */}
+      {isDraggingDisc && discDragPos && turntableRef.current && (
+        <div
+          className="absolute top-1/2 -translate-y-1/2 w-[100%] aspect-[1/1.08] z-25 pointer-events-none"
+          style={{ transform: 'translateX(110%)' }}
+        >
+          {(() => {
+            // Calculamos la posición del ratón relativa al reproductor para mapearlo perfectamente
+            const rect = turntableRef.current.getBoundingClientRect();
+            const localX = ((discDragPos.x - rect.left) / rect.width) * 100;
+            const localY = ((discDragPos.y - rect.top) / rect.height) * 100;
+
+            return (
+              <div
+                className="absolute"
+                style={{
+                  left: `${localX}%`, top: `${localY}%`, width: `${CD_DISC}%`, aspectRatio: '1',
+                  transform: 'translate(-50%, -50%)',
+                }}
+              >
+                <div className="relative w-full h-full opacity-90 rounded-full" style={{ boxShadow: '0 20px 40px rgba(0,0,0,0.6)' }}>
+                  <div className="absolute inset-0" style={{ WebkitMaskImage: CD_HOLE_MASK, maskImage: CD_HOLE_MASK }}>
+                    <div className="absolute inset-0 rounded-full overflow-hidden">
+                      <PeekDiscVisuals album={album} isDragging={true} />
+                    </div>
+                    <CdSheen />
+                  </div>
+                </div>
+              </div>
+            );
+          })()}
+        </div>
+      )}
       {/* 3. TAPA DE CRISTAL (z-30): se abre al elegir el álbum y se cierra al empezar a sonar */}
       <motion.div
         initial={{ opacity: 0, x: 0 }}
@@ -1335,6 +1368,7 @@ export default function AlbumsCoverFlow({ albums, onExpand }: any) {
                         pauseOrResumeSound={pauseOrResumeSound} playNext={playNext} playPrevious={playPrevious}
                         isDiscOnPlatter={isDiscOnPlatter} turntableRef={turntableRef} onDiscDragStart={handleDiscDragStart}
                         isInstantSnap={isInstantSnap} isDraggingDisc={isDraggingDisc} onDiscReturn={() => setIsDiscOnPlatter(true)}
+                        discDragPos={discDragPos}
                         onPowerOff={() => {
                           setIsDiscOnPlatter(false);
                           if (albumZenMode) {
@@ -1424,7 +1458,7 @@ export default function AlbumsCoverFlow({ albums, onExpand }: any) {
                     className="absolute inset-0"
                     style={{ transformStyle: 'preserve-3d' }}
                     initial={false}
-                    animate={{ scale: isExpanded && isPaperOpen ? 1.07 : 1, z: isExpanded && isPaperOpen ? 24 : 0 }}
+                    animate={{ scale: isExpanded && isPaperOpen ? 1.13 : 1, z: isExpanded && isPaperOpen ? 24 : 0 }}
                     transition={
                       isExpanded && !isPaperOpen
                         ? { scale: { type: 'spring', stiffness: 180, damping: 24, delay: 1.3 }, z: { type: 'spring', stiffness: 180, damping: 24, delay: 1.3 } }
@@ -1870,32 +1904,6 @@ export default function AlbumsCoverFlow({ albums, onExpand }: any) {
             </motion.div>
           )}
         </AnimatePresence>
-
-        {isDraggingDisc && discDragPos && expandedIndex !== null && !isDiscOnPlatter && (
-          <motion.div
-            layoutId="vinyl-disc"
-            className="fixed z-[9999] pointer-events-none"
-            style={{
-              left: discDragPos.x - dragDiscSize / 2,
-              top: discDragPos.y - dragDiscSize / 2,
-              width: dragDiscSize,
-              height: dragDiscSize,
-            }}
-            initial={false}
-            animate={{
-              scale: 1
-            }}
-            exit={{ opacity: 0, transition: { duration: 0.2 } }}
-            transition={{ duration: 0 }}
-          >
-            <div className="relative w-full h-full opacity-90" style={{ filter: 'drop-shadow(0 20px 30px rgba(0,0,0,0.7))', WebkitMaskImage: CD_HOLE_MASK, maskImage: CD_HOLE_MASK }}>
-              <div className="absolute inset-0 rounded-full overflow-hidden">
-                <PeekDiscVisuals album={albums[expandedIndex]} isDragging={true} />
-              </div>
-              <CdSheen />
-            </div>
-          </motion.div>
-        )}
       </div>
 
       <AnimatePresence>
