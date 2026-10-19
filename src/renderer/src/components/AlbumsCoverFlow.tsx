@@ -1222,10 +1222,6 @@ export default function AlbumsCoverFlow({ albums, onExpand }: any) {
   }
   const scrollDir = scrollDirRef.current;
 
-  // NUEVO: el disco que se arrastra tiene el tamaño real del tocadiscos en pantalla
-  const turntableW = turntableRef.current?.getBoundingClientRect().width;
-  const dragDiscSize = (turntableW || Math.max(450, Math.min(1200, Math.min(view.vh * 0.75, view.vw * 0.40)))) * (CD_DISC / 100);
-
   return (
     <>
       <div
