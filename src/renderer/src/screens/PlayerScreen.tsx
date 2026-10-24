@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ArrowLeft, Play, Pause, SkipBack, SkipForward, Repeat, Shuffle, ListMusic, Mic2, Heart, Plus, ThumbsDown, FolderOpen, Disc3, Mic2 as Mic2Icon, Menu, Video, Music } from 'lucide-react';
+import { ArrowLeft, Play, Pause, SkipBack, SkipForward, Repeat, Shuffle, ListMusic, Mic2, Heart, Plus, ThumbsDown, FolderOpen, Disc3, Mic2 as Mic2Icon, Menu, Video, } from 'lucide-react';
 import { Virtuoso } from 'react-virtuoso';
 import { useAudio } from '../context/AudioContext';
 import { useTheme } from '../context/ThemeContext';
@@ -738,20 +738,7 @@ export default function PlayerScreen() {
                             linkClassName="hover:underline hover:text-white transition-colors cursor-pointer"
                           />
                         </div>
-                        {isOnline && (
-                          <button
-                            onClick={() => handleToggleVideoMode()}
-                            className="flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold backdrop-blur-md transition-all shadow-md bg-white/10 hover:bg-red-600/80 hover:text-white text-white/90 border border-white/10 hover:border-red-500/50 shrink-0 cursor-pointer"
-                            title={isVideoMode ? t('player.switchToAudio', 'Cambiar a música') : t('player.switchToVideo', 'Cambiar a video')}
-                          >
-                            {isVideoMode ? (
-                              <Music size={13} style={{ color: colors.primary }} />
-                            ) : (
-                              <Video size={13} className="text-red-400" />
-                            )}
-                            <span>{isVideoMode ? t('player.switchToAudio', 'Cambiar a música') : t('player.switchToVideo', 'Cambiar a video')}</span>
-                          </button>
-                        )}
+
                       </div>
                     </motion.div>
                   </AnimatePresence>
@@ -802,13 +789,12 @@ export default function PlayerScreen() {
                   <button
                     onClick={() => handleToggleVideoMode()}
                     disabled={!isOnline}
-                    className={`p-3 rounded-full transition-all flex items-center justify-center cursor-pointer ${
-                      isVideoMode
-                        ? 'bg-red-600 text-white shadow-lg shadow-red-600/40 ring-2 ring-red-400/50'
-                        : isOnline
-                          ? 'hover:bg-white/10 text-white/70 hover:text-white'
-                          : 'opacity-30 cursor-not-allowed text-white/40'
-                    }`}
+                    className={`p-3 rounded-full transition-all flex items-center justify-center cursor-pointer ${isVideoMode
+                      ? 'bg-red-600 text-white shadow-lg shadow-red-600/40 ring-2 ring-red-400/50'
+                      : isOnline
+                        ? 'hover:bg-white/10 text-white/70 hover:text-white'
+                        : 'opacity-30 cursor-not-allowed text-white/40'
+                      }`}
                     title={
                       !isOnline
                         ? t('player.videoOffline', 'Se requiere conexión a internet para ver el video')

@@ -14,7 +14,14 @@ import type { Song, Album, Artist } from '../types';
 
 type Rect = { left: number; right: number; top: number; bottom: number; width: number; height: number };
 interface Sticker { id: string; src: string; x: number; y: number; w: number; rot: number }
-interface PanelCfg { bg: string | null; bgOpacity: number; bgFit: 'cover' | 'contain' }
+interface PanelCfg {
+  bg: string | null;
+  bgOpacity: number;
+  bgFit: 'cover' | 'contain';
+  bgX?: number;
+  bgY?: number;
+  bgScale?: number;
+}
 interface Custom { paper: string; ink: 'dark' | 'light'; accent: string; panels: PanelCfg[]; stickers: Sticker[][] }
 
 interface Props {
@@ -26,8 +33,7 @@ interface Props {
   onPlaySong: (song: Song) => void;
   currentSongId?: string;
   isPlaying?: boolean;
-  setIsPlayerOpen?: (isOpen: boolean) => void; // en desuso: se conserva para no romper llamadas existentes
-  // Opcional: rectángulo de la portada. Si no se pasa, se busca el elemento [data-expanded-cover]
+  setIsPlayerOpen?: (isOpen: boolean) => void;
   originRect?: Rect | null;
 }
 
@@ -47,7 +53,7 @@ const defaultCustom = (): Custom => ({
   paper: '#f7f2e6',
   ink: 'dark',
   accent: '#b4402a',
-  panels: [0, 1, 2].map(() => ({ bg: null, bgOpacity: 100, bgFit: 'cover' as const })),
+  panels: [0, 1, 2].map(() => ({ bg: null, bgOpacity: 100, bgFit: 'cover' as const, bgX: 50, bgY: 50, bgScale: 100 })),
   stickers: [[], [], []]
 });
 
@@ -65,7 +71,6 @@ const loadImg = (src: string) => new Promise<HTMLImageElement>((res, rej) => {
   i.onerror = rej;
   i.src = src;
 });
-// Reduce la imagen para que quepa en localStorage. Con alpha=true conserva la transparencia (PNG).
 async function prepareImage(file: File, max: number, alpha: boolean): Promise<string> {
   const src = await fileToDataUrl(file);
   if (file.type === 'image/gif' || file.type === 'image/svg+xml') return src;
@@ -80,10 +85,8 @@ async function prepareImage(file: File, max: number, alpha: boolean): Promise<st
 
 export function AlbumTriptych({ isOpen, onClose, song, album: albumProp, artist, onPlaySong, currentSongId, isPlaying = false, originRect }: Props) {
   const { t, i18n } = useTranslation();
-  // Si no llega el álbum, se arma uno con los datos de la canción
   const album: any = albumProp || { name: song.album || song.title, artist: song.artist, cover: song.cover, year: song.year, songs: [song] };
 
-  // 0 = desmontado | 1 = detrás de la portada | 2 = asomado a la derecha | 3 = centrado y plegado | 4 = desplegado
   const [stage, setStage] = useState(0);
   const stageRef = useRef(0);
   stageRef.current = stage;
@@ -92,7 +95,6 @@ export function AlbumTriptych({ isOpen, onClose, song, album: albumProp, artist,
   const timers = useRef<number[]>([]);
   const liftRef = useRef<Animation | null>(null);
 
-  // La pestaña "INFO & TRACKS" se levanta al abrir y baja al cerrar (usa data-triptych-tab; sin ese atributo simplemente no se anima)
   const liftTab = (up: boolean) => {
     if (up) {
       const tab = document.querySelector('[data-triptych-tab]') as HTMLElement | null;
@@ -123,7 +125,6 @@ export function AlbumTriptych({ isOpen, onClose, song, album: albumProp, artist,
     return () => window.removeEventListener('resize', update);
   }, []);
 
-  // --- Secuencia de apertura / cierre ---
   useEffect(() => {
     const clear = () => { timers.current.forEach((id) => clearTimeout(id)); timers.current = []; };
     clear();
@@ -141,7 +142,6 @@ export function AlbumTriptych({ isOpen, onClose, song, album: albumProp, artist,
         stageRef.current = next;
         if (next < 4) at(CLIMB[next], climb);
       };
-      // Origen = portada actual en pantalla; primero se levanta la pestaña y luego sale el tríptico
       const el = document.querySelector('[data-expanded-cover]') as HTMLElement | null;
       if (originRect) {
         setOrigin(originRect);
@@ -176,7 +176,6 @@ export function AlbumTriptych({ isOpen, onClose, song, album: albumProp, artist,
     return () => window.removeEventListener('keydown', onKey);
   }, [onClose]);
 
-  // --- Biografía del artista (misma caché que usa la hoja de liner notes) ---
   const artistName: string = (album?.artist || '').trim();
   const [bio, setBio] = useState('');
   const [bioLoading, setBioLoading] = useState(false);
@@ -215,7 +214,7 @@ export function AlbumTriptych({ isOpen, onClose, song, album: albumProp, artist,
           }
         }
       } catch (e) {
-        // sin conexión: se muestra el mensaje de "sin información"
+        // sin conexión
       } finally {
         if (!cancelled) setBioLoading(false);
       }
@@ -223,7 +222,6 @@ export function AlbumTriptych({ isOpen, onClose, song, album: albumProp, artist,
     return () => { cancelled = true; };
   }, [warm, artistName, i18n.language]);
 
-  // --- Personalización (por álbum, en localStorage) ---
   const storeKey = `triptych_custom_${album?.name}`;
   const [custom, setCustom] = useState<Custom>(defaultCustom);
   const [saveErr, setSaveErr] = useState(false);
@@ -232,7 +230,8 @@ export function AlbumTriptych({ isOpen, onClose, song, album: albumProp, artist,
   const [selPanel, setSelPanel] = useState(0);
   const [selSticker, setSelSticker] = useState<string | null>(null);
   const panelRefs = useRef<(HTMLDivElement | null)[]>([null, null, null]);
-  const dragRef = useRef<{ panel: number; id: string; sx: number; sy: number; ox: number; oy: number } | null>(null);
+
+  const dragRef = useRef<{ type: 'sticker' | 'bg'; panel: number; id?: string; sx: number; sy: number; ox: number; oy: number } | null>(null);
   const [dragging, setDragging] = useState(false);
 
   useEffect(() => {
@@ -243,7 +242,7 @@ export function AlbumTriptych({ isOpen, onClose, song, album: albumProp, artist,
         const p = JSON.parse(raw);
         setCustom({
           ...base, ...p,
-          panels: Array.isArray(p.panels) && p.panels.length === 3 ? p.panels : base.panels,
+          panels: Array.isArray(p.panels) && p.panels.length === 3 ? p.panels.map((pn: any) => ({ ...base.panels[0], ...pn })) : base.panels,
           stickers: Array.isArray(p.stickers) && p.stickers.length === 3 ? p.stickers : base.stickers
         });
       } else {
@@ -278,8 +277,12 @@ export function AlbumTriptych({ isOpen, onClose, song, album: albumProp, artist,
     const f = e.target.files?.[0];
     e.target.value = '';
     if (!f) return;
-    try { patchPanel(selPanel, { bg: await prepareImage(f, 1000, f.type !== 'image/jpeg') }); } catch (err) { /* imagen inválida */ }
+    try {
+      const bgUrl = await prepareImage(f, 1000, f.type !== 'image/jpeg');
+      patchPanel(selPanel, { bg: bgUrl, bgX: 50, bgY: 50, bgScale: 100 });
+    } catch (err) { /* imagen inválida */ }
   };
+
   const onStickerFile = async (e: ChangeEvent<HTMLInputElement>) => {
     const f = e.target.files?.[0];
     e.target.value = '';
@@ -300,9 +303,14 @@ export function AlbumTriptych({ isOpen, onClose, song, album: albumProp, artist,
       const el = panelRefs.current[d.panel];
       if (!el) return;
       const r = el.getBoundingClientRect();
-      const nx = Math.max(0, Math.min(100, d.ox + ((e.clientX - d.sx) / r.width) * 100));
-      const ny = Math.max(0, Math.min(100, d.oy + ((e.clientY - d.sy) / r.height) * 100));
-      patchSticker(d.panel, d.id, { x: nx, y: ny });
+      const nx = Math.max(-50, Math.min(150, d.ox + ((e.clientX - d.sx) / r.width) * 100));
+      const ny = Math.max(-50, Math.min(150, d.oy + ((e.clientY - d.sy) / r.height) * 100));
+
+      if (d.type === 'sticker' && d.id) {
+        patchSticker(d.panel, d.id, { x: nx, y: ny });
+      } else if (d.type === 'bg') {
+        patchPanel(d.panel, { bgX: nx, bgY: ny });
+      }
     };
     const up = () => { dragRef.current = null; setDragging(false); };
     window.addEventListener('pointermove', move);
@@ -313,12 +321,10 @@ export function AlbumTriptych({ isOpen, onClose, song, album: albumProp, artist,
     };
   }, [dragging]);
 
-  // Al cerrar el tríptico se sale del modo personalización
   useEffect(() => { if (!isOpen) setShowCustomize(false); }, [isOpen]);
 
   if (stage === 0) return null;
 
-  // --- Medidas ---
   const S = Math.round(Math.max(260, Math.min(view.vh * 0.62, view.vw * 0.295, 560)));
   const k = S / 460;
   const fs = (n: number) => `${(n * k).toFixed(1)}px`;
@@ -346,7 +352,7 @@ export function AlbumTriptych({ isOpen, onClose, song, album: albumProp, artist,
 
   const faceShadow = '0 18px 40px rgba(0,0,0,0.45)';
   const paperTexture = (
-    <div style={{ position: 'absolute', inset: 0, backgroundImage: `radial-gradient(${textureColor} 1px, transparent 1.2px)`, backgroundSize: '4px 4px' }} />
+    <div style={{ position: 'absolute', inset: 0, backgroundImage: `radial-gradient(${textureColor} 1px, transparent 1.2px)`, backgroundSize: '4px 4px', pointerEvents: 'none', zIndex: 1 }} />
   );
 
   const header = (left: string, right: string) => (
@@ -372,8 +378,17 @@ export function AlbumTriptych({ isOpen, onClose, song, album: albumProp, artist,
             e.preventDefault();
             setSelSticker(st.id);
             setSelPanel(idx);
-            dragRef.current = { panel: idx, id: st.id, sx: e.clientX, sy: e.clientY, ox: st.x, oy: st.y };
+            dragRef.current = { type: 'sticker', panel: idx, id: st.id, sx: e.clientX, sy: e.clientY, ox: st.x, oy: st.y };
             setDragging(true);
+          }}
+          onWheel={(e) => {
+            if (!edit || selSticker !== st.id) return;
+            e.stopPropagation();
+            e.preventDefault();
+            const step = e.shiftKey ? 5 : 2;
+            const delta = e.deltaY < 0 ? step : -step;
+            const newW = Math.max(5, Math.min(200, st.w + delta));
+            patchSticker(idx, st.id, { w: newW });
           }}
           style={{
             position: 'absolute', left: `${st.x}%`, top: `${st.y}%`, width: `${st.w}%`,
@@ -387,7 +402,6 @@ export function AlbumTriptych({ isOpen, onClose, song, album: albumProp, artist,
     </div>
   );
 
-  // Cara de una hoja (no es un componente para no remontar el contenido en cada render)
   const renderFace = (idx: number, hinge: 'left' | 'right' | 'both', content: ReactNode) => {
     const pc = custom.panels[idx];
     const crease = (side: 'left' | 'right') => (
@@ -407,9 +421,38 @@ export function AlbumTriptych({ isOpen, onClose, song, album: albumProp, artist,
       >
         {paperTexture}
         {pc.bg && (
-          <div style={{ position: 'absolute', inset: 0, backgroundImage: `url(${pc.bg})`, backgroundSize: pc.bgFit, backgroundPosition: 'center', backgroundRepeat: 'no-repeat', opacity: pc.bgOpacity / 100 }} />
+          <div
+            onPointerDown={(e) => {
+              if (!edit) return;
+              e.stopPropagation();
+              e.preventDefault();
+              setSelPanel(idx);
+              dragRef.current = { type: 'bg', panel: idx, sx: e.clientX, sy: e.clientY, ox: pc.bgX ?? 50, oy: pc.bgY ?? 50 };
+              setDragging(true);
+            }}
+            onWheel={(e) => {
+              if (!edit || selPanel !== idx) return;
+              e.stopPropagation();
+              e.preventDefault();
+              const step = e.shiftKey ? 10 : 5;
+              const delta = e.deltaY < 0 ? step : -step;
+              const currentScale = pc.bgScale ?? 100;
+              const newScale = Math.max(20, Math.min(300, currentScale + delta));
+              patchPanel(idx, { bgScale: newScale });
+            }}
+            style={{
+              position: 'absolute', inset: 0,
+              backgroundImage: `url(${pc.bg})`,
+              backgroundSize: pc.bgFit === 'contain' ? 'contain' : `${pc.bgScale ?? 100}%`,
+              backgroundPosition: `${pc.bgX ?? 50}% ${pc.bgY ?? 50}%`,
+              backgroundRepeat: 'no-repeat',
+              opacity: pc.bgOpacity / 100,
+              cursor: edit ? 'grab' : 'default',
+              pointerEvents: edit ? 'auto' : 'none'
+            }}
+          />
         )}
-        <div style={{ position: 'absolute', inset: 0, padding: 26 * k, display: 'flex', flexDirection: 'column', minHeight: 0 }}>{content}</div>
+        <div style={{ position: 'absolute', inset: 0, padding: 26 * k, display: 'flex', flexDirection: 'column', minHeight: 0, pointerEvents: edit ? 'none' : 'auto' }}>{content}</div>
         {(hinge === 'left' || hinge === 'both') && crease('left')}
         {(hinge === 'right' || hinge === 'both') && crease('right')}
         {renderStickers(idx)}
@@ -417,13 +460,36 @@ export function AlbumTriptych({ isOpen, onClose, song, album: albumProp, artist,
     );
   };
 
-  // ---------- Hoja 1: info del álbum ----------
+  // NUEVO: Función auxiliar para pintar la cara trasera con la imagen subida difuminada
+  const renderBackBleed = (idx: number) => {
+    const pc = custom.panels[idx];
+    if (!pc.bg) return null;
+    return (
+      <div
+        style={{
+          position: 'absolute',
+          inset: -40, // Evita bordes duros del difuminado
+          backgroundImage: `url(${pc.bg})`,
+          backgroundSize: pc.bgFit === 'contain' ? 'contain' : `${pc.bgScale ?? 100}%`,
+          backgroundPosition: `${100 - (pc.bgX ?? 50)}% ${pc.bgY ?? 50}%`, // Espejo de la posición de arrastre
+          backgroundRepeat: 'no-repeat',
+          opacity: Math.max(0.15, (pc.bgOpacity / 100) * 0.55), // Translúcido para simular que la tinta mojó el papel
+          filter: 'blur(24px) saturate(1.4)', // El difuminado clave
+          transform: 'scaleX(-1)', // Volteado horizontalmente porque lo vemos desde atrás
+          pointerEvents: 'none',
+          zIndex: 0
+        }}
+      />
+    );
+  };
+
   const infoRows: [string, string][] = [
     [t('detail.release', 'Lanzamiento'), String(song.year || album.year || '—')],
     [t('player.genre', 'Género'), String(song.genre || '—')],
     [t('detail.songs', 'Canciones'), String(songs.length)],
     [t('detail.totalDuration', 'Duración total'), totalSecs ? fmtTime(totalSecs) : '—']
   ];
+
   const panel1 = (
     <>
       {header(t('detail.album', 'Álbum'), 'Liner notes')}
@@ -452,7 +518,6 @@ export function AlbumTriptych({ isOpen, onClose, song, album: albumProp, artist,
     </>
   );
 
-  // ---------- Hoja 2: tracks ----------
   const panel2 = (
     <>
       {header(t('detail.tracklist', 'Tracklist'), `${songs.length} ${t('detail.tracks', 'tracks')}`)}
@@ -483,7 +548,6 @@ export function AlbumTriptych({ isOpen, onClose, song, album: albumProp, artist,
     </>
   );
 
-  // ---------- Hoja 3: artista ----------
   const panel3 = (
     <>
       {header(t('artist.about', 'Sobre el artista'), 'Artist')}
@@ -508,7 +572,7 @@ export function AlbumTriptych({ isOpen, onClose, song, album: albumProp, artist,
     </>
   );
 
-  // ---------- Portada exterior del tríptico (reverso de la hoja 1, visible mientras está plegado) ----------
+  // ACTUALIZADO: Cara exterior del primer panel (Liner Notes - Back) con la misma foto difuminada
   const outerCover = (
     <div
       style={{
@@ -517,23 +581,25 @@ export function AlbumTriptych({ isOpen, onClose, song, album: albumProp, artist,
         display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 14 * k, padding: 30 * k, fontFamily: SERIF
       }}
     >
+      {renderBackBleed(0)}
       {paperTexture}
-      <div style={{ position: 'relative', width: '62%', aspectRatio: '1', overflow: 'hidden', background: '#222', boxShadow: '0 10px 26px rgba(0,0,0,0.4)' }}>
+      <div style={{ position: 'relative', width: '62%', aspectRatio: '1', overflow: 'hidden', background: '#222', boxShadow: '0 10px 26px rgba(0,0,0,0.4)', zIndex: 1 }}>
         <CoverImage coverUrl={album.cover} audioPath={songs[0]?.path} hq={false} className="w-full h-full object-cover" />
       </div>
-      <div style={{ position: 'relative', fontSize: fs(22), fontWeight: 900, lineHeight: 1.05, textAlign: 'center', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{album.name}</div>
-      <div style={{ position: 'relative', fontSize: fs(13), fontStyle: 'italic', opacity: 0.85 }}>{album.artist}</div>
-      <div style={{ position: 'relative', fontFamily: SANS, fontSize: fs(8.5), fontWeight: 800, letterSpacing: '0.3em', textTransform: 'uppercase', color: custom.accent }}>Info · Tracks · Artista</div>
+      <div style={{ position: 'relative', fontSize: fs(22), fontWeight: 900, lineHeight: 1.05, textAlign: 'center', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden', zIndex: 1 }}>{album.name}</div>
+      <div style={{ position: 'relative', fontSize: fs(13), fontStyle: 'italic', opacity: 0.85, zIndex: 1 }}>{album.artist}</div>
+      <div style={{ position: 'relative', fontFamily: SANS, fontSize: fs(8.5), fontWeight: 800, letterSpacing: '0.3em', textTransform: 'uppercase', color: custom.accent, zIndex: 1 }}>Info · Tracks · Artista</div>
     </div>
   );
 
+  // ACTUALIZADO: Cara trasera del tercer panel (Artist - Back) con la misma foto difuminada
   const paperBack = (
     <div style={{ position: 'absolute', inset: 0, overflow: 'hidden', background: custom.paper, borderRadius: 3 * k, backfaceVisibility: 'hidden', WebkitBackfaceVisibility: 'hidden', transform: 'rotateY(180deg)', boxShadow: faceShadow }}>
+      {renderBackBleed(2)}
       {paperTexture}
     </div>
   );
 
-  // Hoja 3 se abre después de la 1; al cerrar se pliega primero la 3
   const t1 = { duration: 0.8, ease: EASE, delay: open ? 0 : 0.5 };
   const t3 = { duration: 0.8, ease: EASE, delay: open ? 0.5 : 0 };
   const moveDuration = stage === 1 ? 0.65 : stage === 2 ? 0.7 : 0.6;
@@ -546,7 +612,6 @@ export function AlbumTriptych({ isOpen, onClose, song, album: albumProp, artist,
 
   return (
     <>
-      {/* Telón oscuro: aparece cuando el tríptico llega al centro; clic fuera para cerrar */}
       <motion.div
         className="fixed inset-0 z-[110] bg-black/70"
         initial={false}
@@ -556,7 +621,6 @@ export function AlbumTriptych({ isOpen, onClose, song, album: albumProp, artist,
         onClick={(e) => { e.stopPropagation(); if (open) onClose(); }}
       />
 
-      {/* Escenario. Mientras sale de detrás de la portada se recorta todo lo que quede a la izquierda del borde derecho de la portada */}
       <div
         className="fixed inset-0 z-[120] pointer-events-none"
         style={{ clipPath: clipOn ? `inset(0px 0px 0px ${Math.round(cover.right)}px)` : 'none' }}
@@ -568,11 +632,9 @@ export function AlbumTriptych({ isOpen, onClose, song, album: albumProp, artist,
           animate={{ x: pos.x, y: pos.y }}
           transition={{ duration: moveDuration, ease: [0.3, 0.7, 0.2, 1] }}
         >
-          {/* Hoja central (2): fija. Las otras dos giran sobre sus pliegues */}
           <div style={{ position: 'absolute', inset: 0, transformStyle: 'preserve-3d' }}>
             {renderFace(1, 'both', panel2)}
 
-            {/* Hoja 3 (derecha) */}
             <motion.div
               style={{ position: 'absolute', top: 0, left: '100%', width: S, height: S, transformOrigin: 'left center', transformStyle: 'preserve-3d' }}
               initial={false}
@@ -583,7 +645,6 @@ export function AlbumTriptych({ isOpen, onClose, song, album: albumProp, artist,
               {paperBack}
             </motion.div>
 
-            {/* Hoja 1 (izquierda): al plegarse queda por delante y muestra la portada exterior */}
             <motion.div
               style={{ position: 'absolute', top: 0, right: '100%', width: S, height: S, transformOrigin: 'right center', transformStyle: 'preserve-3d' }}
               initial={false}
@@ -597,7 +658,6 @@ export function AlbumTriptych({ isOpen, onClose, song, album: albumProp, artist,
         </motion.div>
       </div>
 
-      {/* Botones (solo con el tríptico desplegado) */}
       {open && (
         <div className="fixed top-5 right-5 z-[140] flex items-center gap-2">
           <button
@@ -617,7 +677,6 @@ export function AlbumTriptych({ isOpen, onClose, song, album: albumProp, artist,
         </div>
       )}
 
-      {/* Panel de personalización */}
       {edit && (
         <div
           className="fixed bottom-4 left-1/2 -translate-x-1/2 z-[150] w-[min(820px,94vw)] max-h-[34vh] overflow-y-auto bg-[#fcfcfc] text-zinc-800 rounded-2xl border-[3px] border-white shadow-[0_30px_60px_rgba(0,0,0,0.5)] p-4 customized-scrollbar-light"
@@ -639,7 +698,6 @@ export function AlbumTriptych({ isOpen, onClose, song, album: albumProp, artist,
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-            {/* Papel */}
             <div className="flex flex-col gap-3">
               <div>
                 <p className={lbl}>PAPEL</p>
@@ -681,7 +739,6 @@ export function AlbumTriptych({ isOpen, onClose, song, album: albumProp, artist,
               </div>
             </div>
 
-            {/* Hoja seleccionada */}
             <div className="flex flex-col gap-3">
               <div>
                 <p className={lbl}>HOJA</p>
@@ -715,9 +772,12 @@ export function AlbumTriptych({ isOpen, onClose, song, album: albumProp, artist,
                   )}
                 </div>
                 {pc.bg && (
-                  <div className="mt-2">
-                    <div className="flex justify-between text-xs text-zinc-500"><span>Opacidad</span><span className="font-mono">{pc.bgOpacity}%</span></div>
-                    <input type="range" min={5} max={100} value={pc.bgOpacity} onChange={(e) => patchPanel(selPanel, { bgOpacity: Number(e.target.value) })} className="w-full accent-zinc-800" />
+                  <div className="mt-2 flex flex-col gap-2">
+                    <div>
+                      <div className="flex justify-between text-xs text-zinc-500"><span>Opacidad</span><span className="font-mono">{pc.bgOpacity}%</span></div>
+                      <input type="range" min={5} max={100} value={pc.bgOpacity} onChange={(e) => patchPanel(selPanel, { bgOpacity: Number(e.target.value) })} className="w-full accent-zinc-800" />
+                    </div>
+                    <p className="text-[11px] text-zinc-500">💡 Tip: Puedes arrastrar la imagen de fondo directamente sobre la hoja y usar el scroll para hacerle zoom.</p>
                   </div>
                 )}
               </div>
@@ -741,13 +801,13 @@ export function AlbumTriptych({ isOpen, onClose, song, album: albumProp, artist,
                   ))}
                 </div>
                 {custom.stickers[selPanel].length > 0 && !selSt && (
-                  <p className="text-[11px] text-zinc-500 mt-1.5">Arrastra los stickers sobre la hoja o selecciónalos para ajustarlos.</p>
+                  <p className="text-[11px] text-zinc-500 mt-1.5">Arrastra los stickers sobre la hoja o usa el scroll del mouse sobre ellos para cambiar su tamaño.</p>
                 )}
                 {selSt && (
                   <div className="mt-2 flex flex-col gap-1.5">
                     <div>
                       <div className="flex justify-between text-xs text-zinc-500"><span>Tamaño</span><span className="font-mono">{Math.round(selSt.w)}%</span></div>
-                      <input type="range" min={6} max={100} value={selSt.w} onChange={(e) => patchSticker(selPanel, selSt.id, { w: Number(e.target.value) })} className="w-full accent-zinc-800" />
+                      <input type="range" min={6} max={200} value={selSt.w} onChange={(e) => patchSticker(selPanel, selSt.id, { w: Number(e.target.value) })} className="w-full accent-zinc-800" />
                     </div>
                     <div>
                       <div className="flex justify-between text-xs text-zinc-500"><span>Giro</span><span className="font-mono">{Math.round(selSt.rot)}°</span></div>
